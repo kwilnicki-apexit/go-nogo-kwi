@@ -1,0 +1,16 @@
+RAPORT DECYZYJNY GO/NO-GO
+Tytuł projektu: Aktualizacja bramki płatniczej - beta
+Status projektu: wstrzymany
+Dostarczone komponenty: API płatności, moduł powiadamiania
+
+WYNIKI TESTÓW:
+- Testy funkcjonalne: 20%
+- Testy niefunkcjonalne: 90%
+- Pokrycie: 72%
+- Liczba błędów krytycznych (crit): 2
+
+RYZYKA:
+- Niestabilność integracji zewnętrznej z bankiem powodująca timeouty.
+
+DECYZJA: NO-GO
+Komentarz: Wdrożenie odrzucone. Projekt posiada 2 błędy krytyczne uniemożliwiające transakcje. Dodatkowo pokrycie testami wynosi zaledwie 72% (wymagane jest minimum 80%). Wymagane poprawki i retesty.

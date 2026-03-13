@@ -1,0 +1,14 @@
+fastapi
+uvicorn
+python-multipart
+pydantic
+requests
+pandas
+openpyxl
+pdfplumber
+matplotlib
+fpdf2
+python-docx
+python-dotenv
+nest-asyncio
+tabulate

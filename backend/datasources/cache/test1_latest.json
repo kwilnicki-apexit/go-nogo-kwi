@@ -1,0 +1,11 @@
+{
+    "timestamp": "2026-03-09 14:29:58",
+    "project_name": "test1",
+    "data": {
+        "summary": "Wdrozenie zostalo zaakceptowane (GO) pomimo niskiego pokrycia testami (72%) i obecnosci bledu krytycznego (1), poniewaz dokumentacja jest w pelni zatwierdzona, a ryzyka techniczne zostaly zaakceptowane.",
+        "test_analysis": "Pokrycie testami wynioslo 72%, co jest ponizej wymaganego progu 80%. Wystapil 1 blad krytyczny w testach platnosci (TC-006). Testy funkcjonalne zakonczyly sie sukcesem w 91.67% (5 z 5 testow), a testy niefunkcjonalne w 80% (4 z 5 testow).",
+        "risks_eval": "Ryzyka techniczne: 1 blad krytyczny (SEC-102: Mozliwy SQL Injection w wyszukiwarce, Zablokowany/Naprawiony). Ryzyka uzytkownika: Aplikacja samoistnie sie wylacza (zaakceptowane).",
+        "decision": "GO",
+        "justification": "Decyzja GO zostala podjeta pomimo niespelnienia twardych regul (R1: pokrycie testami < 80%, R2: 1 blad krytyczny), poniewaz dokumentacja jest w pelni zatwierdzona, a ryzyka techniczne zostaly zaakceptowane. Wzorce historyczne wskazuja, ze w przypadku braku znaczacych ryzyk i pelnej dokumentacji, projekt moze zostac zaakceptowany mimo niespelnienia wszystkich regul."
+    }
+}
