@@ -1,3 +1,35 @@
+// frontend/src/types/index.ts
+
+export type AppMode = 'chatbot' | 'gonogo' | 'translator' | 'analysis';
+export type ThemeMode = 'light' | 'dark';
+
+export interface ChatMessage {
+  id: string;
+  role: 'user' | 'assistant' | 'system';
+  content: string;
+  timestamp: Date;
+  mode: AppMode;
+  draftData?: StructuredDraft;
+  chartPaths?: string[];
+}
+
+export interface Project {
+  id: string;
+  name: string;
+  mode: AppMode;
+  messages: ChatMessage[];
+  createdAt: Date;
+  updatedAt: Date;
+  archived: boolean;
+  /** ChromaDB collection ID or S3 prefix for RAG context */
+  ragContextId?: string;
+  /** Whether RAG indexing is enabled */
+  ragEnabled: boolean;
+  canvasContent?: string;
+  draft?: StructuredDraft;
+  chartPaths?: string[];
+}
+
 export interface StructuredDraft {
   summary: string;
   test_analysis: string;
@@ -20,44 +52,83 @@ export interface ExportRequest {
   chart_paths: string[];
 }
 
-export interface SectionConfig {
-  key: keyof StructuredDraft;
-  labelPl: string;
-  labelEn: string;
-  icon: string;
+export interface ChatRequest {
+  project_id: string;
+  mode: AppMode;
+  message: string;
+  language: string;
+  canvas_content?: string;
+  rag_context_id?: string;
+  files?: File[];
 }
 
-export type EnabledSections = Record<keyof StructuredDraft, boolean>;
+export interface ChatResponse {
+  message: string;
+  draft_data?: StructuredDraft;
+  chart_paths?: string[];
+  canvas_html?: string;
+}
+
+export interface AttachedFile {
+  file: File;
+  id: string;
+}
+
+export interface RagIndexRequest {
+  project_id: string;
+  collection_name: string;
+}
+
+export interface RagIndexResponse {
+  context_id: string;
+  status: string;
+  document_count: number;
+}
 
 export interface Labels {
-  projectParams: string;
-  projectName: string;
-  reportAuthor: string;
-  outputLanguage: string;
-  polish: string;
-  english: string;
-  testFiles: string;
-  identifiedRisks: string;
-  generateReport: string;
-  generating: string;
-  addFileHint: string;
-  reviewEdit: string;
-  reviewHint: string;
-  aiRecommendation: string;
-  generatedCharts: string;
-  exportPdf: string;
-  exportDocx: string;
-  exportMd: string;
+  headerTitle: string;
+  chatPlaceholder: string;
+  newProject: string;
+  searchProjects: string;
+  canvasTitle: string;
+  downloadPdf: string;
+  downloadDocx: string;
+  downloadMd: string;
+  sendMessage: string;
+  attachFiles: string;
+  modeChatbot: string;
+  modeGoNogo: string;
+  modeTranslator: string;
+  modeAnalysis: string;
+  openCanvas: string;
+  closeCanvas: string;
+  noProjects: string;
+  today: string;
+  yesterday: string;
+  older: string;
+  welcome: string;
+  welcomeSub: string;
   generatingFile: string;
   successFile: string;
   errorExport: string;
   errorAi: string;
-  headerTitle: string;
-  sectionEnabled: string;
-  sectionDisabled: string;
-  selectAll: string;
-  deselectAll: string;
-  sectionsIncluded: string;
   maxFiles: string;
-  fileCount: string;
+  newLine: string;
+  editName: string;
+  archive: string;
+  unarchive: string;
+  deleteProject: string;
+  archived: string;
+  active: string;
+  confirmDelete: string;
+  ragConnect: string;
+  ragDisconnect: string;
+  ragConnected: string;
+  ragIndexing: string;
+  ragTooltip: string;
+  darkMode: string;
+  lightMode: string;
+  cancel: string;
+  save: string;
+  rename: string;
 }

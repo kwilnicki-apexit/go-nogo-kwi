@@ -99,6 +99,53 @@ class UpdateRulesRequest(BaseModel):
 
 MAX_FILE_SIZE = 5 * 1024 * 1024
 
+# TODO: TESTING - TO BE DELETED
+@app.post("/api/v2/chat")
+async def chat_mock_endpoint(request: Request):
+    """
+    Mockowy endpoint do testowania frontendu. 
+    Odbiera wiadomości i zwraca udawane odpowiedzi.
+    """
+    try:
+        # Sprawdzamy czy żądanie ma pliki (multipart) czy to czysty JSON
+        content_type = request.headers.get("content-type", "")
+        
+        if "multipart/form-data" in content_type:
+            form = await request.form()
+            message = form.get("message", "")
+            mode = form.get("mode", "chatbot")
+            files = form.getlist("files")
+            file_info = f"\n\nZałączono plików: {len(files)}" if files else ""
+        else:
+            data = await request.json()
+            message = data.get("message", "")
+            mode = data.get("mode", "chatbot")
+            file_info = ""
+
+        # Domyślna odpowiedź dla Chatbota, Tłumacza i Analizy
+        response_payload = {
+            "message": f"To jest udawana odpowiedź z lokalnego środowiska.\n\nTryb działania: **{mode.upper()}**\nOtrzymałem od Ciebie: *{message}*{file_info}",
+        }
+
+        # Jeśli tryb to Go/No-Go, dodajemy dane draftu, aby frontend OTWARTYŁ CANVAS!
+        if mode == "gonogo":
+            response_payload["message"] = "Przeanalizowałem Twoje pliki. Otwórz edytor raportu po prawej stronie, aby zobaczyć szczegóły."
+            response_payload["draft_data"] = {
+                "summary": "To jest przykładowe podsumowanie z mocka. Wdrożenie wygląda obiecująco.",
+                "test_analysis": "Pokrycie testami wynosi 85%. Wszystkie testy funkcjonalne przeszły pomyślnie.",
+                "risks_eval": "Zignorowano mniejsze błędy UI zgłoszone przez użytkowników.",
+                "decision": "GO",
+                "justification": "Wszystkie twarde reguły (brak błędów krytycznych, >80% pokrycia) zostały spełnione."
+            }
+            # Możesz też tu dodać zmockowane ścieżki do wykresów, jeśli masz jakieś w folderze output/charts
+            # response_payload["chart_paths"] = ["output/charts/dummy_chart.png"]
+
+        return response_payload
+
+    except Exception as e:
+        logger.error(f"Błąd w mock API: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+    
 
 @app.post("/api/v2/reports/draft")
 async def generate_draft(
