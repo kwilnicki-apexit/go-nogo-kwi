@@ -99,52 +99,120 @@ class UpdateRulesRequest(BaseModel):
 
 MAX_FILE_SIZE = 5 * 1024 * 1024
 
-# TODO: TESTING - TO BE DELETED
+# TODO: TESTING - modded
 @app.post("/api/v2/chat")
-async def chat_mock_endpoint(request: Request):
+async def chat_endpoint(request: Request, user: dict = Depends(get_current_user)):
     """
-    Mockowy endpoint do testowania frontendu. 
-    Odbiera wiadomości i zwraca udawane odpowiedzi.
+    Główny router aplikacji.
+    Odbiera zapytania z frontendu, rozpoznaje tryb (mode) i kieruje do odpowiednich modułów.
     """
     try:
-        # Sprawdzamy czy żądanie ma pliki (multipart) czy to czysty JSON
         content_type = request.headers.get("content-type", "")
         
+        # 1. Dekodowanie payloadu (z plikami lub bez)
         if "multipart/form-data" in content_type:
             form = await request.form()
             message = form.get("message", "")
             mode = form.get("mode", "chatbot")
+            language = form.get("language", "pl")
+            project_id = form.get("project_id", "default")
             files = form.getlist("files")
-            file_info = f"\n\nZałączono plików: {len(files)}" if files else ""
         else:
             data = await request.json()
             message = data.get("message", "")
             mode = data.get("mode", "chatbot")
-            file_info = ""
+            language = data.get("language", "pl")
+            project_id = data.get("project_id", "default")
+            files = []
 
-        # Domyślna odpowiedź dla Chatbota, Tłumacza i Analizy
-        response_payload = {
-            "message": f"To jest udawana odpowiedź z lokalnego środowiska.\n\nTryb działania: **{mode.upper()}**\nOtrzymałem od Ciebie: *{message}*{file_info}",
-        }
-
-        # Jeśli tryb to Go/No-Go, dodajemy dane draftu, aby frontend OTWARTYŁ CANVAS!
+        # ---------------------------------------------------------
+        # TRYB 1: GO/NO-GO (Zintegrowany z Twoim dotychczasowym API)
+        # ---------------------------------------------------------
         if mode == "gonogo":
-            response_payload["message"] = "Przeanalizowałem Twoje pliki. Otwórz edytor raportu po prawej stronie, aby zobaczyć szczegóły."
-            response_payload["draft_data"] = {
-                "summary": "To jest przykładowe podsumowanie z mocka. Wdrożenie wygląda obiecująco.",
-                "test_analysis": "Pokrycie testami wynosi 85%. Wszystkie testy funkcjonalne przeszły pomyślnie.",
-                "risks_eval": "Zignorowano mniejsze błędy UI zgłoszone przez użytkowników.",
-                "decision": "GO",
-                "justification": "Wszystkie twarde reguły (brak błędów krytycznych, >80% pokrycia) zostały spełnione."
-            }
-            # Możesz też tu dodać zmockowane ścieżki do wykresów, jeśli masz jakieś w folderze output/charts
-            # response_payload["chart_paths"] = ["output/charts/dummy_chart.png"]
+            if not files:
+                return {
+                    "message": "Aby wygenerować raport Go/No-Go, proszę załącz pliki z wynikami testów (CSV lub Excel) za pomocą ikony spinacza."
+                }
 
-        return response_payload
+            contents = {}
+            for file in files:
+                content = await file.read()
+                if len(content) > MAX_FILE_SIZE:
+                    raise HTTPException(status_code=413, detail=f"Plik {file.filename} jest za duży (max 5MB)")
+                
+                # Zabezpieczenie przed niewłaściwym formatem
+                ext = os.path.splitext(file.filename)[1].lower()
+                if ext not in {'.csv', '.xls', '.xlsx'}:
+                    return {"message": f"Ignoruję plik {file.filename}. Raporty Go/No-Go wymagają plików CSV lub Excel."}
+                
+                contents[file.filename] = content
+
+            if not contents:
+                return {"message": "Nie załączono żadnych prawidłowych plików tabelarycznych."}
+
+            # URUCHOMIENIE PIPELINE'U QA:
+            parsed_test_data = file_parser.extract_test_data_from_bytes(contents)
+            rag_context = rag.get_historical_context(lang=language)
+            historical_cache = storage.get_latest_history(project_name=project_id)
+
+            # Generowanie wykresów
+            chart_paths = chart_generator.generate_all_charts(
+                file_contents=contents,
+                project_name=project_id,
+                lang=language
+            )
+
+            # Traktujemy tekst wpisany przez usera jako "Ryzyka" / "Komentarz" do raportu
+            user_risks = message if message else "Brak dodatkowych komentarzy od użytkownika."
+
+            # Właściwe generowanie draftu z LLM
+            draft_json = report_generator.generate_structured_draft(
+                historical_cache=historical_cache,
+                rag_context=rag_context,
+                parsed_test_data=parsed_test_data,
+                user_risks=user_risks,
+                project_name=project_id,
+                lang=language
+            )
+
+            storage.save_to_cache(project_name=project_id, structured_data=draft_json)
+
+            msg_response = (
+                "Zakończyłem analizę wdrożenia i wygenerowałem wykresy. "
+                "Raport został przygotowany – możesz go zweryfikować i edytować w prawym panelu."
+            ) if language == "pl" else "Analysis complete. Please review the interactive report on the right."
+
+            return {
+                "message": msg_response,
+                "draft_data": draft_json,
+                "chart_paths": chart_paths
+            }
+
+        # ---------------------------------------------------------
+        # TRYB 2: ZWYKŁY CHATBOT
+        # ---------------------------------------------------------
+        elif mode == "chatbot":
+            sys_prompt = "Jesteś pomocnym asystentem QA (Quality Assurance) i inżynierem oprogramowania."
+            # Bezpośrednie odpytanie LLM zdefiniowanego w systemie
+            reply = llm.generate_response(sys_prompt, message, temperature=0.3)
+            return {"message": reply}
+
+        # ---------------------------------------------------------
+        # TRYB 3 & 4: TŁUMACZ / ANALIZA (Placeholdery dla kolegi)
+        # ---------------------------------------------------------
+        elif mode == "translator":
+            return {"message": f"Moduł tłumacza odbiera dane. [To funkcja, którą Twój kolega podepnie pod endpoint HPE]. Twoja wiadomość to: {message}"}
+            
+        elif mode == "analysis":
+            return {"message": f"Moduł analityczny z agentem Pandas uruchomiony. [Zarezerwowane pod integrację]. Przekazano plików: {len(files)}"}
+
+        else:
+            return {"message": "Nieznany tryb działania."}
 
     except Exception as e:
-        logger.error(f"Błąd w mock API: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Błąd w chat_endpoint: {e}", exc_info=True)
+        # Zwracamy błąd jako wiadomość czatu, żeby nie wysypać UI
+        return {"message": f"**Wystąpił błąd serwera:** {str(e)}"}
     
 
 @app.post("/api/v2/reports/draft")

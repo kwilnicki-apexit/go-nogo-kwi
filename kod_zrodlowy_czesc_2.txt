@@ -1,0 +1,1178 @@
+
+
+============================================================
+--- PLIK: .\frontend\src\components\deprecated\ReportForm.tsx ---
+============================================================
+
+// import { useRef } from 'react';
+// import type { Labels } from '../types';
+
+// const MAX_FILES = 20;
+
+// interface ReportFormProps {
+//   projectName: string;
+//   setProjectName: (val: string) => void;
+//   author: string;
+//   setAuthor: (val: string) => void;
+//   language: string;
+//   setLanguage: (val: string) => void;
+//   risks: string;
+//   setRisks: (val: string) => void;
+//   files: File[];
+//   setFiles: (files: File[]) => void;
+//   onGenerate: () => void;
+//   isLoading: boolean;
+//   labels: Labels;
+// }
+
+// export const ReportForm = ({
+//   projectName, setProjectName,
+//   author, setAuthor,
+//   language, setLanguage,
+//   risks, setRisks,
+//   files, setFiles,
+//   onGenerate, isLoading,
+//   labels,
+// }: ReportFormProps) => {
+//   const fileInputRef = useRef<HTMLInputElement>(null);
+
+//   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+//     if (e.target.files) {
+//       const newFiles = Array.from(e.target.files);
+//       const combined = [...files, ...newFiles].slice(0, MAX_FILES);
+//       setFiles(combined);
+//     }
+//   };
+
+//   const removeFile = (index: number) => {
+//     setFiles(files.filter((_, i) => i !== index));
+//     if (fileInputRef.current) {
+//       fileInputRef.current.value = '';
+//     }
+//   };
+
+//   return (
+//     <section className="card">
+//       <h2 className="card-title">{labels.projectParams}</h2>
+//       <div className="form-grid">
+//         <div className="form-group">
+//           <label className="form-label">{labels.projectName}</label>
+//           <input
+//             className="form-control"
+//             value={projectName}
+//             onChange={e => setProjectName(e.target.value)}
+//           />
+//         </div>
+//         <div className="form-group">
+//           <label className="form-label">{labels.reportAuthor}</label>
+//           <input
+//             className="form-control"
+//             value={author}
+//             onChange={e => setAuthor(e.target.value)}
+//           />
+//         </div>
+//         <div className="form-group full-width">
+//           <label className="form-label">{labels.outputLanguage}</label>
+//           <select
+//             className="form-control"
+//             value={language}
+//             onChange={e => setLanguage(e.target.value)}
+//           >
+//             <option value="pl">{labels.polish}</option>
+//             <option value="en">{labels.english}</option>
+//           </select>
+//         </div>
+//         <div className="form-group full-width">
+//           <label className="form-label">{labels.testFiles}</label>
+//           <input
+//             ref={fileInputRef}
+//             type="file"
+//             className="form-control"
+//             multiple
+//             accept=".csv,.xls,.xlsx"
+//             onChange={handleFileChange}
+//           />
+//           <div style={{
+//             display: 'flex',
+//             justifyContent: 'space-between',
+//             marginTop: '0.35rem',
+//             fontSize: '0.8rem',
+//             color: '#999',
+//           }}>
+//             <span>{labels.maxFiles}</span>
+//             <span>{files.length} / {MAX_FILES} {labels.fileCount}</span>
+//           </div>
+//           {files.length > 0 && (
+//             <div style={{ marginTop: '0.5rem' }}>
+//               {files.map((file, index) => (
+//                 <div key={index} className="file-item">
+//                   <span>
+//                     {file.name}
+//                     <span style={{ color: '#999', marginLeft: '0.5rem' }}>
+//                       ({(file.size / 1024).toFixed(1)} KB)
+//                     </span>
+//                   </span>
+//                   <button
+//                     onClick={() => removeFile(index)}
+//                     className="file-remove-btn"
+//                     title="Remove"
+//                   >
+//                     x
+//                   </button>
+//                 </div>
+//               ))}
+//             </div>
+//           )}
+//         </div>
+//         <div className="form-group full-width">
+//           <label className="form-label">{labels.identifiedRisks}</label>
+//           <textarea
+//             className="form-control"
+//             rows={3}
+//             style={{ resize: 'vertical' }}
+//             value={risks}
+//             onChange={e => setRisks(e.target.value)}
+//             placeholder={language === 'pl'
+//               ? 'Opisz znane ryzyka projektu...'
+//               : 'Describe known project risks...'}
+//           />
+//         </div>
+//       </div>
+//       <button
+//         className="btn btn-primary"
+//         onClick={onGenerate}
+//         disabled={isLoading || files.length === 0}
+//       >
+//         {isLoading ? labels.generating : labels.generateReport}
+//       </button>
+//       {files.length === 0 && (
+//         <p style={{ color: '#999', fontSize: '0.85rem', marginTop: '0.5rem' }}>
+//           {labels.addFileHint}
+//         </p>
+//       )}
+//     </section>
+//   );
+// };
+
+============================================================
+--- PLIK: .\frontend\src\components\deprecated\StructuredEditor.tsx ---
+============================================================
+
+// import { useState } from 'react';
+// import ReactQuill from 'react-quill-new';
+// import 'react-quill-new/dist/quill.snow.css';
+// import type { StructuredDraft, SectionConfig, Labels, EnabledSections } from '../types';
+
+// const SECTIONS: SectionConfig[] = [
+//   { key: 'summary', labelPl: 'Podsumowanie', labelEn: 'Summary', icon: '' },
+//   { key: 'test_analysis', labelPl: 'Analiza testów', labelEn: 'Test analysis', icon: '' },
+//   { key: 'risks_eval', labelPl: 'Ocena ryzyk', labelEn: 'Risk evaluation', icon: '' },
+//   { key: 'decision', labelPl: 'Decyzja', labelEn: 'Decision', icon: '' },
+//   { key: 'justification', labelPl: 'Uzasadnienie', labelEn: 'Justification', icon: '' },
+// ];
+
+// interface StructuredEditorProps {
+//   draft: StructuredDraft;
+//   setDraft: (draft: StructuredDraft) => void;
+//   onExport: (format: 'pdf' | 'docx' | 'md', enabledSections: EnabledSections) => void;
+//   exportMessage: string;
+//   chartPaths: string[];
+//   language: string;
+//   labels: Labels;
+// }
+
+// const QUILL_MODULES = {
+//   toolbar: [
+//     [{ header: [1, 2, 3, false] }],
+//     ['bold', 'italic', 'underline', 'strike'],
+//     [{ list: 'ordered' }, { list: 'bullet' }],
+//     [{ color: [] }, { background: [] }],
+//     ['blockquote'],
+//     ['clean'],
+//   ],
+// };
+
+// const QUILL_FORMATS = [
+//   'header', 'bold', 'italic', 'underline', 'strike',
+//   'list', 'bullet', 'color', 'background', 'blockquote',
+// ];
+
+// export const StructuredEditor = ({
+//   draft, setDraft, onExport, exportMessage, chartPaths, language, labels,
+// }: StructuredEditorProps) => {
+//   const [enabledSections, setEnabledSections] = useState<EnabledSections>({
+//     summary: true,
+//     test_analysis: true,
+//     risks_eval: true,
+//     decision: true,
+//     justification: true,
+//   });
+
+//   const isPl = language === 'pl';
+
+//   const hasDraft = draft && (draft.summary || draft.test_analysis || draft.decision);
+//   if (!hasDraft) return null;
+
+//   const handleChange = (key: keyof StructuredDraft, value: string) => {
+//     setDraft({ ...draft, [key]: value });
+//   };
+
+//   const toggleSection = (key: keyof StructuredDraft) => {
+//     if (key === 'decision') return;
+//     setEnabledSections(prev => ({ ...prev, [key]: !prev[key] }));
+//   };
+
+//   const enabledCount = Object.values(enabledSections).filter(Boolean).length;
+//   const allEnabled = enabledCount === SECTIONS.length;
+
+//   const toggleAll = () => {
+//     const newState = !allEnabled;
+//     const updated = { ...enabledSections };
+//     for (const s of SECTIONS) {
+//       updated[s.key] = newState;
+//     }
+//     updated.decision = true;
+//     setEnabledSections(updated);
+//   };
+
+//   const decisionColor = draft.decision === 'GO' ? '#4CAF50' : '#F44336';
+
+//   return (
+//     <section className="card" style={{ animation: 'fadeIn 0.5s' }}>
+//       <h2 className="card-title" style={{ color: 'var(--orlen-red)' }}>
+//         {labels.reviewEdit}
+//       </h2>
+//       <p className="hint-text">{labels.reviewHint}</p>
+
+//       <div className={`decision-banner ${draft.decision === 'GO' ? 'decision-go' : 'decision-nogo'}`}>
+//         <span className="decision-label">{labels.aiRecommendation}</span>
+//         <div className="decision-value" style={{ color: decisionColor }}>
+//           {draft.decision || '-'}
+//         </div>
+//       </div>
+
+//       <div className="section-controls">
+//         <button className="btn-toggle-all" onClick={toggleAll}>
+//           {allEnabled ? labels.deselectAll : labels.selectAll}
+//         </button>
+//         <span className="section-count">
+//           {enabledCount} / {SECTIONS.length} {labels.sectionsIncluded}
+//         </span>
+//       </div>
+
+//       {SECTIONS.map((section) => {
+//         const enabled = enabledSections[section.key];
+//         const sectionLabel = isPl ? section.labelPl : section.labelEn;
+
+//         return (
+//           <div
+//             key={section.key}
+//             className={`editor-section ${enabled ? 'section-enabled' : 'section-disabled'}`}
+//           >
+//             <div className="section-header" onClick={() => toggleSection(section.key)}>
+//               <div className="section-header-left">
+//                 <input
+//                   type="checkbox"
+//                   checked={enabled}
+//                   onChange={() => toggleSection(section.key)}
+//                   onClick={e => e.stopPropagation()}
+//                   className="section-checkbox"
+//                   disabled={section.key === 'decision'}
+//                 />
+//                 <span className="section-title" style={{
+//                   color: section.key === 'decision' ? decisionColor : undefined,
+//                 }}>
+//                   {sectionLabel}
+//                 </span>
+//                 {section.key === 'decision' && (
+//                   <span className="decision-badge" style={{ backgroundColor: decisionColor }}>
+//                     {draft.decision}
+//                   </span>
+//                 )}
+//               </div>
+//               <span className="section-toggle-hint">
+//                 {enabled ? labels.sectionEnabled : labels.sectionDisabled}
+//               </span>
+//             </div>
+
+//             {enabled && (
+//               <div className="section-body">
+//                 {section.key === 'decision' ? (
+//                   <select
+//                     className="form-control decision-select"
+//                     value={draft.decision}
+//                     onChange={e => handleChange('decision', e.target.value)}
+//                     style={{ color: decisionColor }}
+//                   >
+//                     <option value="GO">GO</option>
+//                     <option value="NO-GO">NO-GO</option>
+//                   </select>
+//                 ) : (
+//                   <ReactQuill
+//                     theme="snow"
+//                     value={draft[section.key]}
+//                     onChange={(value: string) => handleChange(section.key, value)}
+//                     modules={QUILL_MODULES}
+//                     formats={QUILL_FORMATS}
+//                   />
+//                 )}
+//               </div>
+//             )}
+//           </div>
+//         );
+//       })}
+
+//       {chartPaths.length > 0 && (
+//         <div className="charts-section">
+//           <label className="form-label" style={{ fontWeight: 'bold' }}>
+//             {labels.generatedCharts} ({chartPaths.length})
+//           </label>
+//           <div className="charts-grid">
+//             {chartPaths.map((path, i) => {
+//               const name = path.split('/').pop() || `chart_${i}`;
+//               return (
+//                 <div key={i} className="chart-item">
+//                   <span className="chart-name">{name}</span>
+//                 </div>
+//               );
+//             })}
+//           </div>
+//         </div>
+//       )}
+
+//       <div className="button-group">
+//         <button className="btn btn-secondary" onClick={() => onExport('pdf', enabledSections)}>
+//           {labels.exportPdf}
+//         </button>
+//         <button className="btn btn-outline" onClick={() => onExport('docx', enabledSections)}>
+//           {labels.exportDocx}
+//         </button>
+//         <button className="btn btn-outline" onClick={() => onExport('md', enabledSections)}>
+//           {labels.exportMd}
+//         </button>
+//       </div>
+
+//       {exportMessage && (
+//         <div className={`alert ${exportMessage.includes('Błąd') || exportMessage.includes('Error')
+//           ? 'alert-error' : 'alert-success'}`}>
+//           {exportMessage}
+//         </div>
+//       )}
+//     </section>
+//   );
+// };
+
+============================================================
+--- PLIK: .\frontend\src\i18n\labels.ts ---
+============================================================
+
+// frontend/src/i18n/labels.ts
+import type { Labels } from '../types';
+
+export const labelsPl: Labels = {
+  headerTitle: 'QA Asystent AI',
+  chatPlaceholder: 'Napisz wiadomość...',
+  newProject: 'Nowy projekt',
+  searchProjects: 'Szukaj projektów...',
+  canvasTitle: 'Edytor raportu',
+  downloadPdf: 'PDF',
+  downloadDocx: 'DOCX',
+  downloadMd: 'MD',
+  sendMessage: 'Wyślij',
+  attachFiles: 'Załącz pliki',
+  modeChatbot: 'Chatbot',
+  modeGoNogo: 'Go/No-Go',
+  modeTranslator: 'Tłumacz',
+  modeAnalysis: 'Analiza',
+  openCanvas: 'Otwórz edytor',
+  closeCanvas: 'Zamknij edytor',
+  noProjects: 'Brak projektów',
+  today: 'Dzisiaj',
+  yesterday: 'Wczoraj',
+  older: 'Starsze',
+  welcome: 'Witaj w asystencie QA',
+  welcomeSub: 'Wybierz tryb i rozpocznij rozmowę lub wgraj pliki testowe.',
+  generatingFile: 'Generowanie pliku...',
+  successFile: 'Sukces! Plik zapisano:',
+  errorExport: 'Błąd podczas eksportu pliku.',
+  errorAi: 'Wystąpił błąd podczas łączenia z AI.',
+  maxFiles: 'Maks. 20 plików, do 5 MB każdy.',
+  newLine: 'nowa linia',
+  editName: 'Zmień nazwę',
+  archive: 'Archiwizuj',
+  unarchive: 'Przywróć',
+  deleteProject: 'Usuń',
+  archived: 'Archiwum',
+  active: 'Aktywne',
+  confirmDelete: 'Czy na pewno chcesz usunąć ten projekt?',
+  ragConnect: 'Połącz RAG',
+  ragDisconnect: 'Odłącz RAG',
+  ragConnected: 'RAG aktywny',
+  ragIndexing: 'Indeksowanie...',
+  ragTooltip: 'Połącz z ChromaDB/S3 aby utrzymać kontekst RAG',
+  darkMode: 'Tryb ciemny',
+  lightMode: 'Tryb jasny',
+  cancel: 'Anuluj',
+  save: 'Zapisz',
+  rename: 'Zmień nazwę',
+};
+
+export const labelsEn: Labels = {
+  headerTitle: 'QA AI Assistant',
+  chatPlaceholder: 'Type a message...',
+  newProject: 'New Project',
+  searchProjects: 'Search projects...',
+  canvasTitle: 'Report Editor',
+  downloadPdf: 'PDF',
+  downloadDocx: 'DOCX',
+  downloadMd: 'MD',
+  sendMessage: 'Send',
+  attachFiles: 'Attach files',
+  modeChatbot: 'Chatbot',
+  modeGoNogo: 'Go/No-Go',
+  modeTranslator: 'Translator',
+  modeAnalysis: 'Analysis',
+  openCanvas: 'Open editor',
+  closeCanvas: 'Close editor',
+  noProjects: 'No projects',
+  today: 'Today',
+  yesterday: 'Yesterday',
+  older: 'Older',
+  welcome: 'Welcome to QA Assistant',
+  welcomeSub: 'Select a mode and start a conversation or upload test files.',
+  generatingFile: 'Generating file...',
+  successFile: 'Success! File saved:',
+  errorExport: 'Error during file export.',
+  errorAi: 'An error occurred connecting to AI.',
+  maxFiles: 'Max 20 files, each up to 5 MB.',
+  newLine: 'new line',
+  editName: 'Rename',
+  archive: 'Archive',
+  unarchive: 'Unarchive',
+  deleteProject: 'Delete',
+  archived: 'Archived',
+  active: 'Active',
+  confirmDelete: 'Are you sure you want to delete this project?',
+  ragConnect: 'Connect RAG',
+  ragDisconnect: 'Disconnect RAG',
+  ragConnected: 'RAG active',
+  ragIndexing: 'Indexing...',
+  ragTooltip: 'Connect to ChromaDB/S3 to maintain RAG context',
+  darkMode: 'Dark mode',
+  lightMode: 'Light mode',
+  cancel: 'Cancel',
+  save: 'Save',
+  rename: 'Rename',
+};
+
+export const getLabels = (lang: string): Labels => {
+  return lang === 'pl' ? labelsPl : labelsEn;
+};
+
+============================================================
+--- PLIK: .\frontend\src\styles\main.css ---
+============================================================
+
+/* frontend/src/styles/main.css */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --font-family-sans: 'Inter', system-ui, -apple-system, sans-serif;
+}
+
+/* DEKLARACJE DLA TRYBU JASNEGO */
+:root {
+  --color-orlen: #e3000f;
+  --color-orlen-dark: #b8000c;
+
+  --color-bg: #f3f4f6;
+  --color-surface: #ffffff;
+  --color-surface-secondary: #f8fafc;
+  --color-surface-tertiary: #e2e8f0;
+
+  --color-border: #e2e8f0;
+  --color-border-strong: #cbd5e1;
+
+  --color-text-primary: #0f172a;
+  --color-text-secondary: #475569;
+  --color-text-tertiary: #64748b;
+  --color-text-muted: #94a3b8;
+
+  /* Sidebar specific */
+  --sidebar-bg: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+  --sidebar-header-bg: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+  --sidebar-item-hover: rgba(0, 0, 0, 0.04);
+  --sidebar-item-active: rgba(227, 0, 15, 0.04);
+  --sidebar-item-active-border: rgba(227, 0, 15, 0.5);
+  --sidebar-new-btn-bg: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+  --sidebar-new-btn-hover: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+  --sidebar-search-bg: #ffffff;
+  --sidebar-search-focus-ring: rgba(227, 0, 15, 0.2);
+  --sidebar-toggle-bg: linear-gradient(135deg, #f1f5f9 0%, #e8edf2 100%);
+  --sidebar-toggle-hover: linear-gradient(135deg, #e2e8f0 0%, #dde3ea 100%);
+  --sidebar-footer-bg: linear-gradient(0deg, #f1f5f9 0%, #f8fafc 100%);
+  --sidebar-divider: linear-gradient(90deg, transparent, #cbd5e1, transparent);
+
+  /* Context menu */
+  --ctx-menu-bg: #ffffff;
+  --ctx-menu-shadow: 0 8px 30px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.06);
+  --ctx-menu-border: #e2e8f0;
+  --ctx-delete-confirm-bg: #fef2f2;
+  --ctx-delete-confirm-border: #fecaca;
+  --ctx-delete-confirm-text: #991b1b;
+  --ctx-delete-yes-bg: #dc2626;
+  --ctx-delete-yes-hover: #b91c1c;
+  --ctx-delete-no-bg: transparent;
+  --ctx-delete-no-hover: rgba(0,0,0,0.04);
+  --ctx-delete-no-text: #64748b;
+
+  /* Input */
+  --input-box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  --input-focus-shadow: 0 0 0 2px rgba(227, 0, 15, 0.12), 0 4px 16px rgba(0, 0, 0, 0.08);
+  --input-focus-border: rgba(227, 0, 15, 0.35);
+
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 12px;
+}
+
+/* DEKLARACJE DLA TRYBU CIEMNEGO */
+.dark {
+  --color-bg: #09090b;
+  --color-surface: #18181b;
+  --color-surface-secondary: #111827;
+  --color-surface-tertiary: #27272a;
+
+  --color-border: #27272a;
+  --color-border-strong: #3f3f46;
+
+  --color-text-primary: #f8fafc;
+  --color-text-secondary: #cbd5e1;
+  --color-text-tertiary: #94a3b8;
+  --color-text-muted: #64748b;
+
+  /* Sidebar specific dark */
+  --sidebar-bg: linear-gradient(180deg, #111827 0%, #0f1419 100%);
+  --sidebar-header-bg: linear-gradient(135deg, #1a1f2e 0%, #151921 100%);
+  --sidebar-item-hover: rgba(255, 255, 255, 0.04);
+  --sidebar-item-active: rgba(227, 0, 15, 0.08);
+  --sidebar-item-active-border: rgba(227, 0, 15, 0.6);
+  --sidebar-new-btn-bg: linear-gradient(135deg, #1e2433 0%, #1a1f2e 100%);
+  --sidebar-new-btn-hover: linear-gradient(135deg, #252d3f 0%, #1e2433 100%);
+  --sidebar-search-bg: #1a1f2e;
+  --sidebar-search-focus-ring: rgba(227, 0, 15, 0.25);
+  --sidebar-toggle-bg: linear-gradient(135deg, #1e2433 0%, #1a1f2e 100%);
+  --sidebar-toggle-hover: linear-gradient(135deg, #252d3f 0%, #222838 100%);
+  --sidebar-footer-bg: linear-gradient(0deg, #0d1117 0%, #111827 100%);
+  --sidebar-divider: linear-gradient(90deg, transparent, #3f3f46, transparent);
+
+  /* Context menu dark */
+  --ctx-menu-bg: #1e2433;
+  --ctx-menu-shadow: 0 8px 30px rgba(0, 0, 0, 0.4), 0 2px 8px rgba(0, 0, 0, 0.3);
+  --ctx-menu-border: #3f3f46;
+  --ctx-delete-confirm-bg: rgba(153, 27, 27, 0.12);
+  --ctx-delete-confirm-border: rgba(220, 38, 38, 0.25);
+  --ctx-delete-confirm-text: #fca5a5;
+  --ctx-delete-yes-bg: #dc2626;
+  --ctx-delete-yes-hover: #ef4444;
+  --ctx-delete-no-bg: transparent;
+  --ctx-delete-no-hover: rgba(255,255,255,0.06);
+  --ctx-delete-no-text: #94a3b8;
+
+  /* Input dark */
+  --input-box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  --input-focus-shadow: 0 0 0 2px rgba(227, 0, 15, 0.2), 0 4px 16px rgba(0, 0, 0, 0.3);
+  --input-focus-border: rgba(227, 0, 15, 0.45);
+}
+
+/* ── Base ── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; }
+html, body, #root { height: 100%; overflow: hidden; }
+
+body {
+  font-family: var(--font-family-sans);
+  font-size: 15px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  background-color: var(--color-bg);
+  color: var(--color-text-primary);
+  transition: background-color 0.2s, color 0.2s;
+}
+
+/* ── Scrollbars ── */
+.custom-scrollbar::-webkit-scrollbar { width: 5px; height: 5px; }
+.custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+.custom-scrollbar::-webkit-scrollbar-thumb { background-color: var(--color-border-strong); border-radius: 3px; }
+.custom-scrollbar::-webkit-scrollbar-thumb:hover { background-color: var(--color-text-tertiary); }
+
+button {
+  font-family: inherit; font-size: inherit; line-height: inherit;
+  border: none; background: none; cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center;
+  transition: all 0.15s ease-in-out;
+}
+
+/* ── Sidebar Styles ── */
+.sidebar-root {
+  background: var(--sidebar-bg);
+  border-right: 1px solid var(--color-border);
+}
+
+.sidebar-header {
+  background: var(--sidebar-header-bg);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.sidebar-logo-icon {
+  background: linear-gradient(135deg, #e3000f 0%, #b8000c 100%);
+  box-shadow: 0 2px 8px rgba(227, 0, 15, 0.3);
+}
+
+.sidebar-new-btn {
+  background: var(--sidebar-new-btn-bg);
+  border: 1px solid var(--color-border);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  transition: all 0.2s ease;
+}
+.sidebar-new-btn:hover {
+  background: var(--sidebar-new-btn-hover);
+  border-color: var(--color-border-strong);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+  transform: translateY(-1px);
+}
+.sidebar-new-btn:active {
+  transform: translateY(0);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.sidebar-search {
+  background: var(--sidebar-search-bg);
+  border: 1px solid var(--color-border);
+  transition: all 0.2s ease;
+}
+.sidebar-search:focus-within {
+  border-color: var(--color-orlen);
+  box-shadow: 0 0 0 3px var(--sidebar-search-focus-ring);
+}
+
+.sidebar-tab-group {
+  background: var(--sidebar-search-bg);
+  border: 1px solid var(--color-border);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+.sidebar-tab-active {
+  background: var(--color-surface-tertiary);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+}
+
+.sidebar-group-label {
+  background: linear-gradient(90deg, transparent, var(--color-border), transparent);
+  height: 1px;
+  margin: 0;
+}
+
+.sidebar-project-item {
+  transition: all 0.15s ease;
+  border-left: 3px solid transparent;
+  margin: 2px 8px;
+  border-radius: 8px;
+}
+.sidebar-project-item:hover {
+  background: var(--sidebar-item-hover);
+  border-left-color: var(--color-border-strong);
+}
+.sidebar-project-item.active {
+  background: var(--sidebar-item-active);
+  border-left-color: var(--sidebar-item-active-border);
+  box-shadow: 0 1px 4px rgba(227, 0, 15, 0.06);
+}
+
+.sidebar-more-btn {
+  opacity: 0;
+  transition: all 0.15s ease;
+  border-radius: 6px;
+}
+.sidebar-project-item:hover .sidebar-more-btn,
+.sidebar-more-btn.visible {
+  opacity: 1;
+}
+.sidebar-more-btn:hover {
+  background: var(--color-surface-tertiary);
+  color: var(--color-text-primary);
+}
+
+.sidebar-footer {
+  background: var(--sidebar-footer-bg);
+  border-top: 1px solid var(--color-border);
+}
+
+.sidebar-theme-btn {
+  transition: all 0.2s ease;
+  border-radius: 8px;
+  border: 1px solid transparent;
+}
+.sidebar-theme-btn:hover {
+  background: var(--sidebar-item-hover);
+  border-color: var(--color-border);
+}
+
+/* ── Context Menu ── */
+.ctx-menu {
+  background: var(--ctx-menu-bg);
+  border: 1px solid var(--ctx-menu-border);
+  box-shadow: var(--ctx-menu-shadow);
+  border-radius: 10px;
+  padding: 4px;
+  min-width: 160px;
+  backdrop-filter: blur(12px);
+}
+
+.ctx-menu-item {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: flex-start;
+  text-align: left;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  transition: all 0.12s ease;
+  white-space: nowrap;
+}
+.ctx-menu-item:hover {
+  background: var(--sidebar-item-hover);
+  color: var(--color-text-primary);
+}
+.ctx-menu-item.danger {
+  color: var(--color-orlen);
+}
+.ctx-menu-item.danger:hover {
+  background: rgba(227, 0, 15, 0.06);
+}
+
+.ctx-menu-divider {
+  height: 1px;
+  background: var(--sidebar-divider);
+  margin: 3px 6px;
+  border: none;
+}
+
+/* Delete confirmation inline block */
+.ctx-menu-delete-confirm {
+  padding: 6px 8px;
+  border-radius: 6px;
+  background: var(--ctx-delete-confirm-bg);
+  border: 1px solid var(--ctx-delete-confirm-border);
+}
+.ctx-menu-delete-confirm-text {
+  display: block;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--ctx-delete-confirm-text);
+  line-height: 1.35;
+  text-align: left;
+  margin-bottom: 6px;
+}
+.ctx-menu-delete-confirm-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.ctx-menu-delete-yes {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  color: #ffffff;
+  background: var(--ctx-delete-yes-bg);
+  border: none;
+  cursor: pointer;
+  transition: background 0.12s ease;
+  white-space: nowrap;
+}
+.ctx-menu-delete-yes:hover {
+  background: var(--ctx-delete-yes-hover);
+}
+.ctx-menu-delete-no {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3px 10px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--ctx-delete-no-text);
+  background: var(--ctx-delete-no-bg);
+  border: none;
+  cursor: pointer;
+  transition: all 0.12s ease;
+  white-space: nowrap;
+}
+.ctx-menu-delete-no:hover {
+  background: var(--ctx-delete-no-hover);
+  color: var(--color-text-primary);
+}
+
+/* ── Input Area ── */
+.input-box-wrapper {
+  border-radius: var(--radius-lg);
+  border: 1.5px solid var(--color-border);
+  background: var(--color-surface);
+  box-shadow: var(--input-box-shadow);
+  transition: all 0.2s ease;
+}
+.input-box-wrapper:focus-within {
+  border-color: var(--input-focus-border);
+  box-shadow: var(--input-focus-shadow);
+}
+.input-box-wrapper:hover:not(:focus-within) {
+  border-color: var(--color-border-strong);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+}
+
+.input-attach-btn {
+  transition: all 0.15s ease;
+  border-radius: 8px;
+  padding: 10px;
+  color: var(--color-text-tertiary);
+}
+.input-attach-btn:hover {
+  background: var(--color-surface-tertiary);
+  color: var(--color-orlen);
+}
+
+.input-send-btn {
+  transition: all 0.2s ease;
+  border-radius: 10px;
+  padding: 12px;
+}
+.input-send-btn.enabled {
+  background: linear-gradient(135deg, #e3000f 0%, #c5000d 100%);
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(227, 0, 15, 0.3);
+}
+.input-send-btn.enabled:hover {
+  background: linear-gradient(135deg, #c5000d 0%, #a3000a 100%);
+  box-shadow: 0 4px 12px rgba(227, 0, 15, 0.4);
+  transform: translateY(-1px);
+}
+.input-send-btn.enabled:active {
+  transform: translateY(0);
+  box-shadow: 0 1px 4px rgba(227, 0, 15, 0.2);
+}
+.input-send-btn.disabled {
+  background: var(--color-surface-tertiary);
+  color: var(--color-text-muted);
+  cursor: not-allowed;
+}
+
+/* ── Quill & Markdown Overrides ── */
+.canvas-editor .ql-toolbar.ql-snow {
+  border: none !important; border-bottom: 1px solid var(--color-border) !important;
+  background-color: var(--color-surface) !important;
+  padding: 10px 16px !important; position: sticky; top: 0; z-index: 10;
+}
+.canvas-editor .ql-toolbar .ql-stroke { stroke: var(--color-text-secondary) !important; }
+.canvas-editor .ql-toolbar .ql-fill { fill: var(--color-text-secondary) !important; }
+.canvas-editor .ql-toolbar .ql-picker-label { color: var(--color-text-secondary) !important; }
+.canvas-editor .ql-toolbar .ql-picker-options { background-color: var(--color-surface) !important; border-color: var(--color-border) !important; color: var(--color-text-primary) !important; }
+.canvas-editor .ql-container.ql-snow { border: none !important; font-family: var(--font-family-sans) !important; font-size: 15px !important; }
+.canvas-editor .ql-editor { min-height: 400px; padding: 32px !important; color: var(--color-text-primary); line-height: 1.8; }
+.dark .canvas-editor .ql-editor blockquote { background-color: rgba(227, 0, 15, 0.05); }
+
+/* Animacje */
+@keyframes slideInRight { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+@keyframes fadeInUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes pulseDot { 0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; } 40% { transform: scale(1); opacity: 1; } }
+@keyframes ctxMenuIn { from { opacity: 0; transform: translateY(-4px) scale(0.97); } to { opacity: 1; transform: translateY(0) scale(1); } }
+.animate-slide-in-right { animation: slideInRight 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+.animate-fade-in-up { animation: fadeInUp 0.25s ease-out forwards; }
+.animate-ctx-menu { animation: ctxMenuIn 0.15s ease-out forwards; }
+
+.typing-dot {
+  width: 6px; height: 6px; border-radius: 50%; background-color: var(--color-orlen);
+  display: inline-block; animation: pulseDot 1.4s infinite ease-in-out both;
+}
+.typing-dot:nth-child(1) { animation-delay: -0.32s; }
+.typing-dot:nth-child(2) { animation-delay: -0.16s; }
+.typing-dot:nth-child(3) { animation-delay: 0s; }
+
+============================================================
+--- PLIK: .\frontend\src\types\index.ts ---
+============================================================
+
+// frontend/src/types/index.ts
+
+export type AppMode = 'chatbot' | 'gonogo' | 'translator' | 'analysis';
+export type ThemeMode = 'light' | 'dark';
+
+export interface ChatMessage {
+  id: string;
+  role: 'user' | 'assistant' | 'system';
+  content: string;
+  timestamp: Date;
+  mode: AppMode;
+  draftData?: StructuredDraft;
+  chartPaths?: string[];
+}
+
+export interface Project {
+  id: string;
+  name: string;
+  mode: AppMode;
+  messages: ChatMessage[];
+  createdAt: Date;
+  updatedAt: Date;
+  archived: boolean;
+  /** ChromaDB collection ID or S3 prefix for RAG context */
+  ragContextId?: string;
+  /** Whether RAG indexing is enabled */
+  ragEnabled: boolean;
+  canvasContent?: string;
+  draft?: StructuredDraft;
+  chartPaths?: string[];
+}
+
+export interface StructuredDraft {
+  summary: string;
+  test_analysis: string;
+  risks_eval: string;
+  decision: string;
+  justification: string;
+}
+
+export interface DraftResponse {
+  draft: StructuredDraft;
+  charts: string[];
+}
+
+export interface ExportRequest {
+  project_name: string;
+  edited_text: string;
+  format: 'pdf' | 'docx' | 'md';
+  language: string;
+  author: string;
+  chart_paths: string[];
+}
+
+export interface ChatRequest {
+  project_id: string;
+  mode: AppMode;
+  message: string;
+  language: string;
+  canvas_content?: string;
+  rag_context_id?: string;
+  files?: File[];
+}
+
+export interface ChatResponse {
+  message: string;
+  draft_data?: StructuredDraft;
+  chart_paths?: string[];
+  canvas_html?: string;
+}
+
+export interface AttachedFile {
+  file: File;
+  id: string;
+}
+
+export interface RagIndexRequest {
+  project_id: string;
+  collection_name: string;
+}
+
+export interface RagIndexResponse {
+  context_id: string;
+  status: string;
+  document_count: number;
+}
+
+export interface Labels {
+  headerTitle: string;
+  chatPlaceholder: string;
+  newProject: string;
+  searchProjects: string;
+  canvasTitle: string;
+  downloadPdf: string;
+  downloadDocx: string;
+  downloadMd: string;
+  sendMessage: string;
+  attachFiles: string;
+  modeChatbot: string;
+  modeGoNogo: string;
+  modeTranslator: string;
+  modeAnalysis: string;
+  openCanvas: string;
+  closeCanvas: string;
+  noProjects: string;
+  today: string;
+  yesterday: string;
+  older: string;
+  welcome: string;
+  welcomeSub: string;
+  generatingFile: string;
+  successFile: string;
+  errorExport: string;
+  errorAi: string;
+  maxFiles: string;
+  newLine: string;
+  editName: string;
+  archive: string;
+  unarchive: string;
+  deleteProject: string;
+  archived: string;
+  active: string;
+  confirmDelete: string;
+  ragConnect: string;
+  ragDisconnect: string;
+  ragConnected: string;
+  ragIndexing: string;
+  ragTooltip: string;
+  darkMode: string;
+  lightMode: string;
+  cancel: string;
+  save: string;
+  rename: string;
+}
+
+============================================================
+--- PLIK: .\frontend\src\lib\utils.ts ---
+============================================================
+
+// frontend/src/lib/utils.ts
+import { clsx, type ClassValue } from 'clsx';
+import { twMerge } from 'tailwind-merge';
+
+export function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs));
+}
+
+export function generateId(): string {
+  return `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+}
+
+export function formatFileSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+export function formatTime(date: Date): string {
+  return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+}
+
+export function isToday(date: Date): boolean {
+  const today = new Date();
+  return date.toDateString() === today.toDateString();
+}
+
+export function isYesterday(date: Date): boolean {
+  const yesterday = new Date();
+  yesterday.setDate(yesterday.getDate() - 1);
+  return date.toDateString() === yesterday.toDateString();
+}
+
+export function stripHtml(html: string): string {
+  let text = html;
+  text = text.replace(/<br\s*\/?>/gi, '\n');
+  text = text.replace(/<\/p><p>/gi, '\n\n');
+  text = text.replace(/<\/li><li>/gi, '\n- ');
+  text = text.replace(/<li>/gi, '- ');
+  text = text.replace(/<[^>]+>/g, '');
+  text = text.replace(/&nbsp;/g, ' ');
+  text = text.replace(/&amp;/g, '&');
+  text = text.replace(/&lt;/g, '<');
+  text = text.replace(/&gt;/g, '>');
+  text = text.replace(/\n{3,}/g, '\n\n');
+  return text.trim();
+}
+
+export function draftToHtml(
+  draft: {
+    summary: string;
+    test_analysis: string;
+    risks_eval: string;
+    decision: string;
+    justification: string;
+  },
+  isPl: boolean
+): string {
+  const sections = [
+    { heading: isPl ? 'Podsumowanie' : 'Summary', content: draft.summary },
+    { heading: isPl ? 'Analiza testów' : 'Test Analysis', content: draft.test_analysis },
+    { heading: isPl ? 'Ocena ryzyk' : 'Risk Evaluation', content: draft.risks_eval },
+    {
+      heading: isPl ? 'Decyzja' : 'Decision',
+      content: `<strong style="font-size:1.3em;color:${draft.decision === 'GO' ? '#10b981' : '#ef4444'}">${draft.decision}</strong>`,
+    },
+    { heading: isPl ? 'Uzasadnienie' : 'Justification', content: draft.justification },
+  ];
+
+  return sections
+    .filter(s => s.content)
+    .map(s => `<h2>${s.heading}</h2>\n${s.content}`)
+    .join('\n\n');
+}
+
+export function htmlToMarkdown(html: string): string {
+  let md = html;
+  md = md.replace(/<h1[^>]*>(.*?)<\/h1>/gi, '# $1\n');
+  md = md.replace(/<h2[^>]*>(.*?)<\/h2>/gi, '## $1\n');
+  md = md.replace(/<h3[^>]*>(.*?)<\/h3>/gi, '### $1\n');
+  md = md.replace(/<strong[^>]*>(.*?)<\/strong>/gi, '**$1**');
+  md = md.replace(/<em[^>]*>(.*?)<\/em>/gi, '*$1*');
+  md = md.replace(/<br\s*\/?>/gi, '\n');
+  md = md.replace(/<\/p>\s*<p>/gi, '\n\n');
+  md = md.replace(/<li[^>]*>(.*?)<\/li>/gi, '- $1\n');
+  md = md.replace(/<[^>]+>/g, '');
+  md = md.replace(/&nbsp;/g, ' ');
+  md = md.replace(/&amp;/g, '&');
+  md = md.replace(/&lt;/g, '<');
+  md = md.replace(/&gt;/g, '>');
+  md = md.replace(/\n{3,}/g, '\n\n');
+  return md.trim();
+}
+
+============================================================
+--- PLIK: .\frontend\src\hooks\useTheme.ts ---
+============================================================
+
+// frontend/src/hooks/useTheme.ts
+import { useState, useEffect, useCallback } from 'react';
+import type { ThemeMode } from '../types';
+
+export function useTheme() {
+  const [theme, setTheme] = useState<ThemeMode>(() => {
+    const stored = localStorage.getItem('qa-theme');
+    if (stored === 'dark' || stored === 'light') return stored;
+    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  });
+
+  useEffect(() => {
+    const root = document.documentElement;
+    if (theme === 'dark') {
+      root.classList.add('dark');
+    } else {
+      root.classList.remove('dark');
+    }
+    localStorage.setItem('qa-theme', theme);
+  }, [theme]);
+
+  const toggleTheme = useCallback(() => {
+    setTheme(prev => (prev === 'dark' ? 'light' : 'dark'));
+  }, []);
+
+  return { theme, toggleTheme };
+}
