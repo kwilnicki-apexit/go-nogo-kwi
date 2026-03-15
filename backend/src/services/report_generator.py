@@ -23,8 +23,12 @@ class ReportGenerator:
         self.final_output_path = Config.OUTPUT_REPORTS_PATH
 
         current_dir = os.path.dirname(os.path.abspath(__file__))
-        self.font_regular = os.path.join(current_dir, "..", "utils", "fonts", "Roboto-Regular.ttf")
-        self.font_bold = os.path.join(current_dir, "..", "utils", "fonts", "Roboto-Bold.ttf")
+        self.font_dir = os.path.join(current_dir, "..", "utils", "fonts")
+        
+        self.font_regular = os.path.join(self.font_dir, "Roboto-Regular.ttf")
+        self.font_bold = os.path.join(self.font_dir, "Roboto-Bold.ttf")
+        self.font_italic = os.path.join(self.font_dir, "Roboto-Italic.ttf")
+        self.font_bold_italic = os.path.join(self.font_dir, "Roboto-BoldItalic.ttf")
 
         os.makedirs(self.final_output_path, exist_ok=True)
 
@@ -223,85 +227,122 @@ Required keys:
             pdf = _StyledPDF(labels, orientation="P", unit="mm", format="A4")
             pdf.alias_nb_pages()
             
-            has_roboto = os.path.exists(self.font_regular)
-            has_roboto_bold = os.path.exists(self.font_bold)
 
-            if has_roboto:
-                pdf.add_font("Roboto", "", self.font_regular, uni=True)
-                if has_roboto_bold:
-                    pdf.add_font("Roboto", "B", self.font_bold, uni=True)
-                else:
-                    pdf.add_font("Roboto", "B", self.font_regular, uni=True)
+            if os.path.exists(self.font_regular):
+                # style=""
+                pdf.add_font("Roboto", style="", fname=self.font_regular)
+                
+                # style="B"
+                if os.path.exists(self.font_bold):
+                    pdf.add_font("Roboto", style="B", fname=self.font_bold)
+                
+                # style="I"
+                if os.path.exists(self.font_italic):
+                    pdf.add_font("Roboto", style="I", fname=self.font_italic)
+                
+                # style="BI"
+                if os.path.exists(self.font_bold_italic):
+                    pdf.add_font("Roboto", style="BI", fname=self.font_bold_italic)
+                
                 pdf.default_font = "Roboto"
             else:
                 pdf.default_font = "Helvetica"
-                self.logger.warning("Roboto font not found, falling back to Helvetica")
-
+                self.logger.warning("No Roboto fonts found, using default : Helvetica")
+                
             pdf.set_auto_page_break(auto=True, margin=25)
             pdf.add_page()
 
             # ── Cover / Header Block ──
+            # 1. Thin, vibrant red banner across the top to add a strong visual identity
             pdf.set_fill_color(227, 0, 15)  # orlen red
-            pdf.rect(0, 0, 210, 55, "F")
-            pdf.set_text_color(255, 255, 255)
-            pdf.set_font(pdf.default_font, "B", 22)
-            pdf.set_y(14)
-            pdf.cell(0, 12, labels["title"], ln=True, align="C")
-            pdf.set_font(pdf.default_font, "", 11)
-            pdf.cell(0, 7, f'{labels["project"]}: {custom_name}', ln=True, align="C")
-            pdf.cell(0, 7,
-                     f'{labels["version"]}: {version}  |  '
-                     f'{labels["author"]}: {author}  |  '
-                     f'{labels["date"]}: {timestamp_display}',
-                     ln=True, align="C")
+            pdf.rect(0, 0, 210, 6, "F")
+            
+            pdf.ln(12)
+            
+            # 2. Main report title - large, bold, dark
+            pdf.set_text_color(30, 41, 59)  # slate-800
+            pdf.set_font(pdf.default_font, "B", 24)
+            pdf.cell(0, 10, labels["title"].upper(), ln=True, align="L")
+            pdf.ln(4)
+            
+            # 3. Metadata block - subtle light gray background with border
+            pdf.set_fill_color(248, 250, 252)  # slate-50
+            pdf.set_draw_color(226, 232, 240)  # slate-200
+            start_meta_y = pdf.get_y()
+            pdf.rect(10, start_meta_y, 190, 14, "FD")  # F=fill, D=draw
+            
+            pdf.set_y(start_meta_y + 3.5)
+            pdf.set_x(14)
+            pdf.set_font(pdf.default_font, "B", 10)
+            pdf.set_text_color(71, 85, 105)  # slate-600
+            
+            meta_text = (
+                f'{labels["project"]}: {custom_name}   |   '
+                f'{labels["version"]}: {version}   |   '
+                f'{labels["author"]}: {author}   |   '
+                f'{labels["date"]}: {timestamp_display}'
+            )
+            pdf.cell(0, 7, meta_text, ln=True, align="L")
+            
+            pdf.ln(14)
 
-            pdf.set_text_color(45, 45, 45)
-            pdf.ln(20)
-
-            # ── Parse sections from final_text ──
             sections = self._parse_sections_from_text(final_text)
 
             section_keys = ["summary", "test_analysis", "risks_eval", "decision", "justification"]
             for key in section_keys:
-                heading = labels.get(key, key)
+                heading = labels.get(key, key).upper()
                 body = sections.get(key, "")
                 if not body:
                     continue
 
-                # Section heading
-                pdf.set_font(pdf.default_font, "B", 13)
-                pdf.set_text_color(227, 0, 15)
-                pdf.cell(0, 10, heading, ln=True)
-                pdf.set_draw_color(227, 0, 15)
-                pdf.line(pdf.get_x(), pdf.get_y(), pdf.get_x() + 180, pdf.get_y())
-                pdf.ln(3)
+                pdf.ln(4)
+                start_y = pdf.get_y()
+                
+                # red vertical accent - left side
+                pdf.set_fill_color(227, 0, 15)
+                pdf.rect(10, start_y + 1.5, 1.5, 5, "F")
+                
+                pdf.set_x(14)
+                pdf.set_font(pdf.default_font, "B", 12)
+                pdf.set_text_color(30, 41, 59)
+                pdf.cell(0, 8, heading, ln=True)
+                pdf.ln(2)
 
-                # Decision badge
                 if key == "decision":
                     self._pdf_decision_badge(pdf, body.strip())
                     pdf.ln(6)
                     continue
+                
+                pdf.set_x(10)
+                pdf.set_font(pdf.default_font, "", 10.5)
+                pdf.set_text_color(51, 65, 85)  # slate-700
+                pdf.multi_cell(190, 6.5, body.strip())
+                pdf.ln(5)
 
-                # Body text
-                pdf.set_font(pdf.default_font, "", 10)
-                pdf.set_text_color(45, 45, 45)
-                pdf.multi_cell(0, 6, body.strip())
-                pdf.ln(6)
-
-            # ── Charts ──
             valid_charts = [c for c in charts_paths if os.path.exists(c)]
             if valid_charts:
                 pdf.add_page()
+                
+                # header for attachments section
+                pdf.set_fill_color(227, 0, 15)
+                pdf.rect(10, pdf.get_y() + 1.5, 1.5, 6, "F")
+                pdf.set_x(14)
                 pdf.set_font(pdf.default_font, "B", 14)
-                pdf.set_text_color(45, 45, 45)
-                pdf.cell(0, 10, labels["attachments"], ln=True)
-                pdf.ln(4)
+                pdf.set_text_color(30, 41, 59)
+                pdf.cell(0, 9, labels["attachments"].upper(), ln=True)
+                pdf.ln(6)
 
                 for chart in valid_charts:
-                    if pdf.get_y() > 200:
+                    if pdf.get_y() > 180:
                         pdf.add_page()
+                    
+                    img_y = pdf.get_y()
+                    
+                    pdf.set_draw_color(226, 232, 240)
+                    pdf.rect(14, img_y - 1, 182, 102, "D")
+                    
                     pdf.image(chart, x=15, w=180)
-                    pdf.ln(8)
+                    pdf.ln(110)
 
             pdf.output(filepath)
             self.logger.info(f"PDF saved: {filepath}")
@@ -314,7 +355,7 @@ Required keys:
             raise ExportError(f"PDF generation failed: {e}")
 
     def _pdf_decision_badge(self, pdf, decision_text):
-        """Renders a colored GO / NO-GO badge in the PDF."""
+        """Renders a colored GO / NO-GO badge in the PDF"""
         is_go = decision_text.upper().strip() == "GO"
         if is_go:
             pdf.set_fill_color(76, 175, 80)
