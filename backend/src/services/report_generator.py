@@ -63,13 +63,15 @@ class ReportGenerator:
             except Exception:
                 pass
 
-        history.append({
-            "version": version,
-            "filename": filename,
-            "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            "author": author,
-            "status": "APPROVED"
-        })
+        history.append(
+            {
+                "version": version,
+                "filename": filename,
+                "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                "author": author,
+                "status": "APPROVED",
+            }
+        )
 
         with open(log_filepath, "w", encoding="utf-8") as f:
             json.dump(history, f, indent=4)
@@ -114,8 +116,15 @@ class ReportGenerator:
 
     # ─── LLM draft generation ───────────────────────────────────
 
-    def generate_structured_draft(self, historical_cache, rag_context, parsed_test_data,
-                                  user_risks, project_name, lang="pl"):
+    def generate_structured_draft(
+        self,
+        historical_cache,
+        rag_context,
+        parsed_test_data,
+        user_risks,
+        project_name,
+        lang="pl",
+    ):
         """
         Generates a structured JSON draft of the Go/No-Go report via LLM.
 
@@ -137,35 +146,37 @@ class ReportGenerator:
             if historical_cache and historical_cache.get("data"):
                 prev_status = historical_cache["data"].get("decision", "Nieznany")
                 prev_risks = historical_cache["data"].get("risks_eval", "Brak")
-                history_str = f"Ostatnia decyzja: {prev_status}. Poprzednie ryzyka: {prev_risks}."
+                history_str = f"Ostatnia decyzja: {prev_status}.\nPoprzednie ryzyka: {prev_risks}."
 
             system_prompt = (
-                "Jestes glownym inzynierem QA. Twoim zadaniem jest analityczna ocena wdrozenia. "
-                "MUSISZ zwrocic odpowiedz jako poprawny obiekt JSON. "
-                "Nie dodawaj zadnego formatowania Markdown wokol JSONa."
+                "Jesteś Głównym Inżynierem QA, ale działasz jako doradca techniczny. "
+                "Ostateczną instancją decyzyjną (Release Managerem) jest Użytkownik.\n"
+                "ZASADA NADRZĘDNA (AUTORYTET UŻYTKOWNIKA): Jeśli w sekcji [UWAGI UŻYTKOWNIKA] człowiek jawnie akceptuje ryzyka, nakazuje zmianę decyzji lub twierdzi, że błędy są znane, MUSISZ bezwzględnie zmienić decyzję na 'GO'. "
+                "W takiej sytuacji w polu 'justification' wyjaśnij, że mimo błędów technicznych, ryzyko zostało zaakceptowane biznesowo.\n"
+                "Zwróć odpowiedź WYŁĄCZNIE jako surowy, poprawny obiekt JSON. Nie używaj znaczników ```json ani Markdown."
             )
             user_prompt = f"""
-Wygeneruj strukture raportu decyzyjnego w formacie JSON z nastepujacymi kluczami:
-- "summary": (string) krotkie podsumowanie wynikow,
-- "test_analysis": (string) wnioski z przeprowadzonych testow,
-- "risks_eval": (string) ocena ryzyk podanych przez uzytkownika oraz ryzyk z testow,
-- "decision": (string) dokladnie "GO" lub "NO-GO",
-- "justification": (string) dlaczego podjeto taka decyzje (uwzglednij kontekst historyczny i reguly biznesowe).
+                            Wygeneruj strukturę raportu w formacie JSON zachowując te klucze:
+                            - "summary": (string) krótkie podsumowanie techniczne,
+                            - "test_analysis": (string) wnioski z testów,
+                            - "risks_eval": (string) analiza ryzyk (zaznacz tu, czy użytkownik zaakceptował usterki),
+                            - "decision": (string) dokładnie "GO" lub "NO-GO",
+                            - "justification": (string) ostateczne uzasadnienie (uwzględnij autorytet użytkownika!).
 
-[REGULY DECYZYJNE Z HISTORYCZNYCH RAPORTOW]
-{rag_context}
+                            [GLOBALNE ZASADY BIZNESOWE (RAG)]
+                            {rag_context}
 
-[KONTEKST HISTORYCZNY PROJEKTU]
-{history_str}
+                            [KONTEKST Z POPRZEDNICH WERSJI RAPORTU]
+                            {history_str}
 
-[ZPARSOWANE WYNIKI TESTOW]
-{parsed_test_data}
+                            [ZPARSOWANE WYNIKI TESTÓW]
+                            {parsed_test_data}
 
-[RYZYKA UZYTKOWNIKA]
-{user_risks}
-"""
-            fallback_summary = "Blad parsowania JSON"
-            fallback_justification = "Blad po stronie modelu AI (niepoprawny format)"
+                            [UWAGI UŻYTKOWNIKA (PRIORYTET NADRZĘDNY)]
+                            {user_risks}
+                            """
+            fallback_summary = "Błąd parsowania JSON"
+            fallback_justification = "Błąd po stronie modelu AI (niepoprawny format)"
 
         else:
             history_str = "no historical reports"
@@ -175,61 +186,66 @@ Wygeneruj strukture raportu decyzyjnego w formacie JSON z nastepujacymi kluczami
                 history_str = f"Last decision: {prev_status} | Last risks: {prev_risks}"
 
             system_prompt = (
-                "You are a lead QA engineer. Your task is to analytically evaluate the deployment. "
-                "You MUST return the response as a valid JSON object."
+                "You are a Lead QA Engineer acting as a technical advisor. The User is the ultimate Release Manager.\n"
+                "OVERRIDE RULE: If the User in the [USER INPUT] section explicitly accepts risks, commands a decision change, or states that bugs are known/accepted, you MUST set the decision to 'GO'. "
+                "In such cases, use the 'justification' field to state that despite technical failures, the risks were business-accepted by the User.\n"
+                "Return the response STRICTLY as a valid JSON object. Do not use ```json or Markdown wrappers."
             )
             user_prompt = f"""
-Generate the structure of the decision report in JSON format.
-NOTE: Keep the JSON keys exactly as specified below, and write the values in professional English.
+                            Generate the report structure in JSON format using exactly these keys:
+                            - "summary": brief technical summary,
+                            - "test_analysis": conclusions from tests,
+                            - "risks_eval": risk evaluation (highlight if the user accepted the flaws),
+                            - "decision": exactly "GO" or "NO-GO",
+                            - "justification": final rationale (must respect the User's overriding authority).
 
-Required keys:
-- "summary": brief summary of the results,
-- "test_analysis": conclusions from the executed tests,
-- "risks_eval": evaluation of user-reported risks,
-- "decision": exactly "GO" or "NO-GO",
-- "justification": rationale behind the decision (include historical context and business rules).
+                            [GLOBAL BUSINESS RULES (RAG)]
+                            {rag_context}
 
-[DECISION RULES FROM HISTORICAL REPORTS]
-{rag_context}
+                            [CONTEXT FROM PREVIOUS REPORT DRAFTS]
+                            {history_str}
 
-[HISTORICAL PROJECT CONTEXT]
-{history_str}
+                            [PARSED TEST RESULTS]
+                            {parsed_test_data}
 
-[PARSED TEST DATA]
-{parsed_test_data}
-
-[USER RISKS]
-{user_risks}
-"""
+                            [USER INPUT (HIGHEST PRIORITY)]
+                            {user_risks}
+                            """
             fallback_summary = "JSON parsing error"
             fallback_justification = "LLM-side error (incorrect format)"
 
         raw_response = self.llm.generate_response(
-            system_prompt, user_prompt,
-            temperature=0.1, max_tokens=2000, force_json=True
+            system_prompt,
+            user_prompt,
+            temperature=0.1,
+            max_tokens=2000,
+            force_json=True,
         )
 
         cleaned_response = raw_response.strip()
-        match = re.search(r'\{.*\}', cleaned_response, re.DOTALL)
+        match = re.search(r"\{.*\}", cleaned_response, re.DOTALL)
         if match:
             cleaned_response = match.group(0)
 
         try:
             return json.loads(cleaned_response)
         except json.JSONDecodeError as e:
-            self.logger.error(f"LLM did not return valid JSON: {raw_response[:250]}... {e}")
+            self.logger.error(
+                f"LLM did not return valid JSON: {raw_response[:250]}... {e}"
+            )
             return {
                 "summary": fallback_summary,
                 "test_analysis": "",
                 "risks_eval": "",
                 "decision": "NO-GO",
-                "justification": fallback_justification
+                "justification": fallback_justification,
             }
 
     # ─── PDF export ──────────────────────────────────────────────
 
-    def export_to_pdf(self, final_text, charts_paths, custom_name="Report",
-                      author="User", lang="en"):
+    def export_to_pdf(
+        self, final_text, charts_paths, custom_name="Report", author="User", lang="en"
+    ):
         """Exports the report to a styled PDF file."""
         self.logger.info(f"Starting PDF export for project: {custom_name}")
 
@@ -303,7 +319,13 @@ Required keys:
 
             sections = self._parse_sections_from_text(final_text)
 
-            section_keys = ["summary", "test_analysis", "risks_eval", "decision", "justification"]
+            section_keys = [
+                "summary",
+                "test_analysis",
+                "risks_eval",
+                "decision",
+                "justification",
+            ]
             for key in section_keys:
                 heading = labels.get(key, key).upper()
                 body = sections.get(key, "")
@@ -388,15 +410,18 @@ Required keys:
 
     # ─── DOCX export ─────────────────────────────────────────────
 
-    def export_to_docx(self, final_text, charts_paths, custom_name="Report",
-                       author="User", lang="en"):
+    def export_to_docx(
+        self, final_text, charts_paths, custom_name="Report", author="User", lang="en"
+    ):
         """Exports the report to a styled DOCX file."""
         self.logger.info(f"Starting DOCX export for project: {custom_name}")
 
         try:
             timestamp_file = datetime.now().strftime("%Y%m%d_%H%M%S")
             timestamp_display = datetime.now().strftime("%Y-%m-%d %H:%M")
-            log_filepath = os.path.join(self.final_output_path, "docx_version_history.json")
+            log_filepath = os.path.join(
+                self.final_output_path, "docx_version_history.json"
+            )
             version = self._get_next_version(log_filepath)
             labels = self._labels(lang)
 
@@ -440,7 +465,13 @@ Required keys:
 
             # Sections
             sections = self._parse_sections_from_text(final_text)
-            section_keys = ["summary", "test_analysis", "risks_eval", "decision", "justification"]
+            section_keys = [
+                "summary",
+                "test_analysis",
+                "risks_eval",
+                "decision",
+                "justification",
+            ]
 
             for key in section_keys:
                 heading = labels.get(key, key)
@@ -459,7 +490,9 @@ Required keys:
                     run.bold = True
                     run.font.size = Pt(18)
                     is_go = body.strip().upper() == "GO"
-                    run.font.color.rgb = RGBColor(76, 175, 80) if is_go else RGBColor(244, 67, 54)
+                    run.font.color.rgb = (
+                        RGBColor(76, 175, 80) if is_go else RGBColor(244, 67, 54)
+                    )
                 else:
                     doc.add_paragraph(body.strip())
 
@@ -494,15 +527,18 @@ Required keys:
 
     # ─── Markdown export ─────────────────────────────────────────
 
-    def export_to_md(self, final_text, charts_paths, custom_name="Report",
-                     author="User", lang="en"):
+    def export_to_md(
+        self, final_text, charts_paths, custom_name="Report", author="User", lang="en"
+    ):
         """Exports the report to a Markdown file."""
         self.logger.info(f"Starting Markdown export for project: {custom_name}")
 
         try:
             timestamp_file = datetime.now().strftime("%Y%m%d_%H%M%S")
             timestamp_display = datetime.now().strftime("%Y-%m-%d %H:%M")
-            log_filepath = os.path.join(self.final_output_path, "md_version_history.json")
+            log_filepath = os.path.join(
+                self.final_output_path, "md_version_history.json"
+            )
             version = self._get_next_version(log_filepath)
             labels = self._labels(lang)
 
@@ -524,7 +560,13 @@ Required keys:
                 "",
             ]
 
-            section_keys = ["summary", "test_analysis", "risks_eval", "decision", "justification"]
+            section_keys = [
+                "summary",
+                "test_analysis",
+                "risks_eval",
+                "decision",
+                "justification",
+            ]
             for key in section_keys:
                 heading = labels.get(key, key)
                 body = sections.get(key, "")
@@ -650,7 +692,10 @@ class _StyledPDF(FPDF):
         self.set_draw_color(200, 200, 200)
         self.line(10, self.get_y(), 200, self.get_y())
         self.ln(2)
-        self.cell(0, 8,
-                  f'{self.labels["generated"]}  |  '
-                  f'{self.labels["page"]} {self.page_no()}/{{nb}}',
-                  align="C")
+        self.cell(
+            0,
+            8,
+            f'{self.labels["generated"]}  |  '
+            f'{self.labels["page"]} {self.page_no()}/{{nb}}',
+            align="C",
+        )
