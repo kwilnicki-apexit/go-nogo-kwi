@@ -21,7 +21,7 @@ import {
   stripHtml,
 } from "./lib/utils";
 import type { Project, Chat, ChatMessage, AppMode } from "./types";
-import { CheckCircle } from "lucide-react";
+import { CheckCircle, FileText } from "lucide-react";
 import "./styles/main.css";
 
 function App() {
@@ -125,16 +125,23 @@ function App() {
         mode: modeToUse,
       };
 
+      const fileNames = files.map((f) => f.name);
+
       setChats((prev) =>
-        prev.map((c) =>
-          c.id === chatId
-            ? {
-                ...c,
-                messages: [...c.messages, userMsg],
-                updatedAt: new Date(),
-              }
-            : c,
-        ),
+        prev.map((c) => {
+          if (c.id === chatId) {
+            const newFiles = Array.from(
+              new Set([...(c.uploadedFiles || []), ...fileNames]),
+            );
+            return {
+              ...c,
+              messages: [...c.messages, userMsg],
+              uploadedFiles: newFiles,
+              updatedAt: new Date(),
+            };
+          }
+          return c;
+        }),
       );
       setIsLoading(true);
 
@@ -257,12 +264,27 @@ function App() {
     [projects, chats],
   );
 
+  /*
+    Deleting a project should also delete all its chats (cascading delete), 
+    and if the active item is among those deleted, it should reset the active selection and close the canvas.
+  */
   const handleDeleteProject = useCallback(
     (id: string) => {
       setProjects((prev) => prev.filter((p) => p.id !== id));
-      if (activeId === id) setActiveId(null);
+      setChats((prev) => prev.filter((c) => c.projectId !== id));
+
+      if (activeId === id) {
+        setActiveId(null);
+      } else {
+        const activeChatObj = chats.find((c) => c.id === activeId);
+
+        if (activeChatObj?.projectId === id) {
+          setActiveId(null);
+          setIsCanvasOpen(false);
+        }
+      }
     },
-    [activeId],
+    [activeId, chats],
   );
 
   const handleDeleteChat = useCallback(
@@ -506,44 +528,81 @@ function App() {
               transition: "width 0.3s ease",
             }}
           >
+            {/* CHAT HEADER */}
             <div
               style={{
                 display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
+                flexDirection: "column",
                 borderBottom: "1px solid var(--color-border)",
                 backgroundColor: "var(--color-surface)",
                 padding: "16px 32px",
                 flexShrink: 0,
               }}
             >
-              <div style={{ display: "flex", flexDirection: "column" }}>
-                <h2
-                  style={{
-                    fontSize: 16,
-                    fontWeight: 700,
-                    margin: 0,
-                    color: "var(--color-text-primary)",
-                  }}
-                >
-                  {activeChat?.name || labels.newConversation}
-                </h2>
-                {activeChat?.projectId && (
-                  <span className="text-xs text-green-600 font-medium flex items-center gap-1 mt-1">
-                    <CheckCircle size={10} /> {labels.projectContextActive}
-                  </span>
-                )}
-              </div>
-              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                {canvasContent && (
-                  <button
-                    onClick={() => setIsCanvasOpen(!isCanvasOpen)}
-                    className="bg-surface border border-border hover:border-orlen text-text-secondary hover:text-orlen px-4 py-1.5 rounded-md text-sm font-semibold transition-colors"
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                }}
+              >
+                <div style={{ display: "flex", flexDirection: "column" }}>
+                  <h2
+                    style={{
+                      fontSize: 16,
+                      fontWeight: 700,
+                      margin: 0,
+                      color: "var(--color-text-primary)",
+                    }}
                   >
-                    {isCanvasOpen ? labels.closeCanvas : labels.openCanvas}
-                  </button>
-                )}
+                    {activeChat?.name || labels.newConversation}
+                  </h2>
+
+                  {/* INFO ON PROJECT (per ID) */}
+                  {activeChat?.projectId ? (
+                    <span className="text-xs text-green-600 font-medium flex items-center gap-1 mt-1">
+                      <CheckCircle size={10} />
+                      Projekt:{" "}
+                      {projects.find((p) => p.id === activeChat.projectId)
+                        ?.name || "Nieznany projekt"}
+                    </span>
+                  ) : (
+                    <span className="text-xs text-text-tertiary font-medium flex items-center gap-1 mt-1">
+                      Czat wolnostojący (brak projektu)
+                    </span>
+                  )}
+                </div>
+
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  {canvasContent && (
+                    <button
+                      onClick={() => setIsCanvasOpen(!isCanvasOpen)}
+                      className="bg-surface border border-border hover:border-orlen text-text-secondary hover:text-orlen px-4 py-1.5 rounded-md text-sm font-semibold transition-colors"
+                    >
+                      {isCanvasOpen ? labels.closeCanvas : labels.openCanvas}
+                    </button>
+                  )}
+                </div>
               </div>
+
+              {/* LIST OF LOCAL FILES */}
+              {activeChat?.uploadedFiles &&
+                activeChat.uploadedFiles.length > 0 && (
+                  <div className="mt-4 pt-3 border-t border-border flex items-center gap-2 flex-wrap">
+                    <span className="text-[10px] uppercase font-bold text-text-tertiary tracking-wider">
+                      Lokalne pliki czatu:
+                    </span>
+                    {activeChat.uploadedFiles.map((file, idx) => (
+                      <div
+                        key={idx}
+                        className="flex items-center gap-1.5 bg-surface-secondary border border-border px-2 py-1 rounded-md text-[11px] font-medium text-text-secondary shadow-sm"
+                      >
+                        <FileText size={10} className="text-blue-500" />
+                        {file}
+                      </div>
+                    ))}
+                  </div>
+                )}
             </div>
 
             <ChatFeed

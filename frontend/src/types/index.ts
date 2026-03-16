@@ -38,6 +38,7 @@ export interface Chat {
   canvasContent?: string;
   draft?: StructuredDraft;
   chartPaths?: string[];
+  uploadedFiles?: string[];
 }
 
 export interface StructuredDraft {

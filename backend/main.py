@@ -27,7 +27,7 @@ logger = get_logger("FastAPI")
 app = FastAPI(
     title="QA Go/No-Go Decision Engine API",
     version="2.1.0",
-    description="Microservice for generating and exporting automated QA deployment reports."
+    description="Microservice for generating and exporting automated QA deployment reports.",
 )
 
 
@@ -66,6 +66,7 @@ except Exception as e:
 # DATA MODELLING
 # ==========================================
 
+
 class ExportRequest(BaseModel):
     project_name: str
     edited_text: str
@@ -81,21 +82,31 @@ MAX_FILE_SIZE = 5 * 1024 * 1024
 # PROJECT ENDPOINTS (p-xxxxx)
 # ==========================================
 
+
 @app.post("/api/v2/projects/{project_id}/instructions")
-async def update_project_instructions(project_id: str, request: Request, user: dict = Depends(get_current_user)):
+async def update_project_instructions(
+    project_id: str, request: Request, user: dict = Depends(get_current_user)
+):
     """Saves global instructions/assumptions for a project."""
     try:
         data = await request.json()
         instructions = data.get("instructions", "")
         storage.save_project_instructions(project_id, instructions)
-        return {"status": "success", "message": "Project instructions saved successfully."}
+        return {
+            "status": "success",
+            "message": "Project instructions saved successfully.",
+        }
     except Exception as e:
         logger.error(f"Failed to save project instructions: {e}")
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @app.post("/api/v2/projects/{project_id}/upload")
-async def upload_project_files(project_id: str, files: List[UploadFile] = File(...), user: dict = Depends(get_current_user)):
+async def upload_project_files(
+    project_id: str,
+    files: List[UploadFile] = File(...),
+    user: dict = Depends(get_current_user),
+):
     """Uploads knowledge files (PDF, DOCX) to a project and indexes them in the ChromaDB vector store."""
     try:
         proj_uploads_dir = storage.get_project_uploads_dir(project_id)
@@ -113,7 +124,10 @@ async def upload_project_files(project_id: str, files: List[UploadFile] = File(.
                 rag.ingest_document(text_content, file.filename, entity_id=project_id)
                 ingested_count += 1
 
-        return {"status": "success", "message": f"Uploaded and vectorized {ingested_count} project knowledge file(s)."}
+        return {
+            "status": "success",
+            "message": f"Uploaded and vectorized {ingested_count} project knowledge file(s).",
+        }
     except Exception as e:
         logger.error(f"Failed to upload project files: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Internal server error")
@@ -149,7 +163,9 @@ async def chat_endpoint(request: Request, user: dict = Depends(get_current_user)
             project_id = None
 
         if not chat_id:
-            raise HTTPException(status_code=400, detail="No chat_id provided in the request")
+            raise HTTPException(
+                status_code=400, detail="No chat_id provided in the request"
+            )
 
         chat_created_dir = storage.get_chat_created_dir(chat_id)
         chart_generator.output_dir = chat_created_dir
@@ -159,71 +175,88 @@ async def chat_endpoint(request: Request, user: dict = Depends(get_current_user)
         # MODE: GO/NO-GO
         # -------------------
         if mode == "gonogo":
-            if not files:
-                logger.info(f"Go/No-Go request received without files | chat_id={chat_id} | project_id={project_id}")
-                if language == "pl":
-                    return {"message": "Aby wygenerować raport Go/No-Go, proszę załącz pliki z wynikami testów."}
-                return {"message": "To generate a Go/No-Go report, please attach files with test results."}
-
-            # Save uploaded files to local storage under chat-specific directory
             chat_uploads_dir = storage.get_chat_uploads_dir(chat_id)
             contents = {}
 
-            for file in files:
-                content = await file.read()
-                if len(content) > MAX_FILE_SIZE:
-                    raise HTTPException(status_code=413, detail=f"File {file.filename} exceeds size limit.")
+            # REEVALUATION
+            if not files:
+                if os.path.exists(chat_uploads_dir):
+                    for filename in os.listdir(chat_uploads_dir):
+                        ext = os.path.splitext(filename)[1].lower()
+                        if ext in {".csv", ".xls", ".xlsx"}:
+                            file_path = os.path.join(chat_uploads_dir, filename)
+                            with open(file_path, "rb") as f:
+                                contents[filename] = f.read()
 
-                ext = os.path.splitext(file.filename)[1].lower()
-                if ext not in {'.csv', '.xls', '.xlsx'}:
-                    continue
+                if not contents:
+                    msg = (
+                        "Aby wygenerować raport Go/No-Go, proszę załącz pliki z wynikami testów (CSV/XLS)."
+                        if language == "pl"
+                        else "Please attach files with test results."
+                    )
+                    return {"message": msg}
 
-                file_path = os.path.join(chat_uploads_dir, file.filename)
-                with open(file_path, "wb") as f:
-                    f.write(content)
+                logger.info(
+                    f"Re-evaluating based on {len(contents)} existing files in chat {chat_id}."
+                )
 
-                contents[file.filename] = content
+            # STANDARD UPLOAD
+            else:
+                for file in files:
+                    content = await file.read()
+                    if len(content) > MAX_FILE_SIZE:
+                        raise HTTPException(
+                            status_code=413,
+                            detail=f"Plik {file.filename} jest za duży.",
+                        )
 
-                try:
-                    text_content = file_parser.extract_test_data_from_bytes({file.filename: content})
-                    rag.ingest_document(text_content, file.filename, entity_id=chat_id)
-                except Exception as e:
-                    logger.warning(f"Could not process (vectorize) {file.filename}: {e}")
+                    ext = os.path.splitext(file.filename)[1].lower()
+                    if ext not in {".csv", ".xls", ".xlsx"}:
+                        continue
+
+                    file_path = os.path.join(chat_uploads_dir, file.filename)
+                    with open(file_path, "wb") as f:
+                        f.write(content)
+
+                    contents[file.filename] = content
+
+                    try:
+                        text_content = file_parser.extract_test_data_from_bytes(
+                            {file.filename: content}
+                        )
+                        rag.ingest_document(
+                            text_content, file.filename, entity_id=chat_id
+                        )
+                    except Exception as e:
+                        logger.warning(f"Could not vectorize {file.filename}: {e}")
 
             if not contents:
-                logger.info(f"No valid files uploaded for Go/No-Go | chat_id={chat_id} | project_id={project_id}")
-                if language == "pl":
-                    return {"message": "Nie załączono żadnych prawidłowych plików tabelarycznych."}
-                return {"message": "No valid tabular files were uploaded."}
+                return {
+                    "message": "Nie załączono żadnych prawidłowych plików tabelarycznych."
+                }
 
             parsed_test_data = file_parser.extract_test_data_from_bytes(contents)
 
+            # global data - project instructions + RAG context
             project_instructions = ""
             if project_id:
                 project_instructions = storage.load_project_instructions(project_id)
 
-            rag_context = rag.search_context(query=message, project_id=project_id, chat_id=chat_id)
+            # RAG
+            rag_context = rag.search_context(
+                query=message, project_id=project_id, chat_id=chat_id
+            )
 
             if project_instructions:
-                rag_context = (
-                    f"[GLOBAL PROJECT GUIDELINES]\n{project_instructions}\n\n"
-                    f"[RAG DOCUMENTS]\n{rag_context}"
-                )
+                rag_context = f"[GLOBALNE WYTYCZNE PROJEKTU]\n{project_instructions}\n\n[DOKUMENTY RAG]\n{rag_context}"
 
             historical_cache = storage.get_latest_history(chat_id=chat_id)
 
             chart_paths = chart_generator.generate_all_charts(
-                file_contents=contents,
-                project_name=chat_id,
-                lang=language
+                file_contents=contents, project_name=chat_id, lang=language
             )
 
-            if message:
-                user_risks = message
-            elif language == "pl":
-                user_risks = "Brak dodatkowych uwag."
-            else:
-                user_risks = "No additional remarks."
+            user_risks = message if message else "Brak dodatkowych uwag."
 
             draft_json = report_generator.generate_structured_draft(
                 historical_cache=historical_cache,
@@ -231,32 +264,28 @@ async def chat_endpoint(request: Request, user: dict = Depends(get_current_user)
                 parsed_test_data=parsed_test_data,
                 user_risks=user_risks,
                 project_name=chat_id,
-                lang=language
+                lang=language,
             )
 
             storage.save_to_cache(chat_id=chat_id, structured_data=draft_json)
 
-            if language == "pl":
-                msg_response = (
-                    "Zakończyłem analizę wdrożenia i wygenerowałem wykresy. "
-                    "Raport został przygotowany – możesz go zweryfikować i edytować w prawym panelu."
-                )
-            else:
-                msg_response = "Analysis complete. Please review the report on the right."
+            msg_response = (
+                ("Zaktualizowałem raport uwzględniając Twoje nowe wytyczne.")
+                if language == "pl"
+                else "Report updated with your instructions."
+            )
 
             return {
                 "message": msg_response,
                 "draft_data": draft_json,
-                "chart_paths": chart_paths
+                "chart_paths": chart_paths,
             }
 
         # ---------------------------------------------------------
         # MODE 2: CHATBOT
         # ---------------------------------------------------------
         elif mode == "chatbot":
-            sys_prompt = (
-                "You are a helpful QA (Quality Assurance) assistant and software engineer."
-            )
+            sys_prompt = "You are a helpful QA (Quality Assurance) assistant and software engineer."
             reply = llm.generate_response(sys_prompt, message, temperature=0.3)
             return {"message": reply}
 
@@ -299,18 +328,27 @@ def export_report(req: ExportRequest, user: dict = Depends(get_current_user)):
 
         if fmt == "pdf":
             filepath = report_generator.export_to_pdf(
-                final_text=req.edited_text, charts_paths=req.chart_paths,
-                custom_name=req.project_name, author=req.author, lang=req.language
+                final_text=req.edited_text,
+                charts_paths=req.chart_paths,
+                custom_name=req.project_name,
+                author=req.author,
+                lang=req.language,
             )
         elif fmt == "docx":
             filepath = report_generator.export_to_docx(
-                final_text=req.edited_text, charts_paths=req.chart_paths,
-                custom_name=req.project_name, author=req.author, lang=req.language
+                final_text=req.edited_text,
+                charts_paths=req.chart_paths,
+                custom_name=req.project_name,
+                author=req.author,
+                lang=req.language,
             )
         elif fmt == "md":
             filepath = report_generator.export_to_md(
-                final_text=req.edited_text, charts_paths=req.chart_paths,
-                custom_name=req.project_name, author=req.author, lang=req.language
+                final_text=req.edited_text,
+                charts_paths=req.chart_paths,
+                custom_name=req.project_name,
+                author=req.author,
+                lang=req.language,
             )
         else:
             raise HTTPException(status_code=400, detail="Unsupported format.")
@@ -334,12 +372,11 @@ def delete_project_cache(chat_id: str, user: dict = Depends(get_current_user)):
         if success:
             return {
                 "status": "success",
-                "message": f"Cache for chat '{chat_id}' deleted successfully"
+                "message": f"Cache for chat '{chat_id}' deleted successfully",
             }
         else:
             raise HTTPException(
-                status_code=404,
-                detail=f"No cache found for chat '{chat_id}'"
+                status_code=404, detail=f"No cache found for chat '{chat_id}'"
             )
     except HTTPException:
         raise
@@ -356,7 +393,9 @@ current_dir = os.path.dirname(os.path.abspath(__file__))
 frontend_dist_path = os.path.join(current_dir, "..", "frontend", "dist")
 
 if os.path.exists(frontend_dist_path):
-    app.mount("/", StaticFiles(directory=frontend_dist_path, html=True), name="frontend")
+    app.mount(
+        "/", StaticFiles(directory=frontend_dist_path, html=True), name="frontend"
+    )
     logger.info(f"Frontend mounted from: {frontend_dist_path}")
 else:
     logger.warning(f"Frontend dist folder not found: {frontend_dist_path}")
