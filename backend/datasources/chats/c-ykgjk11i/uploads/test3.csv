@@ -1,0 +1,5 @@
+ID_Podatnosci,Modul,Poziom_Ryzyka,Opis,Status_Rozwiazania
+SEC-101,Autoryzacja,Low,Brak naglowka X-Frame-Options,Otwarty
+SEC-102,Baza Danych,High,Mozliwy SQL Injection w wyszukiwarce,Zablokowany/Naprawiony
+SEC-103,Zaleznosci,Medium,Przestarzala wersja biblioteki axios,Otwarty
+SEC-104,API,Low,Zbyt dlugi czas wygasania tokenu JWT,Akceptacja Ryzyka

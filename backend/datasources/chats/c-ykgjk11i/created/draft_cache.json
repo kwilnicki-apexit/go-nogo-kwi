@@ -1,0 +1,11 @@
+{
+    "timestamp": "2026-03-16 19:15:02",
+    "chat_id": "c-ykgjk11i",
+    "data": {
+        "summary": "Wi\u0119kszo\u015b\u0107 test\u00f3w zako\u0144czy\u0142a si\u0119 sukcesem, ale wyst\u0119puj\u0105 problemy z obs\u0142ug\u0105 starych kart Maestro i podatno\u015bciami bezpiecze\u0144stwa. Endpoint /api/v1/reports/pdf przekracza limit czasu.",
+        "test_analysis": "Testy funkcjonalne zako\u0144czone sukcesem z wyj\u0105tkiem TC-006 (brak obs\u0142ugi starych kart Maestro). Testy wydajno\u015bciowe wskazuj\u0105 na przekroczenie limitu czasu dla /api/v1/reports/pdf. Podatno\u015bci bezpiecze\u0144stwa obejmuj\u0105 brak nag\u0142\u00f3wka X-Frame-Options, mo\u017cliwy SQL Injection i przestarza\u0142\u0105 bibliotek\u0119 axios.",
+        "risks_eval": "Ryzyka zwi\u0105zane z bezpiecze\u0144stwem: niskie (SEC-101), wysokie (SEC-102), \u015brednie (SEC-103), niskie (SEC-104). Ryzyko biznesowe zwi\u0105zane z brakiem obs\u0142ugi starych kart Maestro (TC-006) jest \u015brednie. Ryzyko wydajno\u015bciowe dla /api/v1/reports/pdf jest wysokie.",
+        "decision": "NO-GO",
+        "justification": "Decyzja NO-GO z powodu nierozwi\u0105zanych podatno\u015bci bezpiecze\u0144stwa (SEC-101, SEC-103) oraz przekroczenia limitu czasu dla kluczowego endpointu /api/v1/reports/pdf. Brak obs\u0142ugi starych kart Maestro r\u00f3wnie\u017c stanowi istotne ryzyko biznesowe."
+    }
+}

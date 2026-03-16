@@ -1,0 +1,6 @@
+Endpoint,Metoda,Sredni_Czas_ms,Max_Czas_ms,Limit_Akceptowalny_ms,Procent_Bledow,Status
+/api/v1/login,POST,120,450,500,0.00,PASS
+/api/v1/products,GET,85,210,300,0.00,PASS
+/api/v1/cart/add,POST,150,320,400,0.00,PASS
+/api/v1/checkout,POST,280,650,800,0.10,PASS
+/api/v1/reports/pdf,GET,850,2100,1000,1.50,WARNING
