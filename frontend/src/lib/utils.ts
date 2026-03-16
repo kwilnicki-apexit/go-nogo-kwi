@@ -1,51 +1,58 @@
-// frontend/src/lib/utils.ts
-import { clsx, type ClassValue } from 'clsx';
-import { twMerge } from 'tailwind-merge';
+// ============================================================
+// FILE: .\frontend\src\lib\utils.ts
+// ============================================================
 
+import { clsx, type ClassValue } from "clsx";
+import { twMerge } from "tailwind-merge";
+
+/** Merges Tailwind CSS class names with clsx for conditional logic. */
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-export function generateId(prefix: 'c' | 'p' | 'm' = 'c'): string {
+/** Generates a short random ID with a prefix. */
+export function generateId(prefix: "c" | "p" | "m" | "f" = "c"): string {
   return `${prefix}-${Math.random().toString(36).substring(2, 10)}`;
 }
 
+/** Formats byte count into a human-readable file size string. */
 export function formatFileSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
+/** Formats a Date into HH:MM time string. */
 export function formatTime(date: Date): string {
-  return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 }
 
-export function isToday(date: Date): boolean {
-  const today = new Date();
-  return date.toDateString() === today.toDateString();
+/** Extracts initials (up to 2 chars) from a display name. */
+export function getInitials(name: string): string {
+  const parts = name.trim().split(/\s+/);
+  if (parts.length >= 2) {
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  }
+  return name.slice(0, 2).toUpperCase();
 }
 
-export function isYesterday(date: Date): boolean {
-  const yesterday = new Date();
-  yesterday.setDate(yesterday.getDate() - 1);
-  return date.toDateString() === yesterday.toDateString();
-}
-
+/** Strips HTML tags and converts common entities to plain text. */
 export function stripHtml(html: string): string {
   let text = html;
-  text = text.replace(/<br\s*\/?>/gi, '\n');
-  text = text.replace(/<\/p><p>/gi, '\n\n');
-  text = text.replace(/<\/li><li>/gi, '\n- ');
-  text = text.replace(/<li>/gi, '- ');
-  text = text.replace(/<[^>]+>/g, '');
-  text = text.replace(/&nbsp;/g, ' ');
-  text = text.replace(/&amp;/g, '&');
-  text = text.replace(/&lt;/g, '<');
-  text = text.replace(/&gt;/g, '>');
-  text = text.replace(/\n{3,}/g, '\n\n');
+  text = text.replace(/<br\s*\/?>/gi, "\n");
+  text = text.replace(/<\/p><p>/gi, "\n\n");
+  text = text.replace(/<\/li><li>/gi, "\n- ");
+  text = text.replace(/<li>/gi, "- ");
+  text = text.replace(/<[^>]+>/g, "");
+  text = text.replace(/&nbsp;/g, " ");
+  text = text.replace(/&amp;/g, "&");
+  text = text.replace(/&lt;/g, "<");
+  text = text.replace(/&gt;/g, ">");
+  text = text.replace(/\n{3,}/g, "\n\n");
   return text.trim();
 }
 
+/** Converts a structured draft object into HTML for the Quill editor. */
 export function draftToHtml(
   draft: {
     summary: string;
@@ -54,40 +61,50 @@ export function draftToHtml(
     decision: string;
     justification: string;
   },
-  isPl: boolean
+  isPl: boolean,
 ): string {
   const sections = [
-    { heading: isPl ? 'Podsumowanie' : 'Summary', content: draft.summary },
-    { heading: isPl ? 'Analiza testów' : 'Test Analysis', content: draft.test_analysis },
-    { heading: isPl ? 'Ocena ryzyk' : 'Risk Evaluation', content: draft.risks_eval },
+    { heading: isPl ? "Podsumowanie" : "Summary", content: draft.summary },
     {
-      heading: isPl ? 'Decyzja' : 'Decision',
-      content: `<strong style="font-size:1.3em;color:${draft.decision === 'GO' ? '#10b981' : '#ef4444'}">${draft.decision}</strong>`,
+      heading: isPl ? "Analiza testów" : "Test Analysis",
+      content: draft.test_analysis,
     },
-    { heading: isPl ? 'Uzasadnienie' : 'Justification', content: draft.justification },
+    {
+      heading: isPl ? "Ocena ryzyk" : "Risk Evaluation",
+      content: draft.risks_eval,
+    },
+    {
+      heading: isPl ? "Decyzja" : "Decision",
+      content: `<strong style="font-size:1.3em;color:${draft.decision === "GO" ? "#10b981" : "#ef4444"}">${draft.decision}</strong>`,
+    },
+    {
+      heading: isPl ? "Uzasadnienie" : "Justification",
+      content: draft.justification,
+    },
   ];
 
   return sections
-    .filter(s => s.content)
-    .map(s => `<h2>${s.heading}</h2>\n${s.content}`)
-    .join('\n\n');
+    .filter((s) => s.content)
+    .map((s) => `<h2>${s.heading}</h2>\n${s.content}`)
+    .join("\n\n");
 }
 
+/** Converts basic HTML to Markdown for export. */
 export function htmlToMarkdown(html: string): string {
   let md = html;
-  md = md.replace(/<h1[^>]*>(.*?)<\/h1>/gi, '# $1\n');
-  md = md.replace(/<h2[^>]*>(.*?)<\/h2>/gi, '## $1\n');
-  md = md.replace(/<h3[^>]*>(.*?)<\/h3>/gi, '### $1\n');
-  md = md.replace(/<strong[^>]*>(.*?)<\/strong>/gi, '**$1**');
-  md = md.replace(/<em[^>]*>(.*?)<\/em>/gi, '*$1*');
-  md = md.replace(/<br\s*\/?>/gi, '\n');
-  md = md.replace(/<\/p>\s*<p>/gi, '\n\n');
-  md = md.replace(/<li[^>]*>(.*?)<\/li>/gi, '- $1\n');
-  md = md.replace(/<[^>]+>/g, '');
-  md = md.replace(/&nbsp;/g, ' ');
-  md = md.replace(/&amp;/g, '&');
-  md = md.replace(/&lt;/g, '<');
-  md = md.replace(/&gt;/g, '>');
-  md = md.replace(/\n{3,}/g, '\n\n');
+  md = md.replace(/<h1[^>]*>(.*?)<\/h1>/gi, "# $1\n");
+  md = md.replace(/<h2[^>]*>(.*?)<\/h2>/gi, "## $1\n");
+  md = md.replace(/<h3[^>]*>(.*?)<\/h3>/gi, "### $1\n");
+  md = md.replace(/<strong[^>]*>(.*?)<\/strong>/gi, "**$1**");
+  md = md.replace(/<em[^>]*>(.*?)<\/em>/gi, "*$1*");
+  md = md.replace(/<br\s*\/?>/gi, "\n");
+  md = md.replace(/<\/p>\s*<p>/gi, "\n\n");
+  md = md.replace(/<li[^>]*>(.*?)<\/li>/gi, "- $1\n");
+  md = md.replace(/<[^>]+>/g, "");
+  md = md.replace(/&nbsp;/g, " ");
+  md = md.replace(/&amp;/g, "&");
+  md = md.replace(/&lt;/g, "<");
+  md = md.replace(/&gt;/g, ">");
+  md = md.replace(/\n{3,}/g, "\n\n");
   return md.trim();
 }

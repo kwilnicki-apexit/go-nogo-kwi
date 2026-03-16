@@ -1,12 +1,18 @@
-// frontend/src/api/client.ts
+// ============================================================
+// FILE: .\frontend\src\api\client.ts
+// ============================================================
 
 import type { ChatRequest, ChatResponse, ExportRequest } from "../types";
 
+/**
+ * Resolves the API base URL depending on the deployment context.
+ * In dev (port 5173), proxies through Vite to /api/v2.
+ * In production, resolves relative to the current page path.
+ */
 const getBaseUrl = (): string => {
   if (window.location.port === "5173") return "/api/v2";
 
   let path = window.location.pathname.replace(/[^/]*$/, "");
-
   if (!path.endsWith("/")) path += "/";
 
   return path + "api/v2";
@@ -14,6 +20,9 @@ const getBaseUrl = (): string => {
 
 const BASE_URL = getBaseUrl();
 
+/**
+ * Generic fetch wrapper with error handling and automatic content-type detection.
+ */
 async function request<T>(
   endpoint: string,
   options: RequestInit = {},
@@ -39,15 +48,16 @@ async function request<T>(
 }
 
 export const api = {
-
+  /**
+   * Sends a chat message (with optional file attachments) to the backend.
+   */
   async sendMessage(req: ChatRequest): Promise<ChatResponse> {
     if (req.files && req.files.length > 0) {
       const formData = new FormData();
 
       formData.append("chat_id", req.chat_id);
 
-      if (req.project_id) 
-        formData.append("project_id", req.project_id);
+      if (req.project_id) formData.append("project_id", req.project_id);
 
       formData.append("mode", req.mode);
       formData.append("message", req.message);
@@ -55,7 +65,7 @@ export const api = {
 
       if (req.canvas_content)
         formData.append("canvas_content", req.canvas_content);
-      
+
       req.files.forEach((f) => formData.append("files", f));
 
       return request<ChatResponse>("chat", { method: "POST", body: formData });
@@ -74,6 +84,9 @@ export const api = {
     });
   },
 
+  /**
+   * Saves project-level instructions (system prompt) on the backend.
+   */
   async updateProjectInstructions(projectId: string, instructions: string) {
     return request(`projects/${projectId}/instructions`, {
       method: "POST",
@@ -81,6 +94,9 @@ export const api = {
     });
   },
 
+  /**
+   * Uploads knowledge files (PDF, DOCX, TXT) to a project for RAG indexing.
+   */
   async uploadProjectFiles(projectId: string, files: File[]) {
     const formData = new FormData();
     files.forEach((f) => formData.append("files", f));
@@ -90,6 +106,9 @@ export const api = {
     });
   },
 
+  /**
+   * Exports a report to PDF, DOCX, or Markdown format.
+   */
   async exportReport(payload: ExportRequest): Promise<{ filepath: string }> {
     return request<{ filepath: string }>("reports/export", {
       method: "POST",

@@ -1,11 +1,14 @@
-// frontend/src/types/index.ts
+// ============================================================
+// FILE: .\frontend\src\types\index.ts
+// ============================================================
 
-export type AppMode = 'chatbot' | 'gonogo' | 'translator' | 'analysis';
-export type ThemeMode = 'light' | 'dark';
+export type AppMode = "chatbot" | "gonogo" | "translator" | "analysis";
+export type ThemeMode = "light" | "dark";
+export type LangCode = "pl" | "en";
 
 export interface ChatMessage {
   id: string;
-  role: 'user' | 'assistant' | 'system';
+  role: "user" | "assistant" | "system";
   content: string;
   timestamp: Date;
   mode: AppMode;
@@ -14,7 +17,7 @@ export interface ChatMessage {
 }
 
 export interface Project {
-  id: string;               // p-xxxxx
+  id: string;
   name: string;
   createdAt: Date;
   updatedAt: Date;
@@ -24,7 +27,7 @@ export interface Project {
 }
 
 export interface Chat {
-  id: string;               // c-xxxxx
+  id: string;
   projectId: string | null;
   name: string;
   mode: AppMode;
@@ -48,7 +51,7 @@ export interface StructuredDraft {
 export interface ExportRequest {
   project_name: string;
   edited_text: string;
-  format: 'pdf' | 'docx' | 'md';
+  format: "pdf" | "docx" | "md";
   language: string;
   author: string;
   chart_paths: string[];
@@ -74,6 +77,12 @@ export interface ChatResponse {
 export interface AttachedFile {
   file: File;
   id: string;
+}
+
+export interface UserConfig {
+  displayName: string;
+  role: string;
+  authorName: string;
 }
 
 export interface Labels {
@@ -123,4 +132,46 @@ export interface Labels {
   cancel: string;
   save: string;
   rename: string;
+  projectSettings: string;
+  projectSettingsSub: string;
+  projectId: string;
+  projectName: string;
+  startNewRagChat: string;
+  startNewRagChatSub: string;
+  writeFirstMessage: string;
+  systemPromptLabel: string;
+  saved: string;
+  saveBtn: string;
+  uploadingAndVectorizing: string;
+  projectKnowledgeBase: string;
+  projectKnowledgeBaseSub: string;
+  uploadBtn: string;
+  noUploadedFiles: string;
+  projectContextActive: string;
+  newConversation: string;
+  uploadedNFiles: string;
+  uploadError: string;
+  userLabel: string;
+  systemQaLabel: string;
+  chatbotDesc: string;
+  gonogoDesc: string;
+  translatorDesc: string;
+  analysisDesc: string;
+  projectsSection: string;
+  recentChatsSection: string;
+  changeTheme: string;
+  settings: string;
+  userSettings: string;
+  displayNameLabel: string;
+  roleLabel: string;
+  authorNameLabel: string;
+  authorNameHint: string;
+  languageLabel: string;
+  polish: string;
+  english: string;
+  closeSettings: string;
+  confirmDeleteMessage: string;
+  yes: string;
+  no: string;
+  archivedBadge: string;
 }
