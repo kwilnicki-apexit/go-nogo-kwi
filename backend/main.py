@@ -285,7 +285,33 @@ async def chat_endpoint(request: Request, user: dict = Depends(get_current_user)
         # MODE 2: CHATBOT
         # ---------------------------------------------------------
         elif mode == "chatbot":
-            sys_prompt = "You are a helpful QA (Quality Assurance) assistant and software engineer."
+            if language == "pl":
+                sys_prompt = (
+                    "Jesteś wszechstronnym asystentem QA i inżynierem oprogramowania. "
+                    "Obecnie działasz w ogólnym trybie 'Chatbot' (Q&A). "
+                    "BĄDŹ ŚWIADOMY, że Twoja aplikacja posiada 3 inne, dedykowane tryby działania, "
+                    "które użytkownik może wybrać przyciskami pod polem tekstowym:\n"
+                    "1. 'Go/No-Go' - do analizy plików z wynikami testów (CSV/XLS) i generowania raportów decyzyjnych wraz z wykresami.\n"
+                    "2. 'Tłumacz' (Translator) - do profesjonalnych tłumaczeń technicznych.\n"
+                    "3. 'Analiza' (Analysis) - do głębokiej analizy danych z załączonych plików.\n"
+                    "Jeśli użytkownik poprosi Cię o wygenerowanie raportu z testów, tłumaczenie długiego tekstu lub analizę danych tabelarycznych, "
+                    "podejmij próbę odpowiedzi, ale na końcu uprzejmie poinformuj go, że aby uzyskać najlepszy rezultat "
+                    "(np. wygenerować ładny raport PDF z wykresami), powinien przełączyć się na odpowiedni tryb korzystając z ikon pod polem wpisywania wiadomości."
+                )
+            else:
+                sys_prompt = (
+                    "You are a versatile QA assistant and software engineer. "
+                    "You are currently operating in the general 'Chatbot' (Q&A) mode. "
+                    "BE AWARE that this application has 3 other dedicated modes "
+                    "that the user can select using the buttons below the text input:\n"
+                    "1. 'Go/No-Go' - for advanced analysis of test result files (CSV/XLS) and generating decision reports with charts.\n"
+                    "2. 'Translator' - for professional technical translations.\n"
+                    "3. 'Analysis' - for deep data analysis of attached files.\n"
+                    "If the user asks you to generate a test report, translate text, or analyze tabular data, "
+                    "attempt to answer, but politely inform them at the end that for the best results "
+                    "(e.g., to generate a nice PDF report with charts), they should switch to the appropriate mode using the icons below the input field."
+                )
+
             reply = llm.generate_response(sys_prompt, message, temperature=0.3)
             return {"message": reply}
 
