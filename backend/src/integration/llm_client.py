@@ -1,4 +1,6 @@
-# llm_client.py
+# ============================================================
+# FILE: .\backend\src\integration\llm_client.py
+# ============================================================
 
 import requests
 import urllib3
@@ -12,6 +14,8 @@ if not Config.SSL_VERIFY:
 
 
 class LLMClient:
+    """Client for communicating with an OpenAI-compatible LLM API."""
+
     def __init__(self):
         self.logger = get_logger(self.__class__.__name__)
 
@@ -28,11 +32,11 @@ class LLMClient:
         Sends a prompt to the LLM and returns the generated text response.
 
         Args:
-            system_prompt: System-level instruction for the model
-            user_prompt: User-level query or data payload
-            temperature: Sampling temperature (lower = more deterministic)
-            max_tokens: Maximum tokens in the response
-            force_json: if True, requests JSON-formatted output from the model
+            system_prompt: System-level instruction for the model.
+            user_prompt: User-level query or data payload.
+            temperature: Sampling temperature (lower = more deterministic).
+            max_tokens: Maximum tokens in the response.
+            force_json: If True, requests JSON-formatted output from the model.
 
         Returns:
             The generated text content from the LLM response.

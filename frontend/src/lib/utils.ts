@@ -6,8 +6,8 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-export function generateId(): string {
-  return `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+export function generateId(prefix: 'c' | 'p' | 'm' = 'c'): string {
+  return `${prefix}-${Math.random().toString(36).substring(2, 10)}`;
 }
 
 export function formatFileSize(bytes: number): string {

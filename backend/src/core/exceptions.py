@@ -1,5 +1,6 @@
-# exceptions.py
-
+# ============================================================
+# FILE: .\backend\src\core\exceptions.py
+# ============================================================
 
 class AppError(Exception):
     """Base exception for all application errors."""

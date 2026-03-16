@@ -1,720 +1,6 @@
 
 
 ============================================================
---- PLIK: .\kod_zrodlowy_czesc_2.txt ---
-============================================================
-
-
-
-============================================================
---- PLIK: .\frontend\src\styles\main.css ---
-============================================================
-
-/* frontend/src/styles/main.css */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-@import "tailwindcss";
-
-@custom-variant dark (&:where(.dark, .dark *));
-
-@theme {
-  --font-family-sans: 'Inter', system-ui, -apple-system, sans-serif;
-}
-
-/* DEKLARACJE DLA TRYBU JASNEGO */
-:root {
-  --color-orlen: #e3000f;
-  --color-orlen-dark: #b8000c;
-
-  --color-bg: #f3f4f6;
-  --color-surface: #ffffff;
-  --color-surface-secondary: #f8fafc;
-  --color-surface-tertiary: #e2e8f0;
-
-  --color-border: #e2e8f0;
-  --color-border-strong: #cbd5e1;
-
-  --color-text-primary: #0f172a;
-  --color-text-secondary: #475569;
-  --color-text-tertiary: #64748b;
-  --color-text-muted: #94a3b8;
-
-  /* Sidebar specific */
-  --sidebar-bg: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
-  --sidebar-header-bg: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
-  --sidebar-item-hover: rgba(0, 0, 0, 0.04);
-  --sidebar-item-active: rgba(227, 0, 15, 0.04);
-  --sidebar-item-active-border: rgba(227, 0, 15, 0.5);
-  --sidebar-new-btn-bg: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
-  --sidebar-new-btn-hover: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
-  --sidebar-search-bg: #ffffff;
-  --sidebar-search-focus-ring: rgba(227, 0, 15, 0.2);
-  --sidebar-toggle-bg: linear-gradient(135deg, #f1f5f9 0%, #e8edf2 100%);
-  --sidebar-toggle-hover: linear-gradient(135deg, #e2e8f0 0%, #dde3ea 100%);
-  --sidebar-footer-bg: linear-gradient(0deg, #f1f5f9 0%, #f8fafc 100%);
-  --sidebar-divider: linear-gradient(90deg, transparent, #cbd5e1, transparent);
-
-  /* Context menu */
-  --ctx-menu-bg: #ffffff;
-  --ctx-menu-shadow: 0 8px 30px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.06);
-  --ctx-menu-border: #e2e8f0;
-  --ctx-delete-confirm-bg: #fef2f2;
-  --ctx-delete-confirm-border: #fecaca;
-  --ctx-delete-confirm-text: #991b1b;
-  --ctx-delete-yes-bg: #dc2626;
-  --ctx-delete-yes-hover: #b91c1c;
-  --ctx-delete-no-bg: transparent;
-  --ctx-delete-no-hover: rgba(0,0,0,0.04);
-  --ctx-delete-no-text: #64748b;
-
-  /* Input */
-  --input-box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-  --input-focus-shadow: 0 0 0 2px rgba(227, 0, 15, 0.12), 0 4px 16px rgba(0, 0, 0, 0.08);
-  --input-focus-border: rgba(227, 0, 15, 0.35);
-
-  --radius-sm: 4px;
-  --radius-md: 6px;
-  --radius-lg: 8px;
-  --radius-xl: 12px;
-}
-
-/* DEKLARACJE DLA TRYBU CIEMNEGO */
-.dark {
-  --color-bg: #09090b;
-  --color-surface: #18181b;
-  --color-surface-secondary: #111827;
-  --color-surface-tertiary: #27272a;
-
-  --color-border: #27272a;
-  --color-border-strong: #3f3f46;
-
-  --color-text-primary: #f8fafc;
-  --color-text-secondary: #cbd5e1;
-  --color-text-tertiary: #94a3b8;
-  --color-text-muted: #64748b;
-
-  /* Sidebar specific dark */
-  --sidebar-bg: linear-gradient(180deg, #111827 0%, #0f1419 100%);
-  --sidebar-header-bg: linear-gradient(135deg, #1a1f2e 0%, #151921 100%);
-  --sidebar-item-hover: rgba(255, 255, 255, 0.04);
-  --sidebar-item-active: rgba(227, 0, 15, 0.08);
-  --sidebar-item-active-border: rgba(227, 0, 15, 0.6);
-  --sidebar-new-btn-bg: linear-gradient(135deg, #1e2433 0%, #1a1f2e 100%);
-  --sidebar-new-btn-hover: linear-gradient(135deg, #252d3f 0%, #1e2433 100%);
-  --sidebar-search-bg: #1a1f2e;
-  --sidebar-search-focus-ring: rgba(227, 0, 15, 0.25);
-  --sidebar-toggle-bg: linear-gradient(135deg, #1e2433 0%, #1a1f2e 100%);
-  --sidebar-toggle-hover: linear-gradient(135deg, #252d3f 0%, #222838 100%);
-  --sidebar-footer-bg: linear-gradient(0deg, #0d1117 0%, #111827 100%);
-  --sidebar-divider: linear-gradient(90deg, transparent, #3f3f46, transparent);
-
-  /* Context menu dark */
-  --ctx-menu-bg: #1e2433;
-  --ctx-menu-shadow: 0 8px 30px rgba(0, 0, 0, 0.4), 0 2px 8px rgba(0, 0, 0, 0.3);
-  --ctx-menu-border: #3f3f46;
-  --ctx-delete-confirm-bg: rgba(153, 27, 27, 0.12);
-  --ctx-delete-confirm-border: rgba(220, 38, 38, 0.25);
-  --ctx-delete-confirm-text: #fca5a5;
-  --ctx-delete-yes-bg: #dc2626;
-  --ctx-delete-yes-hover: #ef4444;
-  --ctx-delete-no-bg: transparent;
-  --ctx-delete-no-hover: rgba(255,255,255,0.06);
-  --ctx-delete-no-text: #94a3b8;
-
-  /* Input dark */
-  --input-box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-  --input-focus-shadow: 0 0 0 2px rgba(227, 0, 15, 0.2), 0 4px 16px rgba(0, 0, 0, 0.3);
-  --input-focus-border: rgba(227, 0, 15, 0.45);
-}
-
-/* ── Base ── */
-*, *::before, *::after { box-sizing: border-box; margin: 0; }
-html, body, #root { height: 100%; overflow: hidden; }
-
-body {
-  font-family: var(--font-family-sans);
-  font-size: 15px;
-  line-height: 1.6;
-  -webkit-font-smoothing: antialiased;
-  background-color: var(--color-bg);
-  color: var(--color-text-primary);
-  transition: background-color 0.2s, color 0.2s;
-}
-
-/* ── Scrollbars ── */
-.custom-scrollbar::-webkit-scrollbar { width: 5px; height: 5px; }
-.custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-.custom-scrollbar::-webkit-scrollbar-thumb { background-color: var(--color-border-strong); border-radius: 3px; }
-.custom-scrollbar::-webkit-scrollbar-thumb:hover { background-color: var(--color-text-tertiary); }
-
-button {
-  font-family: inherit; font-size: inherit; line-height: inherit;
-  border: none; background: none; cursor: pointer;
-  display: inline-flex; align-items: center; justify-content: center;
-  transition: all 0.15s ease-in-out;
-}
-
-/* ── Sidebar Styles ── */
-.sidebar-root {
-  background: var(--sidebar-bg);
-  border-right: 1px solid var(--color-border);
-}
-
-.sidebar-header {
-  background: var(--sidebar-header-bg);
-  border-bottom: 1px solid var(--color-border);
-}
-
-.sidebar-logo-icon {
-  background: linear-gradient(135deg, #e3000f 0%, #b8000c 100%);
-  box-shadow: 0 2px 8px rgba(227, 0, 15, 0.3);
-}
-
-.sidebar-new-btn {
-  background: var(--sidebar-new-btn-bg);
-  border: 1px solid var(--color-border);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
-  transition: all 0.2s ease;
-}
-.sidebar-new-btn:hover {
-  background: var(--sidebar-new-btn-hover);
-  border-color: var(--color-border-strong);
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
-  transform: translateY(-1px);
-}
-.sidebar-new-btn:active {
-  transform: translateY(0);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
-}
-
-.sidebar-search {
-  background: var(--sidebar-search-bg);
-  border: 1px solid var(--color-border);
-  transition: all 0.2s ease;
-}
-.sidebar-search:focus-within {
-  border-color: var(--color-orlen);
-  box-shadow: 0 0 0 3px var(--sidebar-search-focus-ring);
-}
-
-.sidebar-tab-group {
-  background: var(--sidebar-search-bg);
-  border: 1px solid var(--color-border);
-  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.04);
-}
-.sidebar-tab-active {
-  background: var(--color-surface-tertiary);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
-}
-
-.sidebar-group-label {
-  background: linear-gradient(90deg, transparent, var(--color-border), transparent);
-  height: 1px;
-  margin: 0;
-}
-
-.sidebar-project-item {
-  transition: all 0.15s ease;
-  border-left: 3px solid transparent;
-  margin: 2px 8px;
-  border-radius: 8px;
-}
-.sidebar-project-item:hover {
-  background: var(--sidebar-item-hover);
-  border-left-color: var(--color-border-strong);
-}
-.sidebar-project-item.active {
-  background: var(--sidebar-item-active);
-  border-left-color: var(--sidebar-item-active-border);
-  box-shadow: 0 1px 4px rgba(227, 0, 15, 0.06);
-}
-
-.sidebar-more-btn {
-  opacity: 0;
-  transition: all 0.15s ease;
-  border-radius: 6px;
-}
-.sidebar-project-item:hover .sidebar-more-btn,
-.sidebar-more-btn.visible {
-  opacity: 1;
-}
-.sidebar-more-btn:hover {
-  background: var(--color-surface-tertiary);
-  color: var(--color-text-primary);
-}
-
-.sidebar-footer {
-  background: var(--sidebar-footer-bg);
-  border-top: 1px solid var(--color-border);
-}
-
-.sidebar-theme-btn {
-  transition: all 0.2s ease;
-  border-radius: 8px;
-  border: 1px solid transparent;
-}
-.sidebar-theme-btn:hover {
-  background: var(--sidebar-item-hover);
-  border-color: var(--color-border);
-}
-
-/* ── Context Menu ── */
-.ctx-menu {
-  background: var(--ctx-menu-bg);
-  border: 1px solid var(--ctx-menu-border);
-  box-shadow: var(--ctx-menu-shadow);
-  border-radius: 10px;
-  padding: 4px;
-  min-width: 160px;
-  backdrop-filter: blur(12px);
-}
-
-.ctx-menu-item {
-  display: flex;
-  width: 100%;
-  align-items: center;
-  justify-content: flex-start;
-  text-align: left;
-  gap: 8px;
-  padding: 6px 10px;
-  border-radius: 6px;
-  font-size: 11px;
-  font-weight: 500;
-  color: var(--color-text-secondary);
-  transition: all 0.12s ease;
-  white-space: nowrap;
-}
-.ctx-menu-item:hover {
-  background: var(--sidebar-item-hover);
-  color: var(--color-text-primary);
-}
-.ctx-menu-item.danger {
-  color: var(--color-orlen);
-}
-.ctx-menu-item.danger:hover {
-  background: rgba(227, 0, 15, 0.06);
-}
-
-.ctx-menu-divider {
-  height: 1px;
-  background: var(--sidebar-divider);
-  margin: 3px 6px;
-  border: none;
-}
-
-/* Delete confirmation inline block */
-.ctx-menu-delete-confirm {
-  padding: 6px 8px;
-  border-radius: 6px;
-  background: var(--ctx-delete-confirm-bg);
-  border: 1px solid var(--ctx-delete-confirm-border);
-}
-.ctx-menu-delete-confirm-text {
-  display: block;
-  font-size: 10px;
-  font-weight: 600;
-  color: var(--ctx-delete-confirm-text);
-  line-height: 1.35;
-  text-align: left;
-  margin-bottom: 6px;
-}
-.ctx-menu-delete-confirm-actions {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-.ctx-menu-delete-yes {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-  padding: 3px 10px;
-  border-radius: 4px;
-  font-size: 10px;
-  font-weight: 700;
-  color: #ffffff;
-  background: var(--ctx-delete-yes-bg);
-  border: none;
-  cursor: pointer;
-  transition: background 0.12s ease;
-  white-space: nowrap;
-}
-.ctx-menu-delete-yes:hover {
-  background: var(--ctx-delete-yes-hover);
-}
-.ctx-menu-delete-no {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 3px 10px;
-  border-radius: 4px;
-  font-size: 10px;
-  font-weight: 600;
-  color: var(--ctx-delete-no-text);
-  background: var(--ctx-delete-no-bg);
-  border: none;
-  cursor: pointer;
-  transition: all 0.12s ease;
-  white-space: nowrap;
-}
-.ctx-menu-delete-no:hover {
-  background: var(--ctx-delete-no-hover);
-  color: var(--color-text-primary);
-}
-
-/* ── Input Area ── */
-.input-box-wrapper {
-  border-radius: var(--radius-lg);
-  border: 1.5px solid var(--color-border);
-  background: var(--color-surface);
-  box-shadow: var(--input-box-shadow);
-  transition: all 0.2s ease;
-}
-.input-box-wrapper:focus-within {
-  border-color: var(--input-focus-border);
-  box-shadow: var(--input-focus-shadow);
-}
-.input-box-wrapper:hover:not(:focus-within) {
-  border-color: var(--color-border-strong);
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
-}
-
-.input-attach-btn {
-  transition: all 0.15s ease;
-  border-radius: 8px;
-  padding: 10px;
-  color: var(--color-text-tertiary);
-}
-.input-attach-btn:hover {
-  background: var(--color-surface-tertiary);
-  color: var(--color-orlen);
-}
-
-.input-send-btn {
-  transition: all 0.2s ease;
-  border-radius: 10px;
-  padding: 12px;
-}
-.input-send-btn.enabled {
-  background: linear-gradient(135deg, #e3000f 0%, #c5000d 100%);
-  color: #fff;
-  box-shadow: 0 2px 8px rgba(227, 0, 15, 0.3);
-}
-.input-send-btn.enabled:hover {
-  background: linear-gradient(135deg, #c5000d 0%, #a3000a 100%);
-  box-shadow: 0 4px 12px rgba(227, 0, 15, 0.4);
-  transform: translateY(-1px);
-}
-.input-send-btn.enabled:active {
-  transform: translateY(0);
-  box-shadow: 0 1px 4px rgba(227, 0, 15, 0.2);
-}
-.input-send-btn.disabled {
-  background: var(--color-surface-tertiary);
-  color: var(--color-text-muted);
-  cursor: not-allowed;
-}
-
-/* ── Quill & Markdown Overrides ── */
-.canvas-editor .ql-toolbar.ql-snow {
-  border: none !important; border-bottom: 1px solid var(--color-border) !important;
-  background-color: var(--color-surface) !important;
-  padding: 10px 16px !important; position: sticky; top: 0; z-index: 10;
-}
-.canvas-editor .ql-toolbar .ql-stroke { stroke: var(--color-text-secondary) !important; }
-.canvas-editor .ql-toolbar .ql-fill { fill: var(--color-text-secondary) !important; }
-.canvas-editor .ql-toolbar .ql-picker-label { color: var(--color-text-secondary) !important; }
-.canvas-editor .ql-toolbar .ql-picker-options { background-color: var(--color-surface) !important; border-color: var(--color-border) !important; color: var(--color-text-primary) !important; }
-.canvas-editor .ql-container.ql-snow { border: none !important; font-family: var(--font-family-sans) !important; font-size: 15px !important; }
-.canvas-editor .ql-editor { min-height: 400px; padding: 32px !important; color: var(--color-text-primary); line-height: 1.8; }
-.dark .canvas-editor .ql-editor blockquote { background-color: rgba(227, 0, 15, 0.05); }
-
-/* Animacje */
-@keyframes slideInRight { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
-@keyframes fadeInUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-@keyframes pulseDot { 0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; } 40% { transform: scale(1); opacity: 1; } }
-@keyframes ctxMenuIn { from { opacity: 0; transform: translateY(-4px) scale(0.97); } to { opacity: 1; transform: translateY(0) scale(1); } }
-.animate-slide-in-right { animation: slideInRight 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
-.animate-fade-in-up { animation: fadeInUp 0.25s ease-out forwards; }
-.animate-ctx-menu { animation: ctxMenuIn 0.15s ease-out forwards; }
-
-.typing-dot {
-  width: 6px; height: 6px; border-radius: 50%; background-color: var(--color-orlen);
-  display: inline-block; animation: pulseDot 1.4s infinite ease-in-out both;
-}
-.typing-dot:nth-child(1) { animation-delay: -0.32s; }
-.typing-dot:nth-child(2) { animation-delay: -0.16s; }
-.typing-dot:nth-child(3) { animation-delay: 0s; }
-
-============================================================
---- PLIK: .\frontend\src\types\index.ts ---
-============================================================
-
-// frontend/src/types/index.ts
-
-export type AppMode = 'chatbot' | 'gonogo' | 'translator' | 'analysis';
-export type ThemeMode = 'light' | 'dark';
-
-export interface ChatMessage {
-  id: string;
-  role: 'user' | 'assistant' | 'system';
-  content: string;
-  timestamp: Date;
-  mode: AppMode;
-  draftData?: StructuredDraft;
-  chartPaths?: string[];
-}
-
-export interface Project {
-  id: string;
-  name: string;
-  mode: AppMode;
-  messages: ChatMessage[];
-  createdAt: Date;
-  updatedAt: Date;
-  archived: boolean;
-  /** ChromaDB collection ID or S3 prefix for RAG context */
-  ragContextId?: string;
-  /** Whether RAG indexing is enabled */
-  ragEnabled: boolean;
-  canvasContent?: string;
-  draft?: StructuredDraft;
-  chartPaths?: string[];
-}
-
-export interface StructuredDraft {
-  summary: string;
-  test_analysis: string;
-  risks_eval: string;
-  decision: string;
-  justification: string;
-}
-
-export interface DraftResponse {
-  draft: StructuredDraft;
-  charts: string[];
-}
-
-export interface ExportRequest {
-  project_name: string;
-  edited_text: string;
-  format: 'pdf' | 'docx' | 'md';
-  language: string;
-  author: string;
-  chart_paths: string[];
-}
-
-export interface ChatRequest {
-  project_id: string;
-  mode: AppMode;
-  message: string;
-  language: string;
-  canvas_content?: string;
-  rag_context_id?: string;
-  files?: File[];
-}
-
-export interface ChatResponse {
-  message: string;
-  draft_data?: StructuredDraft;
-  chart_paths?: string[];
-  canvas_html?: string;
-}
-
-export interface AttachedFile {
-  file: File;
-  id: string;
-}
-
-export interface RagIndexRequest {
-  project_id: string;
-  collection_name: string;
-}
-
-export interface RagIndexResponse {
-  context_id: string;
-  status: string;
-  document_count: number;
-}
-
-export interface Labels {
-  headerTitle: string;
-  chatPlaceholder: string;
-  newProject: string;
-  searchProjects: string;
-  canvasTitle: string;
-  downloadPdf: string;
-  downloadDocx: string;
-  downloadMd: string;
-  sendMessage: string;
-  attachFiles: string;
-  modeChatbot: string;
-  modeGoNogo: string;
-  modeTranslator: string;
-  modeAnalysis: string;
-  openCanvas: string;
-  closeCanvas: string;
-  noProjects: string;
-  today: string;
-  yesterday: string;
-  older: string;
-  welcome: string;
-  welcomeSub: string;
-  generatingFile: string;
-  successFile: string;
-  errorExport: string;
-  errorAi: string;
-  maxFiles: string;
-  newLine: string;
-  editName: string;
-  archive: string;
-  unarchive: string;
-  deleteProject: string;
-  archived: string;
-  active: string;
-  confirmDelete: string;
-  ragConnect: string;
-  ragDisconnect: string;
-  ragConnected: string;
-  ragIndexing: string;
-  ragTooltip: string;
-  darkMode: string;
-  lightMode: string;
-  cancel: string;
-  save: string;
-  rename: string;
-}
-
-============================================================
---- PLIK: .\frontend\src\lib\utils.ts ---
-============================================================
-
-// frontend/src/lib/utils.ts
-import { clsx, type ClassValue } from 'clsx';
-import { twMerge } from 'tailwind-merge';
-
-export function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs));
-}
-
-export function generateId(): string {
-  return `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
-}
-
-export function formatFileSize(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}
-
-export function formatTime(date: Date): string {
-  return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-}
-
-export function isToday(date: Date): boolean {
-  const today = new Date();
-  return date.toDateString() === today.toDateString();
-}
-
-export function isYesterday(date: Date): boolean {
-  const yesterday = new Date();
-  yesterday.setDate(yesterday.getDate() - 1);
-  return date.toDateString() === yesterday.toDateString();
-}
-
-export function stripHtml(html: string): string {
-  let text = html;
-  text = text.replace(/<br\s*\/?>/gi, '\n');
-  text = text.replace(/<\/p><p>/gi, '\n\n');
-  text = text.replace(/<\/li><li>/gi, '\n- ');
-  text = text.replace(/<li>/gi, '- ');
-  text = text.replace(/<[^>]+>/g, '');
-  text = text.replace(/&nbsp;/g, ' ');
-  text = text.replace(/&amp;/g, '&');
-  text = text.replace(/&lt;/g, '<');
-  text = text.replace(/&gt;/g, '>');
-  text = text.replace(/\n{3,}/g, '\n\n');
-  return text.trim();
-}
-
-export function draftToHtml(
-  draft: {
-    summary: string;
-    test_analysis: string;
-    risks_eval: string;
-    decision: string;
-    justification: string;
-  },
-  isPl: boolean
-): string {
-  const sections = [
-    { heading: isPl ? 'Podsumowanie' : 'Summary', content: draft.summary },
-    { heading: isPl ? 'Analiza testów' : 'Test Analysis', content: draft.test_analysis },
-    { heading: isPl ? 'Ocena ryzyk' : 'Risk Evaluation', content: draft.risks_eval },
-    {
-      heading: isPl ? 'Decyzja' : 'Decision',
-      content: `<strong style="font-size:1.3em;color:${draft.decision === 'GO' ? '#10b981' : '#ef4444'}">${draft.decision}</strong>`,
-    },
-    { heading: isPl ? 'Uzasadnienie' : 'Justification', content: draft.justification },
-  ];
-
-  return sections
-    .filter(s => s.content)
-    .map(s => `<h2>${s.heading}</h2>\n${s.content}`)
-    .join('\n\n');
-}
-
-export function htmlToMarkdown(html: string): string {
-  let md = html;
-  md = md.replace(/<h1[^>]*>(.*?)<\/h1>/gi, '# $1\n');
-  md = md.replace(/<h2[^>]*>(.*?)<\/h2>/gi, '## $1\n');
-  md = md.replace(/<h3[^>]*>(.*?)<\/h3>/gi, '### $1\n');
-  md = md.replace(/<strong[^>]*>(.*?)<\/strong>/gi, '**$1**');
-  md = md.replace(/<em[^>]*>(.*?)<\/em>/gi, '*$1*');
-  md = md.replace(/<br\s*\/?>/gi, '\n');
-  md = md.replace(/<\/p>\s*<p>/gi, '\n\n');
-  md = md.replace(/<li[^>]*>(.*?)<\/li>/gi, '- $1\n');
-  md = md.replace(/<[^>]+>/g, '');
-  md = md.replace(/&nbsp;/g, ' ');
-  md = md.replace(/&amp;/g, '&');
-  md = md.replace(/&lt;/g, '<');
-  md = md.replace(/&gt;/g, '>');
-  md = md.replace(/\n{3,}/g, '\n\n');
-  return md.trim();
-}
-
-============================================================
---- PLIK: .\frontend\src\hooks\useTheme.ts ---
-============================================================
-
-// frontend/src/hooks/useTheme.ts
-import { useState, useEffect, useCallback } from 'react';
-import type { ThemeMode } from '../types';
-
-export function useTheme() {
-  const [theme, setTheme] = useState<ThemeMode>(() => {
-    const stored = localStorage.getItem('qa-theme');
-    if (stored === 'dark' || stored === 'light') return stored;
-    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-  });
-
-  useEffect(() => {
-    const root = document.documentElement;
-    if (theme === 'dark') {
-      root.classList.add('dark');
-    } else {
-      root.classList.remove('dark');
-    }
-    localStorage.setItem('qa-theme', theme);
-  }, [theme]);
-
-  const toggleTheme = useCallback(() => {
-    setTheme(prev => (prev === 'dark' ? 'light' : 'dark'));
-  }, []);
-
-  return { theme, toggleTheme };
-}
-
-============================================================
 --- PLIK: .\backend\main.py ---
 ============================================================
 
@@ -750,7 +36,6 @@ app = FastAPI(
     description="Microservice for generating and exporting automated QA deployment reports."
 )
 
-
 @app.middleware("http")
 async def log_all_requests(request: Request, call_next):
     correlation_id = str(uuid.uuid4())[:8]
@@ -759,7 +44,6 @@ async def log_all_requests(request: Request, call_next):
     response = await call_next(request)
     logger.info(f"Completed request: {response.status_code} {request.url.path}")
     return response
-
 
 app.add_middleware(
     CORSMiddleware,
@@ -780,6 +64,9 @@ except Exception as e:
     logger.critical(f"Service initialization failed: {e}")
     raise SystemExit(1)
 
+# ==========================================
+# DATA MODELLING
+# ==========================================
 
 class ExportRequest(BaseModel):
     project_name: str
@@ -788,138 +75,192 @@ class ExportRequest(BaseModel):
     language: str
     author: str
     chart_paths: List[str]
-    
-class ApproveReportRequest(BaseModel):
-    """Request to save an approved report to history."""
-    project_name: str
-    report_data: dict
-    language: str
-
-
-class StructuredRule(BaseModel):
-    """Single decision rule definition."""
-    id: str
-    name_pl: Optional[str] = ""
-    name_en: Optional[str] = ""
-    field: str
-    operator: str
-    threshold: float
-    unit: str
-    severity: str
-    description_pl: Optional[str] = ""
-    description_en: Optional[str] = ""
-
-
-class UpdateRulesRequest(BaseModel):
-    """Request to update structured decision rules."""
-    rules: List[StructuredRule]
-    language: str
-
-
 
 MAX_FILE_SIZE = 5 * 1024 * 1024
 
-# TODO: TESTING - TO BE DELETED
-@app.post("/api/v2/chat")
-async def chat_mock_endpoint(request: Request):
-    """
-    Mockowy endpoint do testowania frontendu. 
-    Odbiera wiadomości i zwraca udawane odpowiedzi.
-    """
+# ==========================================
+# PROJECT ENDPOINTS (p-xxxxx)
+# ==========================================
+
+@app.post("/api/v2/projects/{project_id}/instructions")
+async def update_project_instructions(project_id: str, request: Request, user: dict = Depends(get_current_user)):
+    """Zapisuje globalne instrukcje/założenia dla projektu."""
     try:
-        # Sprawdzamy czy żądanie ma pliki (multipart) czy to czysty JSON
+        data = await request.json()
+        instructions = data.get("instructions", "")
+        storage.save_project_instructions(project_id, instructions)
+        return {"status": "success", "message": "Instrukcje projektu zostały zapisane."}
+    except Exception as e:
+        logger.error(f"Błąd zapisu instrukcji: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+@app.post("/api/v2/projects/{project_id}/upload")
+async def upload_project_files(project_id: str, files: List[UploadFile] = File(...), user: dict = Depends(get_current_user)):
+    """Wgrywa pliki wiedzy (PDF, DOCX) do projektu i dodaje je do bazy wektorowej ChromaDB."""
+    try:
+        proj_uploads_dir = storage.get_project_uploads_dir(project_id)
+        ingested_count = 0
+        
+        for file in files:
+            content = await file.read()
+            file_path = os.path.join(proj_uploads_dir, file.filename)
+            with open(file_path, "wb") as f:
+                f.write(content)
+            
+            # Wyciągamy tekst z PDF/DOCX/TXT za pomocą FileParsera i wrzucamy do RAGa
+            text_content = file_parser.extract_history_text(file_path)
+            if text_content:
+                rag.ingest_document(text_content, file.filename, entity_id=project_id)
+                ingested_count += 1
+
+        return {"status": "success", "message": f"Wgrano i zwektoryzowano {ingested_count} plików wiedzy projektu."}
+    except Exception as e:
+        logger.error(f"Błąd wgrywania plików projektu: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
+    
+# ==========================================
+# MAIN CHAT ENDPOINT (c-xxxxx)
+# ==========================================
+@app.post("/api/v2/chat")
+async def chat_endpoint(request: Request, user: dict = Depends(get_current_user)):
+    try:
         content_type = request.headers.get("content-type", "")
         
+        # Payload handling for both JSON and multipart/form-data (for file uploads)
         if "multipart/form-data" in content_type:
             form = await request.form()
             message = form.get("message", "")
             mode = form.get("mode", "chatbot")
+            language = form.get("language", "pl")
+            chat_id = form.get("chat_id")
+            project_id = form.get("project_id")
             files = form.getlist("files")
-            file_info = f"\n\nZałączono plików: {len(files)}" if files else ""
         else:
             data = await request.json()
             message = data.get("message", "")
             mode = data.get("mode", "chatbot")
-            file_info = ""
+            language = data.get("language", "pl")
+            chat_id = data.get("chat_id")
+            project_id = data.get("project_id")
+            files = []
 
-        # Domyślna odpowiedź dla Chatbota, Tłumacza i Analizy
-        response_payload = {
-            "message": f"To jest udawana odpowiedź z lokalnego środowiska.\n\nTryb działania: **{mode.upper()}**\nOtrzymałem od Ciebie: *{message}*{file_info}",
-        }
+        if project_id in ["", "null", "undefined", "default"]:
+            project_id = None
 
-        # Jeśli tryb to Go/No-Go, dodajemy dane draftu, aby frontend OTWARTYŁ CANVAS!
+        if not chat_id:
+            raise HTTPException(status_code=400, detail="No chat_id provided in the request")
+        
+        chat_created_dir = storage.get_chat_created_dir(chat_id)
+        chart_generator.output_dir = chat_created_dir
+        report_generator.final_output_path = chat_created_dir
+
+        # -------------------
+        # MODE: GO/NO-GO
+        # -------------------
         if mode == "gonogo":
-            response_payload["message"] = "Przeanalizowałem Twoje pliki. Otwórz edytor raportu po prawej stronie, aby zobaczyć szczegóły."
-            response_payload["draft_data"] = {
-                "summary": "To jest przykładowe podsumowanie z mocka. Wdrożenie wygląda obiecująco.",
-                "test_analysis": "Pokrycie testami wynosi 85%. Wszystkie testy funkcjonalne przeszły pomyślnie.",
-                "risks_eval": "Zignorowano mniejsze błędy UI zgłoszone przez użytkowników.",
-                "decision": "GO",
-                "justification": "Wszystkie twarde reguły (brak błędów krytycznych, >80% pokrycia) zostały spełnione."
+            if not files:
+                logger.info(f"Go/No-Go request received without files | chat_id={chat_id} | project_id={project_id}")
+                return {
+                    "message": "Aby wygenerować raport Go/No-Go, proszę załącz pliki z wynikami testów."
+                } if language == "pl" else {
+                    "message": "To generate a Go/No-Go report, please attach files with test results."
+                }
+
+            # Saving uploaded files to local storage under chat=specific dir
+            chat_uploads_dir = storage.get_chat_uploads_dir(chat_id)
+            contents = {}
+            
+            for file in files:
+                content = await file.read()
+                if len(content) > MAX_FILE_SIZE:
+                    raise HTTPException(status_code=413, detail=f"Plik {file.filename} jest za duży.")
+                
+                ext = os.path.splitext(file.filename)[1].lower()
+                if ext not in {'.csv', '.xls', '.xlsx'}:
+                    continue
+                
+                file_path = os.path.join(chat_uploads_dir, file.filename)
+                with open(file_path, "wb") as f:
+                    f.write(content)
+                    
+                contents[file.filename] = content
+                
+                try:
+                    text_content = file_parser.extract_test_data_from_bytes({file.filename: content})
+                    rag.ingest_document(text_content, file.filename, entity_id=chat_id)
+                except Exception as e:
+                    logger.warning(f"Could not process (vectorize) {file.filename}: {e}")
+
+            if not contents:
+                logger.info(f"No valid files uploaded for Go/No-Go | chat_id={chat_id} | project_id={project_id}")
+                return {
+                    "message": "Nie załączono żadnych prawidłowych plików tabelarycznych."
+                } if language == "pl" else {
+                    "message": "No valid tabular files were uploaded."
+                }
+
+            parsed_test_data = file_parser.extract_test_data_from_bytes(contents)
+            
+            project_instructions = ""
+            if project_id:
+                project_instructions = storage.load_project_instructions(project_id)
+                
+            rag_context = rag.search_context(query=message, project_id=project_id, chat_id=chat_id)
+            
+            if project_instructions:
+                rag_context = f"[GLOBALNE WYTYCZNE PROJEKTU]\n{project_instructions}\n\n[DOKUMENTY RAG]\n{rag_context}"
+                
+            historical_cache = storage.get_latest_history(chat_id=chat_id)
+
+            chart_paths = chart_generator.generate_all_charts(
+                file_contents=contents,
+                project_name=chat_id,
+                lang=language
+            )
+
+            user_risks = message if message else "Brak dodatkowych uwag." if language == "pl" else "No additional remarks."
+
+            draft_json = report_generator.generate_structured_draft(
+                historical_cache=historical_cache,
+                rag_context=rag_context,
+                parsed_test_data=parsed_test_data,
+                user_risks=user_risks,
+                project_name=chat_id,
+                lang=language
+            )
+
+            storage.save_to_cache(chat_id=chat_id, structured_data=draft_json)
+
+            msg_response = (
+                "Zakończyłem analizę wdrożenia i wygenerowałem wykresy. "
+                "Raport został przygotowany – możesz go zweryfikować i edytować w prawym panelu."
+            ) if language == "pl" else "Analysis complete. Please review the report on the right."
+
+            return {
+                "message": msg_response,
+                "draft_data": draft_json,
+                "chart_paths": chart_paths
             }
-            # Możesz też tu dodać zmockowane ścieżki do wykresów, jeśli masz jakieś w folderze output/charts
-            # response_payload["chart_paths"] = ["output/charts/dummy_chart.png"]
 
-        return response_payload
+        # ---------------------------------------------------------
+        # TRYB 2: ZWYKŁY CHATBOT
+        # ---------------------------------------------------------
+        elif mode == "chatbot":
+            sys_prompt = "Jesteś pomocnym asystentem QA (Quality Assurance) i inżynierem oprogramowania."
+            reply = llm.generate_response(sys_prompt, message, temperature=0.3)
+            return {"message": reply}
 
-    except Exception as e:
-        logger.error(f"Błąd w mock API: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-    
+        # ---------------------------------------------------------
+        # TRYB 3 & 4: TŁUMACZ / ANALIZA (Placeholdery dla kolegi)
+        # ---------------------------------------------------------
+        elif mode == "translator":
+            return {"message": f"Moduł tłumacza. Twoja wiadomość to: {message}"}
+            
+        elif mode == "analysis":
+            return {"message": f"Moduł analityczny. Przekazano plików: {len(files)}"}
 
-@app.post("/api/v2/reports/draft")
-async def generate_draft(
-    project_name: str = Form(...),
-    user_risks: str = Form(...),
-    language: str = Form(...),
-    files: List[UploadFile] = File(...),
-    user: dict = Depends(get_current_user)
-):
-    try:
-        contents = {}
-        for file in files:
-            content = await file.read()
-            if len(content) > MAX_FILE_SIZE:
-                raise HTTPException(
-                    status_code=413,
-                    detail=f"File {file.filename} exceeds the 5MB limit"
-                )
-
-            # validating file extension
-            allowed_extensions = {'.csv', '.xls', '.xlsx'}
-            ext = os.path.splitext(file.filename)[1].lower()
-            if ext not in allowed_extensions:
-                raise HTTPException(
-                    status_code=400,
-                    detail=f"Unsupported file type: {file.filename}. Allowed: CSV, XLS, XLSX"
-                )
-
-            contents[file.filename] = content
-
-
-        parsed_test_data = file_parser.extract_test_data_from_bytes(contents)
-        rag_context = rag.get_historical_context(lang=language)
-        historical_cache = storage.get_latest_history(project_name=project_name)
-
-        # Generate charts from uploaded data
-        chart_paths = chart_generator.generate_all_charts(
-            file_contents=contents,
-            project_name=project_name,
-            lang=language
-        )
-
-        draft_json = report_generator.generate_structured_draft(
-            historical_cache=historical_cache,
-            rag_context=rag_context,
-            parsed_test_data=parsed_test_data,
-            user_risks=user_risks,
-            project_name=project_name,
-            lang=language
-        )
-
-        storage.save_to_cache(project_name=project_name, structured_data=draft_json)
-
-        return {"draft": draft_json, "charts": chart_paths}
+        else:
+            return {"message": "Unknown mode of operation."}
 
     except LLMConnectionError as e:
         logger.error(f"LLM connection failed: {e}")
@@ -934,40 +275,35 @@ async def generate_draft(
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
+# ==========================================
+# EXPORT ENDPOINT & CACHE
+# ==========================================
 @app.post("/api/v2/reports/export")
 def export_report(req: ExportRequest, user: dict = Depends(get_current_user)):
     try:
         fmt = req.format.lower()
+        
+        # Ustawiamy folder wyjściowy na folder czatu
+        chat_created_dir = storage.get_chat_created_dir(req.project_name) # frontend na razie wysyła to jako project_name
+        report_generator.final_output_path = chat_created_dir
 
         if fmt == "pdf":
             filepath = report_generator.export_to_pdf(
-                final_text=req.edited_text,
-                charts_paths=req.chart_paths,
-                custom_name=req.project_name,
-                author=req.author,
-                lang=req.language
+                final_text=req.edited_text, charts_paths=req.chart_paths,
+                custom_name=req.project_name, author=req.author, lang=req.language
             )
         elif fmt == "docx":
             filepath = report_generator.export_to_docx(
-                final_text=req.edited_text,
-                charts_paths=req.chart_paths,
-                custom_name=req.project_name,
-                author=req.author,
-                lang=req.language
+                final_text=req.edited_text, charts_paths=req.chart_paths,
+                custom_name=req.project_name, author=req.author, lang=req.language
             )
         elif fmt == "md":
             filepath = report_generator.export_to_md(
-                final_text=req.edited_text,
-                charts_paths=req.chart_paths,
-                custom_name=req.project_name,
-                author=req.author,
-                lang=req.language
+                final_text=req.edited_text, charts_paths=req.chart_paths,
+                custom_name=req.project_name, author=req.author, lang=req.language
             )
         else:
-            raise HTTPException(
-                status_code=400,
-                detail="Unsupported format. Use 'pdf', 'docx', or 'md'."
-            )
+            raise HTTPException(status_code=400, detail="Unsupported format.")
 
         return {"status": "success", "filepath": filepath}
 
@@ -981,19 +317,19 @@ def export_report(req: ExportRequest, user: dict = Depends(get_current_user)):
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
-@app.delete("/api/v2/cache/{project_name}")
-def delete_project_cache(project_name: str, user: dict = Depends(get_current_user)):
+@app.delete("/api/v2/cache/{chat_id}")
+def delete_project_cache(chat_id: str, user: dict = Depends(get_current_user)):
     try:
-        success = storage.clear_cache(project_name)
+        success = storage.clear_cache(chat_id=chat_id)
         if success:
             return {
                 "status": "success",
-                "message": f"Cache for project '{project_name}' deleted successfully"
+                "message": f"Cache for chat '{chat_id}' deleted successfully"
             }
         else:
             raise HTTPException(
                 status_code=404,
-                detail=f"No cache found for project '{project_name}'"
+                detail=f"No cache found for chat '{chat_id}'"
             )
     except HTTPException:
         raise
@@ -1002,107 +338,9 @@ def delete_project_cache(project_name: str, user: dict = Depends(get_current_use
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
-@app.post("/api/v2/history/approve")
-def approve_report_to_history(
-    req: ApproveReportRequest,
-    user: dict = Depends(get_current_user)
-):
-    """
-    Saves an approved report to the history directory so it becomes
-    part of the RAG context for future analyses. This is how the
-    knowledge base grows over time.
-    """
-    try:
-        filepath = rag.save_approved_report(
-            project_name=req.project_name,
-            report_data=req.report_data,
-            lang=req.language
-        )
-        return {
-            "status": "success",
-            "message": f"Report saved to history",
-            "filepath": filepath
-        }
-    except DataProcessingError as e:
-        raise HTTPException(status_code=500, detail=str(e))
-    except Exception as e:
-        logger.error(f"Failed to approve report: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail="Internal server error")
-
-
-@app.get("/api/v2/history/rules/{language}")
-def get_structured_rules(language: str, user: dict = Depends(get_current_user)):
-    """Returns the current structured decision rules."""
-    try:
-        rules_text = rag.load_structured_rules(lang=language)
-        rules_path = os.path.join(
-            Config.HISTORY_PATH, language, "structured_rules.json"
-        )
-
-        if os.path.exists(rules_path):
-            with open(rules_path, "r", encoding="utf-8") as f:
-                rules_data = json.load(f)
-            return {"status": "success", "data": rules_data}
-        else:
-            return {"status": "success", "data": {"rules": []}}
-
-    except Exception as e:
-        logger.error(f"Failed to load rules: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail="Internal server error")
-
-
-@app.put("/api/v2/history/rules")
-def update_structured_rules(
-    req: UpdateRulesRequest,
-    user: dict = Depends(get_current_user)
-):
-    """Updates the structured decision rules."""
-    try:
-        rules_dicts = [rule.model_dump() for rule in req.rules]
-        filepath = rag.update_structured_rules(
-            rules=rules_dicts,
-            lang=req.language,
-            author=user.get("username", "unknown")
-        )
-        return {
-            "status": "success",
-            "message": "Rules updated",
-            "filepath": filepath
-        }
-    except DataProcessingError as e:
-        raise HTTPException(status_code=500, detail=str(e))
-    except Exception as e:
-        logger.error(f"Failed to update rules: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail="Internal server error")
-
-
-@app.get("/api/v2/history/reports/{language}")
-def list_history_reports(language: str, user: dict = Depends(get_current_user)):
-    """Lists all history report files for a given language."""
-    try:
-        dir_path = os.path.join(Config.HISTORY_PATH, language)
-        if not os.path.exists(dir_path):
-            return {"status": "success", "reports": []}
-
-        reports = []
-        for filename in sorted(os.listdir(dir_path)):
-            if filename.endswith(".txt"):
-                filepath = os.path.join(dir_path, filename)
-                stat = os.stat(filepath)
-                reports.append({
-                    "filename": filename,
-                    "size_kb": round(stat.st_size / 1024, 1),
-                    "modified": datetime.fromtimestamp(
-                        stat.st_mtime
-                    ).strftime("%Y-%m-%d %H:%M:%S"),
-                })
-
-        return {"status": "success", "reports": reports}
-
-    except Exception as e:
-        logger.error(f"Failed to list history: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail="Internal server error")
-        
+# ==========================
+# FRONTEND MOUNT
+# ==========================
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
 frontend_dist_path = os.path.join(current_dir, "..", "frontend", "dist")
@@ -1120,264 +358,42 @@ if __name__ == "__main__":
 --- PLIK: .\backend\requirements.txt ---
 ============================================================
 
+# TODO: review nest asyncio usage and remove if not needed
+# added to fix RuntimeError in Jupyter when running async code (like LLM calls) 
+# in the same event loop
+nest-asyncio
+
+# backend dependencies
 fastapi
 uvicorn
+python-dotenv
 python-multipart
-pydantic
 requests
 pandas
+matplotlib
+
+# for data validation and settings management
+pydantic
+urllib3
+
+# for file parsing and report generation
 openpyxl
 pdfplumber
-matplotlib
 fpdf2
 python-docx
-python-dotenv
-nest-asyncio
 tabulate
 
-============================================================
---- PLIK: .\backend\datasources\cache\projekt_alfa_latest.json ---
-============================================================
-
-{
-    "timestamp": "2026-03-08 22:18:22",
-    "project_name": "Projekt Alfa",
-    "data": {
-        "summary": "Wdrozenie zostalo zaakceptowane (GO) na podstawie spe\u0142nienia wszystkich twardych regu\u0142 decyzyjnych i braku znacz\u0105cych ryzyk.",
-        "test_analysis": "Pokrycie testami wynosi 85%, co przekracza wymagany pr\u00f3g 80%. Liczba b\u0142\u0119d\u00f3w krytycznych wynosi 0. Testy funkcjonalne zako\u0144czy\u0142y si\u0119 sukcesem w 98%, a testy niefunkcjonalne w 98.5%. Nie stwierdzono znacz\u0105cych ryzyk.",
-        "risks_eval": "Ryzyka historyczne SEC-101, SEC-103 i SEC-104 zosta\u0142y ocenione jako akceptowalne. Ryzyko SEC-102 zosta\u0142o zablokowane/naprawione. Ryzyka u\u017cytkownika nie zosta\u0142y zg\u0142oszone.",
-        "decision": "GO",
-        "justification": "Decyzja GO zosta\u0142a podj\u0119ta, poniewa\u017c wszystkie twarde regu\u0142y decyzyjne zosta\u0142y spe\u0142nione: pokrycie testami wynosi 85%, brak b\u0142\u0119d\u00f3w krytycznych, testy funkcjonalne zako\u0144czy\u0142y si\u0119 sukcesem w 98%, a testy niefunkcjonalne w 98.5%. Nie stwierdzono znacz\u0105cych ryzyk, a kontekst historyczny projektu wskazuje na akceptowalno\u015b\u0107 ryzyk i brak blokuj\u0105cych problem\u00f3w."
-    }
-}
+# for vector database and embeddings
+chromadb
+sentence-transformers
+langchain-text-splitters
+charset-normalizer
 
 ============================================================
---- PLIK: .\backend\datasources\cache\test1_latest.json ---
+--- PLIK: .\backend\datasources\projects\p-ouqyarqk\instructions.txt ---
 ============================================================
 
-{
-    "timestamp": "2026-03-09 14:29:58",
-    "project_name": "test1",
-    "data": {
-        "summary": "Wdrozenie zostalo zaakceptowane (GO) pomimo niskiego pokrycia testami (72%) i obecnosci bledu krytycznego (1), poniewaz dokumentacja jest w pelni zatwierdzona, a ryzyka techniczne zostaly zaakceptowane.",
-        "test_analysis": "Pokrycie testami wynioslo 72%, co jest ponizej wymaganego progu 80%. Wystapil 1 blad krytyczny w testach platnosci (TC-006). Testy funkcjonalne zakonczyly sie sukcesem w 91.67% (5 z 5 testow), a testy niefunkcjonalne w 80% (4 z 5 testow).",
-        "risks_eval": "Ryzyka techniczne: 1 blad krytyczny (SEC-102: Mozliwy SQL Injection w wyszukiwarce, Zablokowany/Naprawiony). Ryzyka uzytkownika: Aplikacja samoistnie sie wylacza (zaakceptowane).",
-        "decision": "GO",
-        "justification": "Decyzja GO zostala podjeta pomimo niespelnienia twardych regul (R1: pokrycie testami < 80%, R2: 1 blad krytyczny), poniewaz dokumentacja jest w pelni zatwierdzona, a ryzyka techniczne zostaly zaakceptowane. Wzorce historyczne wskazuja, ze w przypadku braku znaczacych ryzyk i pelnej dokumentacji, projekt moze zostac zaakceptowany mimo niespelnienia wszystkich regul."
-    }
-}
-
-============================================================
---- PLIK: .\backend\datasources\cache\test_latest.json ---
-============================================================
-
-{
-    "timestamp": "2026-03-09 14:39:48",
-    "project_name": "test",
-    "data": {
-        "summary": "Wdrozenie zostalo zaakceptowane (GO) z pokryciem testami wynoszacym 85%, brakiem bledow krytycznych i wysoka zdawalnoscia testow funkcjonalnych i niefunkcjonalnych.",
-        "test_analysis": "Pokrycie testami wynosi 85%, co przekracza wymagane 80%. Wszystkie testy funkcjonalne zakonczyly sie sukcesem (100%), a testy niefunkcjonalne mialy zdawalnosc 98.5%. Nie stwierdzono bledow krytycznych.",
-        "risks_eval": "Ryzyka z testow: SEC-101 (Low), SEC-103 (Medium), SEC-104 (Low). Ryzyka uzytkownika: brak. Wszystkie ryzyka zostaly ocenione jako akceptowalne lub juz rozwiazane.",
-        "decision": "GO",
-        "justification": "Decyzja GO zostala podjeta, poniewaz wszystkie twarde reguly decyzyjne zostaly spelnione: pokrycie testami >= 80%, brak bledow krytycznych, zdawalnosc testow funkcjonalnych >= 95%, zdawalnosc testow niefunkcjonalnych >= 90%. Dodatkowo, ryzyka zostaly ocenione jako akceptowalne."
-    }
-}
-
-============================================================
---- PLIK: .\backend\datasources\history\en\report_gamma_go.txt ---
-============================================================
-
-GO/NO-GO DECISION REPORT
-Project title: gAMma release updates
-Project status: completed
-Delivered components: UI dashboard, analytics engine
-
-TEST RESULTS:
-- Functional tests: 100%
-- Non-functional tests: 100%
-- Test coverage: 91%
-- Number of critical bugs: 0
-
-RISKS:
-- Minor delay in user training schedule, mitigated by video tutorials.
-
-DECISION: GO
-Comment: All qualitative criteria met successfully. Test coverage is well above the 80% threshold, and zero critical bugs were identified during the UAT phase. Proceed with deployment.
-
-
-============================================================
---- PLIK: .\backend\datasources\history\en\structured_rules.json ---
-============================================================
-
-{
-    "version": "1.0",
-    "updated": "2026-03-06",
-    "updated_by": "admin",
-    "rules": [
-        {
-            "id": "R1",
-            "name_en": "Minimum test coverage",
-            "field": "coverage",
-            "operator": ">=",
-            "threshold": 80,
-            "unit": "%",
-            "severity": "blocker",
-            "description_en": "Test coverage must be at least 80%. Below this threshold the deployment is automatically rejected."
-        },
-        {
-            "id": "R2",
-            "name_en": "Zero critical bugs",
-            "field": "critical_bugs",
-            "operator": "==",
-            "threshold": 0,
-            "unit": "count",
-            "severity": "blocker",
-            "description_en": "Critical bug count must be 0. Any critical bug blocks deployment."
-        },
-        {
-            "id": "R3",
-            "name_en": "Minimum functional test pass rate",
-            "field": "functional_pass_rate",
-            "operator": ">=",
-            "threshold": 95,
-            "unit": "%",
-            "severity": "blocker",
-            "description_en": "At least 95% of functional tests must pass."
-        },
-        {
-            "id": "R4",
-            "name_en": "Minimum non-functional test pass rate",
-            "field": "nonfunctional_pass_rate",
-            "operator": ">=",
-            "threshold": 90,
-            "unit": "%",
-            "severity": "warning",
-            "description_en": "At least 90% of non-functional tests should pass. Below this threshold justification is required."
-        }
-    ]
-}
-
-============================================================
---- PLIK: .\backend\datasources\history\pl\raport_alfa_go.txt ---
-============================================================
-
-RAPORT DECYZYJNY GO/NO-GO
-Tytuł projektu: Wdrożenie CRM
-Status projektu: zakończony
-Dostarczone komponenty: moduł autoryzacji, baza danych użytkowników
-
-WYNIKI TESTÓW:
-- Testy funkcjonalne: 100%
-- Testy niefunkcjonalne: 100%
-- Pokrycie: 85%
-- Liczba błędów krytycznych (crit): 0
-
-RYZYKA:
-- Brak znaczących ryzyk. Dokumentacja została w pełni zatwierdzona.
-
-DECYZJA: GO
-Komentarz: Kryteria jakościowe spełnione. Pokrycie testami wynosi powyżej wymaganego progu 80%, brak jakichkolwiek błędów krytycznych. Projekt gotowy do wdrożenia produkcyjnego.
-
-
-============================================================
---- PLIK: .\backend\datasources\history\pl\raport_beta_nogo.txt ---
-============================================================
-
-RAPORT DECYZYJNY GO/NO-GO
-Tytuł projektu: Aktualizacja bramki płatniczej - beta
-Status projektu: wstrzymany
-Dostarczone komponenty: API płatności, moduł powiadamiania
-
-WYNIKI TESTÓW:
-- Testy funkcjonalne: 20%
-- Testy niefunkcjonalne: 90%
-- Pokrycie: 72%
-- Liczba błędów krytycznych (crit): 2
-
-RYZYKA:
-- Niestabilność integracji zewnętrznej z bankiem powodująca timeouty.
-
-DECYZJA: NO-GO
-Komentarz: Wdrożenie odrzucone. Projekt posiada 2 błędy krytyczne uniemożliwiające transakcje. Dodatkowo pokrycie testami wynosi zaledwie 72% (wymagane jest minimum 80%). Wymagane poprawki i retesty.
-
-
-============================================================
---- PLIK: .\backend\datasources\history\pl\structured_rules.json ---
-============================================================
-
-{
-    "version": "1.0",
-    "updated": "2026-03-06",
-    "updated_by": "admin",
-    "rules": [
-        {
-            "id": "R1",
-            "name_pl": "Minimalne pokrycie testami",
-            "name_en": "Minimum test coverage",
-            "field": "coverage",
-            "operator": ">=",
-            "threshold": 80,
-            "unit": "%",
-            "severity": "blocker",
-            "description_pl": "Pokrycie testami musi wynosic co najmniej 80%. Ponizej tego progu wdrozenie jest automatycznie odrzucane.",
-            "description_en": "Test coverage must be at least 80%. Below this threshold the deployment is automatically rejected."
-        },
-        {
-            "id": "R2",
-            "name_pl": "Brak bledow krytycznych",
-            "name_en": "Zero critical bugs",
-            "field": "critical_bugs",
-            "operator": "==",
-            "threshold": 0,
-            "unit": "count",
-            "severity": "blocker",
-            "description_pl": "Liczba bledow krytycznych musi wynosic 0. Kazdy blad krytyczny blokuje wdrozenie.",
-            "description_en": "Critical bug count must be 0. Any critical bug blocks deployment."
-        },
-        {
-            "id": "R3",
-            "name_pl": "Minimalna zdawalnosc testow funkcjonalnych",
-            "name_en": "Minimum functional test pass rate",
-            "field": "functional_pass_rate",
-            "operator": ">=",
-            "threshold": 95,
-            "unit": "%",
-            "severity": "blocker",
-            "description_pl": "Co najmniej 95% testow funkcjonalnych musi zakonczyc sie sukcesem.",
-            "description_en": "At least 95% of functional tests must pass."
-        },
-        {
-            "id": "R4",
-            "name_pl": "Minimalna zdawalnosc testow niefunkcjonalnych",
-            "name_en": "Minimum non-functional test pass rate",
-            "field": "nonfunctional_pass_rate",
-            "operator": ">=",
-            "threshold": 90,
-            "unit": "%",
-            "severity": "warning",
-            "description_pl": "Co najmniej 90% testow niefunkcjonalnych powinno zakonczyc sie sukcesem. Ponizej tego progu wymagane jest uzasadnienie.",
-            "description_en": "At least 90% of non-functional tests should pass. Below this threshold justification is required."
-        }
-    ]
-}
-
-============================================================
---- PLIK: .\backend\output\reports\docx_version_history.json ---
-============================================================
-
-[]
-
-============================================================
---- PLIK: .\backend\output\reports\md_version_history.json ---
-============================================================
-
-[]
-
-============================================================
---- PLIK: .\backend\output\reports\version_history.json ---
-============================================================
-
-[]
+hej
 
 ============================================================
 --- PLIK: .\backend\src\core\config.py ---
@@ -1398,18 +414,26 @@ class Config:
     LLM_MODEL_NAME = os.getenv("LLM_MODEL_NAME", "")
     LLM_TIMEOUT = int(os.getenv("LLM_TIMEOUT", "150"))
 
-    KB_ENDPOINT_URL = os.getenv("KB_ENDPOINT_URL", "")
-    KB_API_TOKEN = os.getenv("KB_API_TOKEN", "")
-    KB_APP_NAME = os.getenv("KB_APP_NAME", "")
+    PARENT_CHUNK_SIZE = int(os.getenv("PARENT_CHUNK_SIZE", "1500"))
+    PARENT_CHUNK_OVERLAP = int(os.getenv("PARENT_CHUNK_OVERLAP", "200"))
+    CHILD_CHUNK_SIZE = int(os.getenv("CHILD_CHUNK_SIZE", "500"))
+    CHILD_CHUNK_OVERLAP = int(os.getenv("CHILD_CHUNK_OVERLAP", "80"))
+    TOP_K = int(os.getenv("TOP_K", "5"))
+    SCORE_THRESHOLD = float(os.getenv("SCORE_THRESHOLD", "0.3"))
 
-    HISTORY_PATH = os.getenv("HISTORY_PATH", "datasources/history")
-    CURRENT_DATA_PATH = os.getenv("CURRENT_DATA_PATH", "datasources/current")
-    CACHE_PATH = os.getenv("CACHE_PATH", "datasources/cache")
-
+    # RAG + filesystem storage paths
+    BASE_DATA_PATH = os.getenv("BASE_DATA_PATH", "datasources")
+    PROJECTS_PATH = os.path.join(BASE_DATA_PATH, "projects")
+    CHATS_PATH = os.path.join(BASE_DATA_PATH, "chats")
+    HISTORY_PATH = os.path.join(BASE_DATA_PATH, "global_history")  # structural
+    
+    # TODO: getting rid of fallback
     OUTPUT_CHARTS_PATH = os.getenv("OUTPUT_CHARTS_PATH", "output/charts")
     OUTPUT_REPORTS_PATH = os.getenv("OUTPUT_REPORTS_PATH", "output/reports")
 
     SSL_VERIFY = os.getenv("SSL_VERIFY", "false").lower() == "true"
+    
+    
 
 ============================================================
 --- PLIK: .\backend\src\core\exceptions.py ---
@@ -2041,426 +1065,6 @@ class FileParser:
             return ""
 
 ============================================================
---- PLIK: .\backend\src\services\rag.py ---
-============================================================
-
-# rag.py
-
-import os
-import json
-from typing import List, Dict
-
-from src.core.config import Config
-from src.core.logger import get_logger
-from src.core.exceptions import DataProcessingError
-
-
-class RAGEngine:
-    def __init__(self, llm_client):
-        self.logger = get_logger(self.__class__.__name__)
-        self.llm = llm_client
-        self.history_path = Config.HISTORY_PATH
-
-    def load_structured_rules(self, lang="pl") -> str:
-        """
-        Loads structured decision rules from JSON configuration.
-
-        These are hard, deterministic rules that don't depend on LLM interpretation.
-        They provide the predictable foundation for Go/No-Go decisions.
-
-        Args:
-            lang: Language code ('pl' or 'en')
-
-        Returns:
-            Formatted string of decision rules for injection into LLM prompts.
-        """
-        rules_path = os.path.join(self.history_path, lang, "structured_rules.json")
-
-        if not os.path.exists(rules_path):
-            self.logger.warning(f"Structured rules file not found: {rules_path}")
-            return ""
-
-        try:
-            with open(rules_path, "r", encoding="utf-8") as f:
-                data = json.load(f)
-
-            rules = data.get("rules", [])
-            if not rules:
-                return ""
-
-            formatted_rules = []
-            for rule in rules:
-                name = rule.get(f"name_{lang}", rule.get("name_en", ""))
-                desc = rule.get(f"description_{lang}", rule.get("description_en", ""))
-                severity = rule.get("severity", "info").upper()
-                threshold = rule.get("threshold", "")
-                operator = rule.get("operator", "")
-                unit = rule.get("unit", "")
-
-                formatted_rules.append(
-                    f"[{severity}] {rule['id']}: {name}\n"
-                    f"  Warunek: {rule.get('field', '')} {operator} {threshold}{unit}\n"
-                    f"  {desc}"
-                )
-
-            self.logger.info(f"Loaded {len(rules)} structured rules for lang: {lang}")
-            return "\n\n".join(formatted_rules)
-
-        except Exception as e:
-            self.logger.error(f"Failed to load structured rules: {e}")
-            return ""
-
-    def load_history_reports(self, lang="pl") -> str:
-        """
-        Loads all .txt history report files from the language-specific subdirectory.
-
-        These provide contextual examples of past decisions, supplementing
-        the structured rules with real-world precedent.
-
-        Args:
-            lang: Language code ('pl' or 'en')
-
-        Returns:
-            Concatenated text content of all history report files.
-        """
-        dir_path = os.path.join(self.history_path, lang)
-        reports_content = ""
-
-        if not os.path.exists(dir_path):
-            self.logger.warning(f"History directory not found: {dir_path}")
-            return ""
-
-        try:
-            txt_files = [f for f in os.listdir(dir_path) if f.endswith(".txt")]
-
-            for filename in sorted(txt_files):
-                file_path = os.path.join(dir_path, filename)
-                with open(file_path, "r", encoding="utf-8") as f:
-                    reports_content += f"--- {filename} ---\n{f.read()}\n\n"
-
-            self.logger.info(f"Loaded {len(txt_files)} history report files for lang: {lang}")
-            return reports_content
-
-        except Exception as e:
-            self.logger.error(f"Failed to read history files: {e}")
-            raise DataProcessingError(f"Failed to load history: {e}")
-
-    def get_historical_context(self, lang="pl") -> str:
-        """
-        Builds the complete historical context by combining structured rules
-        with LLM-summarized patterns from past reports.
-
-        The structured rules provide deterministic, predictable thresholds.
-        The report summaries provide contextual patterns and precedent.
-
-        Args:
-            lang: Target language for both retrieval and output.
-
-        Returns:
-            Combined context string for injection into the draft generation prompt.
-        """
-        self.logger.info(f"Building historical context for lang: {lang}")
-
-        # Part 1: deterministic structured rules (always included, no LLM needed)
-        structured_rules = self.load_structured_rules(lang)
-
-        # Part 2: LLM-summarized patterns from past reports
-        raw_reports = self.load_history_reports(lang)
-        llm_summary = ""
-
-        if raw_reports.strip():
-            if lang == "pl":
-                system_prompt = (
-                    "Jestes analitykiem QA. Na podstawie podanych historycznych raportow "
-                    "wyciagnij wzorce decyzyjne. Skup sie na konkretnych liczbach i progach "
-                    "ktore wplywaly na decyzje GO lub NO-GO. Nie powtarzaj informacji ktore "
-                    "sa juz zawarte w regulach strukturalnych."
-                )
-                user_prompt = (
-                    f"Przeanalizuj ponizsze historyczne raporty i opisz krotko jakie wzorce "
-                    f"decyzyjne z nich wynikaja. Podaj konkretne przyklady decyzji i ich "
-                    f"uzasadnien.\n\nRaporty:\n{raw_reports}"
-                )
-            else:
-                system_prompt = (
-                    "You are a QA analyst. Extract decision patterns from the provided "
-                    "historical reports. Focus on specific numbers and thresholds that "
-                    "influenced GO or NO-GO decisions. Do not repeat information already "
-                    "covered in the structural rules."
-                )
-                user_prompt = (
-                    f"Analyze the following historical reports and briefly describe the "
-                    f"decision patterns they reveal. Provide specific examples of decisions "
-                    f"and their justifications.\n\nReports:\n{raw_reports}"
-                )
-
-            try:
-                llm_summary = self.llm.generate_response(
-                    system_prompt, user_prompt,
-                    temperature=0.1, max_tokens=800
-                )
-            except Exception as e:
-                self.logger.warning(f"LLM summary of history failed, continuing with rules only: {e}")
-                llm_summary = ""
-
-        # Combine both parts
-        parts = []
-
-        if structured_rules:
-            if lang == "pl":
-                parts.append(f"=== TWARDE REGULY DECYZYJNE ===\n{structured_rules}")
-            else:
-                parts.append(f"=== HARD DECISION RULES ===\n{structured_rules}")
-
-        if llm_summary:
-            if lang == "pl":
-                parts.append(f"=== WZORCE Z HISTORYCZNYCH RAPORTOW ===\n{llm_summary}")
-            else:
-                parts.append(f"=== PATTERNS FROM HISTORICAL REPORTS ===\n{llm_summary}")
-
-        if not parts:
-            default = "brak danych historycznych" if lang == "pl" else "no historical data"
-            return default
-
-        return "\n\n".join(parts)
-
-    def save_approved_report(self, project_name: str, report_data: dict, lang: str = "pl") -> str:
-        """
-        Saves an approved report to the history directory so it becomes part
-        of the RAG context for future analyses.
-
-        Args:
-            project_name: Name of the project
-            report_data: Structured report dict with summary, decision, etc.
-            lang: Language code determining the target subdirectory
-
-        Returns:
-            Path to the saved history file.
-
-        Raises:
-            DataProcessingError: If the file cannot be written.
-        """
-        dir_path = os.path.join(self.history_path, lang)
-        os.makedirs(dir_path, exist_ok=True)
-
-        clean_name = project_name.replace(" ", "_").lower()
-
-        # Count existing reports for this project to avoid overwrites
-        existing = [f for f in os.listdir(dir_path)
-                    if f.startswith(clean_name) and f.endswith(".txt")]
-        version = len(existing) + 1
-
-        filename = f"{clean_name}_v{version}.txt"
-        filepath = os.path.join(dir_path, filename)
-
-        try:
-            if lang == "pl":
-                content = self._format_report_for_history_pl(project_name, report_data)
-            else:
-                content = self._format_report_for_history_en(project_name, report_data)
-
-            with open(filepath, "w", encoding="utf-8") as f:
-                f.write(content)
-
-            self.logger.info(f"Approved report saved to history: {filepath}")
-            return filepath
-
-        except Exception as e:
-            self.logger.error(f"Failed to save report to history: {e}")
-            raise DataProcessingError(f"Failed to save to history: {e}")
-
-    def _format_report_for_history_pl(self, project_name: str, data: dict) -> str:
-        return f"""RAPORT DECYZYJNY GO/NO-GO
-Tytul projektu: {project_name}
-
-PODSUMOWANIE:
-{data.get('summary', 'brak')}
-
-ANALIZA TESTOW:
-{data.get('test_analysis', 'brak')}
-
-RYZYKA:
-{data.get('risks_eval', 'brak')}
-
-DECYZJA: {data.get('decision', 'NIEZNANA')}
-
-UZASADNIENIE:
-{data.get('justification', 'brak')}
-"""
-
-    def _format_report_for_history_en(self, project_name: str, data: dict) -> str:
-        return f"""GO/NO-GO DECISION REPORT
-Project title: {project_name}
-
-SUMMARY:
-{data.get('summary', 'none')}
-
-TEST ANALYSIS:
-{data.get('test_analysis', 'none')}
-
-RISKS:
-{data.get('risks_eval', 'none')}
-
-DECISION: {data.get('decision', 'UNKNOWN')}
-
-JUSTIFICATION:
-{data.get('justification', 'none')}
-"""
-
-    def update_structured_rules(self, rules: list[dict], lang: str = "pl", author: str = "system") -> str:
-        """
-        Updates the structured decision rules JSON file.
-
-        Args:
-            rules: List of rule dictionaries
-            lang: Language code
-            author: Who made the update
-
-        Returns:
-            Path to the updated rules file.
-        """
-        dir_path = os.path.join(self.history_path, lang)
-        os.makedirs(dir_path, exist_ok=True)
-        rules_path = os.path.join(dir_path, "structured_rules.json")
-
-        from datetime import datetime
-
-        data = {
-            "version": "1.0",
-            "updated": datetime.now().strftime("%Y-%m-%d"),
-            "updated_by": author,
-            "rules": rules,
-        }
-
-        try:
-            with open(rules_path, "w", encoding="utf-8") as f:
-                json.dump(data, f, indent=4, ensure_ascii=False)
-
-            self.logger.info(f"Structured rules updated: {rules_path}")
-            return rules_path
-
-        except Exception as e:
-            self.logger.error(f"Failed to update structured rules: {e}")
-            raise DataProcessingError(f"Failed to update rules: {e}")
-
-============================================================
---- PLIK: .\backend\src\services\rag_kb_compatibility.py ---
-============================================================
-
-# rag_kb_compatibility.py
-
-# alternative RAG engine using an external KB API
-# only when KB_ENDPOINT_URL configured
-
-import requests
-import urllib3
-
-from src.core.config import Config
-from src.core.logger import get_logger
-from src.core.exceptions import DataProcessingError
-
-if not Config.SSL_VERIFY:
-    urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-
-
-class KBRAGEngine:
-    """RAG engine that retrieves historical context from an external KB API."""
-
-    def __init__(self):
-        self.logger = get_logger(self.__class__.__name__)
-
-        self.kb_endpoint = Config.KB_ENDPOINT_URL
-        self.kb_token = Config.KB_API_TOKEN
-        self.model_name = Config.LLM_MODEL_NAME
-        self.timeout = Config.LLM_TIMEOUT
-        self.app_name = Config.KB_APP_NAME
-
-    def get_historical_context(self, lang="pl"):
-        """
-        Queries the external Knowledge Base for historical decision context.
-
-        Args:
-            lang: Target language for the query and response ('pl' or 'en')
-
-        Returns:
-            LLM-generated historical context string from the KB.
-
-        Raises:
-            DataProcessingError: On timeout, HTTP error, or connection failure.
-        """
-        self.logger.info(f"Requesting historical context from KB (lang: {lang})")
-
-        if not self.kb_endpoint or not self.kb_token:
-            self.logger.warning("Missing Knowledge Base credentials, returning default message")
-            return "brak danych historycznych" if lang == "pl" else "no historical data"
-
-        system_context = """- You are an expert QA Analyst and Release Manager.
-- Analyze the input query and extract hard decision rules strictly based on the retrieved context.
-- If no relevant context is available, state clearly: "Brak wystarczajacych danych historycznych / I don't have enough information."
-- You must not rely on general knowledge. Use only specific rules from the context.
-- Your answers must remain strictly within the boundaries of the available context.
-- IMPORTANT: Always respond in the exact same language as the user's Query.
-- Do not include the phrase 'Based on the provided context' in your response.
-
-Context:
-{context}
-
-Chat_Conversations:
-{chat_history}
-
-Query:
-{query}
-"""
-
-        if lang == "pl":
-            user_prompt = "Wypunktuj krotko 3 glowne zasady decydujace o przyznaniu statusu GO lub NO-GO (wymogi procentowe i bledy)."
-        else:
-            user_prompt = "Briefly list 3 main rules for granting GO or NO-GO status (percentage requirements and bugs)."
-
-        headers = {
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {self.kb_token}",
-            "X-SA-NAME": self.app_name,
-            "X-ENABLE-CITATIONS": "false"
-        }
-
-        payload = {
-            "model": self.model_name,
-            "messages": [
-                {"role": "system", "content": system_context},
-                {"role": "user", "content": user_prompt}
-            ],
-            "max_tokens": 1000,
-            "temperature": 0.1,
-            "top_p": 0.1,
-            "presence_penalty": 0,
-            "frequency_penalty": 0
-        }
-
-        try:
-            self.logger.info("Sending request to KB RAG coordinator endpoint")
-            response = requests.post(
-                self.kb_endpoint, json=payload, headers=headers,
-                verify=Config.SSL_VERIFY, timeout=self.timeout
-            )
-
-            if response.status_code == 200:
-                self.logger.info("Received RAG context successfully from Knowledge Base")
-                return response.json()["choices"][0]["message"]["content"]
-            else:
-                self.logger.error(f"Knowledge Base returned error {response.status_code}: {response.text[:500]}")
-                raise DataProcessingError(f"KB API error: {response.status_code}")
-
-        except requests.exceptions.Timeout:
-            self.logger.error(f"Connection to KB timed out after {self.timeout}s")
-            raise DataProcessingError("KB connection timeout")
-        except DataProcessingError:
-            raise
-        except Exception as e:
-            self.logger.error(f"Failed to connect to Knowledge Base: {str(e)}")
-            raise DataProcessingError(f"Failed to fetch RAG context: {str(e)}")
-
-============================================================
 --- PLIK: .\backend\src\services\report_generator.py ---
 ============================================================
 
@@ -2489,8 +1093,12 @@ class ReportGenerator:
         self.final_output_path = Config.OUTPUT_REPORTS_PATH
 
         current_dir = os.path.dirname(os.path.abspath(__file__))
-        self.font_regular = os.path.join(current_dir, "..", "utils", "fonts", "Roboto-Regular.ttf")
-        self.font_bold = os.path.join(current_dir, "..", "utils", "fonts", "Roboto-Bold.ttf")
+        self.font_dir = os.path.join(current_dir, "..", "utils", "fonts")
+        
+        self.font_regular = os.path.join(self.font_dir, "Roboto-Regular.ttf")
+        self.font_bold = os.path.join(self.font_dir, "Roboto-Bold.ttf")
+        self.font_italic = os.path.join(self.font_dir, "Roboto-Italic.ttf")
+        self.font_bold_italic = os.path.join(self.font_dir, "Roboto-BoldItalic.ttf")
 
         os.makedirs(self.final_output_path, exist_ok=True)
 
@@ -2689,85 +1297,122 @@ Required keys:
             pdf = _StyledPDF(labels, orientation="P", unit="mm", format="A4")
             pdf.alias_nb_pages()
             
-            has_roboto = os.path.exists(self.font_regular)
-            has_roboto_bold = os.path.exists(self.font_bold)
 
-            if has_roboto:
-                pdf.add_font("Roboto", "", self.font_regular, uni=True)
-                if has_roboto_bold:
-                    pdf.add_font("Roboto", "B", self.font_bold, uni=True)
-                else:
-                    pdf.add_font("Roboto", "B", self.font_regular, uni=True)
+            if os.path.exists(self.font_regular):
+                # style=""
+                pdf.add_font("Roboto", style="", fname=self.font_regular)
+                
+                # style="B"
+                if os.path.exists(self.font_bold):
+                    pdf.add_font("Roboto", style="B", fname=self.font_bold)
+                
+                # style="I"
+                if os.path.exists(self.font_italic):
+                    pdf.add_font("Roboto", style="I", fname=self.font_italic)
+                
+                # style="BI"
+                if os.path.exists(self.font_bold_italic):
+                    pdf.add_font("Roboto", style="BI", fname=self.font_bold_italic)
+                
                 pdf.default_font = "Roboto"
             else:
                 pdf.default_font = "Helvetica"
-                self.logger.warning("Roboto font not found, falling back to Helvetica")
-
+                self.logger.warning("No Roboto fonts found, using default : Helvetica")
+                
             pdf.set_auto_page_break(auto=True, margin=25)
             pdf.add_page()
 
             # ── Cover / Header Block ──
+            # 1. Thin, vibrant red banner across the top to add a strong visual identity
             pdf.set_fill_color(227, 0, 15)  # orlen red
-            pdf.rect(0, 0, 210, 55, "F")
-            pdf.set_text_color(255, 255, 255)
-            pdf.set_font(pdf.default_font, "B", 22)
-            pdf.set_y(14)
-            pdf.cell(0, 12, labels["title"], ln=True, align="C")
-            pdf.set_font(pdf.default_font, "", 11)
-            pdf.cell(0, 7, f'{labels["project"]}: {custom_name}', ln=True, align="C")
-            pdf.cell(0, 7,
-                     f'{labels["version"]}: {version}  |  '
-                     f'{labels["author"]}: {author}  |  '
-                     f'{labels["date"]}: {timestamp_display}',
-                     ln=True, align="C")
+            pdf.rect(0, 0, 210, 6, "F")
+            
+            pdf.ln(12)
+            
+            # 2. Main report title - large, bold, dark
+            pdf.set_text_color(30, 41, 59)  # slate-800
+            pdf.set_font(pdf.default_font, "B", 24)
+            pdf.cell(0, 10, labels["title"].upper(), ln=True, align="L")
+            pdf.ln(4)
+            
+            # 3. Metadata block - subtle light gray background with border
+            pdf.set_fill_color(248, 250, 252)  # slate-50
+            pdf.set_draw_color(226, 232, 240)  # slate-200
+            start_meta_y = pdf.get_y()
+            pdf.rect(10, start_meta_y, 190, 14, "FD")  # F=fill, D=draw
+            
+            pdf.set_y(start_meta_y + 3.5)
+            pdf.set_x(14)
+            pdf.set_font(pdf.default_font, "B", 10)
+            pdf.set_text_color(71, 85, 105)  # slate-600
+            
+            meta_text = (
+                f'{labels["project"]}: {custom_name}   |   '
+                f'{labels["version"]}: {version}   |   '
+                f'{labels["author"]}: {author}   |   '
+                f'{labels["date"]}: {timestamp_display}'
+            )
+            pdf.cell(0, 7, meta_text, ln=True, align="L")
+            
+            pdf.ln(14)
 
-            pdf.set_text_color(45, 45, 45)
-            pdf.ln(20)
-
-            # ── Parse sections from final_text ──
             sections = self._parse_sections_from_text(final_text)
 
             section_keys = ["summary", "test_analysis", "risks_eval", "decision", "justification"]
             for key in section_keys:
-                heading = labels.get(key, key)
+                heading = labels.get(key, key).upper()
                 body = sections.get(key, "")
                 if not body:
                     continue
 
-                # Section heading
-                pdf.set_font(pdf.default_font, "B", 13)
-                pdf.set_text_color(227, 0, 15)
-                pdf.cell(0, 10, heading, ln=True)
-                pdf.set_draw_color(227, 0, 15)
-                pdf.line(pdf.get_x(), pdf.get_y(), pdf.get_x() + 180, pdf.get_y())
-                pdf.ln(3)
+                pdf.ln(4)
+                start_y = pdf.get_y()
+                
+                # red vertical accent - left side
+                pdf.set_fill_color(227, 0, 15)
+                pdf.rect(10, start_y + 1.5, 1.5, 5, "F")
+                
+                pdf.set_x(14)
+                pdf.set_font(pdf.default_font, "B", 12)
+                pdf.set_text_color(30, 41, 59)
+                pdf.cell(0, 8, heading, ln=True)
+                pdf.ln(2)
 
-                # Decision badge
                 if key == "decision":
                     self._pdf_decision_badge(pdf, body.strip())
                     pdf.ln(6)
                     continue
+                
+                pdf.set_x(10)
+                pdf.set_font(pdf.default_font, "", 10.5)
+                pdf.set_text_color(51, 65, 85)  # slate-700
+                pdf.multi_cell(190, 6.5, body.strip())
+                pdf.ln(5)
 
-                # Body text
-                pdf.set_font(pdf.default_font, "", 10)
-                pdf.set_text_color(45, 45, 45)
-                pdf.multi_cell(0, 6, body.strip())
-                pdf.ln(6)
-
-            # ── Charts ──
             valid_charts = [c for c in charts_paths if os.path.exists(c)]
             if valid_charts:
                 pdf.add_page()
+                
+                # header for attachments section
+                pdf.set_fill_color(227, 0, 15)
+                pdf.rect(10, pdf.get_y() + 1.5, 1.5, 6, "F")
+                pdf.set_x(14)
                 pdf.set_font(pdf.default_font, "B", 14)
-                pdf.set_text_color(45, 45, 45)
-                pdf.cell(0, 10, labels["attachments"], ln=True)
-                pdf.ln(4)
+                pdf.set_text_color(30, 41, 59)
+                pdf.cell(0, 9, labels["attachments"].upper(), ln=True)
+                pdf.ln(6)
 
                 for chart in valid_charts:
-                    if pdf.get_y() > 200:
+                    if pdf.get_y() > 180:
                         pdf.add_page()
+                    
+                    img_y = pdf.get_y()
+                    
+                    pdf.set_draw_color(226, 232, 240)
+                    pdf.rect(14, img_y - 1, 182, 102, "D")
+                    
                     pdf.image(chart, x=15, w=180)
-                    pdf.ln(8)
+                    pdf.ln(110)
 
             pdf.output(filepath)
             self.logger.info(f"PDF saved: {filepath}")
@@ -2780,7 +1425,7 @@ Required keys:
             raise ExportError(f"PDF generation failed: {e}")
 
     def _pdf_decision_badge(self, pdf, decision_text):
-        """Renders a colored GO / NO-GO badge in the PDF."""
+        """Renders a colored GO / NO-GO badge in the PDF"""
         is_go = decision_text.upper().strip() == "GO"
         if is_go:
             pdf.set_fill_color(76, 175, 80)
@@ -3072,7 +1717,9 @@ class _StyledPDF(FPDF):
 
 import os
 import json
+import uuid
 from datetime import datetime
+from typing import Optional
 
 from src.core.config import Config
 from src.core.logger import get_logger
@@ -3081,54 +1728,106 @@ from src.core.logger import get_logger
 class StorageManager:
     def __init__(self):
         self.logger = get_logger(self.__class__.__name__)
-        self.cache_dir = Config.CACHE_PATH
-        self.export_dir = Config.OUTPUT_REPORTS_PATH
+        self.projects_dir = Config.PROJECTS_PATH
+        self.chats_dir = Config.CHATS_PATH
 
-        os.makedirs(self.cache_dir, exist_ok=True)
-        os.makedirs(self.export_dir, exist_ok=True)
+        os.makedirs(self.projects_dir, exist_ok=True)
+        os.makedirs(self.chats_dir, exist_ok=True)
 
-    def save_to_cache(self, project_name: str, structured_data: dict):
+    @staticmethod
+    def generate_id(prefix: str = "c") -> str:
         """
-        Saves the structured report data to a project-specific JSON cache file.
-
-        Args:
-            project_name: Name of the project
-            structured_data: Report data dictionary to persist
+        Generates a unique ID with a given prefix (default "c" for chat, "p" for project).
+        Example: p-4f8a9b21c3, c-9d8e7f6a5b
         """
-        clean_name = project_name.replace(" ", "_").lower()
-        filepath = os.path.join(self.cache_dir, f"{clean_name}_latest.json")
-        tmp_filepath = filepath + ".tmp"
+        return f"{prefix}-{uuid.uuid4().hex[:12]}"
 
+    # ==========================================
+    # PROJECT MANAGEMENT (p-xxxxxx)
+    # ==========================================
+    def get_project_dir(self, project_id: str) -> str:
+        path = os.path.join(self.projects_dir, project_id)
+        os.makedirs(path, exist_ok=True)
+        return path
+
+    def get_project_uploads_dir(self, project_id: str) -> str:
+        """Directory for global knowledge files of the project (read-only for chats)"""
+        path = os.path.join(self.get_project_dir(project_id), "uploads")
+        os.makedirs(path, exist_ok=True)
+        return path
+
+    def save_project_instructions(self, project_id: str, instructions: str):
+        """Saves global instructions (System Prompt) for the project"""
+        path = os.path.join(self.get_project_dir(project_id), "instructions.txt")
+        with open(path, "w", encoding="utf-8") as f:
+            f.write(instructions)
+
+    def load_project_instructions(self, project_id: str) -> str:
+        """Loads project instructions (returns empty string if not found)"""
+        path = os.path.join(self.get_project_dir(project_id), "instructions.txt")
+        if os.path.exists(path):
+            with open(path, "r", encoding="utf-8") as f:
+                return f.read()
+        return ""
+
+    # ==========================================
+    # CHAT MANAGEMENT (c-xxxxxx)
+    # ==========================================
+    def get_chat_dir(self, chat_id: str) -> str:
+        path = os.path.join(self.chats_dir, chat_id)
+        os.makedirs(path, exist_ok=True)
+        return path
+
+    def get_chat_uploads_dir(self, chat_id: str) -> str:
+        """Directory for files uploaded directly from the chat window (e.g., CSV for analysis)"""
+        path = os.path.join(self.get_chat_dir(chat_id), "uploads")
+        os.makedirs(path, exist_ok=True)
+        return path
+
+    def get_chat_created_dir(self, chat_id: str) -> str:
+        """Directory for files generated by AI in the given chat"""
+        path = os.path.join(self.get_chat_dir(chat_id), "created")
+        os.makedirs(path, exist_ok=True)
+        return path
+
+    def link_chat_to_project(self, chat_id: str, project_id: Optional[str]):
+        """Saves chat metadata (which project it belongs to)"""
+        meta_path = os.path.join(self.get_chat_dir(chat_id), "meta.json")
+        with open(meta_path, "w", encoding="utf-8") as f:
+            json.dump({"project_id": project_id, "created_at": datetime.now().isoformat()}, f)
+
+    def get_chat_project_id(self, chat_id: str) -> Optional[str]:
+        """Returns the project ID for the given chat or None (if it's a standalone chat)"""
+        meta_path = os.path.join(self.get_chat_dir(chat_id), "meta.json")
+        if os.path.exists(meta_path):
+            with open(meta_path, "r", encoding="utf-8") as f:
+                return json.load(f).get("project_id")
+        return None
+
+    # ==========================================
+    # BACKWARD COMPATIBILITY (cache for RAG)
+    # ==========================================
+    
+    # FIX: methods redone for saving JSON directly in the chat folder
+    
+    def save_to_cache(self, chat_id: str, structured_data: dict):
+        created_dir = self.get_chat_created_dir(chat_id)
+        filepath = os.path.join(created_dir, "draft_cache.json")
+        
         cache_payload = {
             "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            "project_name": project_name,
+            "chat_id": chat_id,
             "data": structured_data
         }
-
         try:
-            with open(tmp_filepath, "w", encoding="utf-8") as f:
+            with open(filepath, "w", encoding="utf-8") as f:
                 json.dump(cache_payload, f, indent=4)
-            os.replace(tmp_filepath, filepath)  # atomic on most OS
-            self.logger.info(f"Saved JSON cache for project: {project_name}")
+            self.logger.info(f"Saved JSON draft cache for chat: {chat_id}")
         except Exception as e:
             self.logger.error(f"Failed to save JSON cache: {e}")
-            if os.path.exists(tmp_filepath):
-                os.remove(tmp_filepath)
 
-
-    def get_latest_history(self, project_name: str) -> dict:
-        """
-        Retrieves the latest cached report data for a project.
-
-        Args:
-            project_name: Name of the project
-
-        Returns:
-            Cached data dictionary, or None if not found.
-        """
-        clean_name = project_name.replace(" ", "_").lower()
-        filepath = os.path.join(self.cache_dir, f"{clean_name}_latest.json")
-
+    def get_latest_history(self, chat_id: str) -> Optional[dict]:
+        filepath = os.path.join(self.get_chat_created_dir(chat_id), "draft_cache.json")
         if os.path.exists(filepath):
             try:
                 with open(filepath, "r", encoding="utf-8") as f:
@@ -3137,1714 +1836,189 @@ class StorageManager:
                 self.logger.error(f"Failed to read cache file {filepath}: {e}")
         return None
 
-    def clear_cache(self, project_name: str) -> bool:
-        """
-        Deletes the cached report data for a project.
-
-        Args:
-            project_name: Name of the project
-
-        Returns:
-            True if the cache file was found and deleted, False otherwise.
-        """
-        clean_name = project_name.replace(" ", "_").lower()
-        filepath = os.path.join(self.cache_dir, f"{clean_name}_latest.json")
-
+    def clear_cache(self, chat_id: str) -> bool:
+        filepath = os.path.join(self.get_chat_created_dir(chat_id), "draft_cache.json")
         if os.path.exists(filepath):
             os.remove(filepath)
-            self.logger.info(f"Cache deleted for project: {project_name}")
+            self.logger.info(f"Cache deleted for chat: {chat_id}")
             return True
-
         return False
 
 ============================================================
---- PLIK: .\frontend\README.md ---
+--- PLIK: .\backend\src\services\rag.py ---
 ============================================================
 
-# React + TypeScript + Vite
-
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
-
-Currently, two official plugins are available:
-
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
-
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
-
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
-
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
-
-
-============================================================
---- PLIK: .\frontend\eslint.config.js ---
-============================================================
-
-import js from '@eslint/js'
-import globals from 'globals'
-import reactHooks from 'eslint-plugin-react-hooks'
-import reactRefresh from 'eslint-plugin-react-refresh'
-import tseslint from 'typescript-eslint'
-import { defineConfig, globalIgnores } from 'eslint/config'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      js.configs.recommended,
-      tseslint.configs.recommended,
-      reactHooks.configs.flat.recommended,
-      reactRefresh.configs.vite,
-    ],
-    languageOptions: {
-      ecmaVersion: 2020,
-      globals: globals.browser,
-    },
-  },
-])
-
-
-============================================================
---- PLIK: .\frontend\index.html ---
-============================================================
-
-<!-- frontend/index.html -->
- 
-<!doctype html>
-<html lang="pl">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>QA AI Assistant</title>
-  </head>
-  <body class="antialiased">
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
-  </body>
-</html>
-
-============================================================
---- PLIK: .\frontend\tsconfig.app.json ---
-============================================================
-
-{
-  "compilerOptions": {
-    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.app.tsbuildinfo",
-    "target": "ES2022",
-    "useDefineForClassFields": true,
-    "lib": ["ES2022", "DOM", "DOM.Iterable"],
-    "module": "ESNext",
-    "types": ["vite/client"],
-    "skipLibCheck": true,
-
-    /* Bundler mode */
-    "moduleResolution": "bundler",
-    "allowImportingTsExtensions": true,
-    "verbatimModuleSyntax": true,
-    "moduleDetection": "force",
-    "noEmit": true,
-    "jsx": "react-jsx",
-
-    /* Linting */
-    "strict": true,
-    "noUnusedLocals": true,
-    "noUnusedParameters": true,
-    "erasableSyntaxOnly": true,
-    "noFallthroughCasesInSwitch": true,
-    "noUncheckedSideEffectImports": true
-  },
-  "include": ["src"]
-}
-
-
-============================================================
---- PLIK: .\frontend\tsconfig.node.json ---
-============================================================
-
-{
-  "compilerOptions": {
-    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.node.tsbuildinfo",
-    "target": "ES2023",
-    "lib": ["ES2023"],
-    "module": "ESNext",
-    "types": ["node"],
-    "skipLibCheck": true,
-
-    /* Bundler mode */
-    "moduleResolution": "bundler",
-    "allowImportingTsExtensions": true,
-    "verbatimModuleSyntax": true,
-    "moduleDetection": "force",
-    "noEmit": true,
-
-    /* Linting */
-    "strict": true,
-    "noUnusedLocals": true,
-    "noUnusedParameters": true,
-    "erasableSyntaxOnly": true,
-    "noFallthroughCasesInSwitch": true,
-    "noUncheckedSideEffectImports": true
-  },
-  "include": ["vite.config.ts"]
-}
-
-
-============================================================
---- PLIK: .\frontend\vite.config.ts ---
-============================================================
-
-import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react'
-import tailwindcss from '@tailwindcss/vite'
-
-// https://vite.dev/config/
-export default defineConfig({
-    plugins: [react(), tailwindcss()],
-
-    base: './',
-
-    server: {
-        host: true,
-        port: 5173,
-        allowedHosts: true,
-        proxy: {
-            '/api': {
-                target: 'http://localhost:8000',
-                changeOrigin: true,
-            }
-        }
-    }
-})
-
-============================================================
---- PLIK: .\frontend\src\App.tsx ---
-============================================================
-
-// frontend/src/App.tsx
-import { useState, useCallback } from 'react';
-import { Sidebar } from './components/Sidebar';
-import { SidebarToggle } from './components/SidebarToggle';
-import { ChatFeed } from './components/ChatFeed';
-import { InputArea } from './components/InputArea';
-import { CanvasPanel } from './components/CanvasPanel';
-import { useTheme } from './hooks/useTheme';
-import { getLabels } from './i18n/labels';
-import { api } from './api/client';
-import { generateId, draftToHtml, htmlToMarkdown, stripHtml } from './lib/utils';
-import type { Project, ChatMessage, AppMode, Labels } from './types';
-import './styles/main.css';
-
-function App() {
-  const { theme, toggleTheme } = useTheme();
-  const [language, setLanguage] = useState('pl');
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-  const [isCanvasOpen, setIsCanvasOpen] = useState(false);
-
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [activeProjectId, setActiveProjectId] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [ragLoadingId, setRagLoadingId] = useState<string | null>(null);
-
-  const [canvasContent, setCanvasContent] = useState('');
-  const [exportMessage, setExportMessage] = useState('');
-  const [chartPaths, setChartPaths] = useState<string[]>([]);
-
-  const labels = getLabels(language);
-  const activeProject = projects.find(p => p.id === activeProjectId) || null;
-
-  const updateProject = useCallback((id: string, updates: Partial<Project>) => {
-    setProjects(prev => prev.map(p => (p.id === id ? { ...p, ...updates, updatedAt: new Date() } : p)));
-  }, []);
-
-  const handleNewProject = useCallback(() => {
-    const id = generateId();
-    setProjects(prev => [{
-      id, name: `Projekt ${prev.length + 1}`, mode: 'chatbot' as AppMode,
-      messages: [], createdAt: new Date(), updatedAt: new Date(),
-      archived: false, ragEnabled: false,
-    }, ...prev]);
-    setActiveProjectId(id);
-    setIsCanvasOpen(false);
-    setCanvasContent('');
-    setExportMessage('');
-    setChartPaths([]);
-  }, []);
-
-  const handleSelectProject = useCallback((id: string) => {
-    setActiveProjectId(id);
-    const project = projects.find(p => p.id === id);
-    if (project?.canvasContent) {
-      setCanvasContent(project.canvasContent);
-      setChartPaths(project.chartPaths || []);
-    } else {
-      setCanvasContent('');
-      setChartPaths([]);
-      setIsCanvasOpen(false);
-    }
-    setExportMessage('');
-  }, [projects]);
-
-  const handleDeleteProject = useCallback((id: string) => {
-    setProjects(prev => prev.filter(p => p.id !== id));
-    if (activeProjectId === id) { setActiveProjectId(null); setCanvasContent(''); setIsCanvasOpen(false); }
-  }, [activeProjectId]);
-
-  const handleRenameProject = useCallback((id: string, name: string) => updateProject(id, { name }), [updateProject]);
-
-  const handleArchiveProject = useCallback((id: string) => {
-    const p = projects.find(pr => pr.id === id);
-    if (p) updateProject(id, { archived: !p.archived });
-  }, [projects, updateProject]);
-
-  const handleToggleRag = useCallback(async (id: string) => {
-    const p = projects.find(pr => pr.id === id);
-    if (!p) return;
-    setRagLoadingId(id);
-    try {
-      if (p.ragEnabled) {
-        await api.disconnectRag(id);
-        updateProject(id, { ragEnabled: false, ragContextId: undefined });
-      } else {
-        const result = await api.connectRag({ project_id: id, collection_name: p.name.replace(/\s+/g, '_').toLowerCase() });
-        updateProject(id, { ragEnabled: true, ragContextId: result.context_id });
-      }
-    } catch (err) { console.error('RAG toggle failed:', err); }
-    finally { setRagLoadingId(null); }
-  }, [projects, updateProject]);
-
-  const handleModeChange = useCallback((mode: AppMode) => {
-    if (!activeProject) {
-      const nameMap: Record<AppMode, string> = { chatbot: 'Chat', gonogo: 'Go/No-Go', translator: 'Tłumaczenie', analysis: 'Analiza' };
-      const id = generateId();
-      setProjects(prev => [{
-        id, name: `${nameMap[mode]} ${prev.length + 1}`, mode,
-        messages: [], createdAt: new Date(), updatedAt: new Date(),
-        archived: false, ragEnabled: false,
-      }, ...prev]);
-      setActiveProjectId(id);
-    } else {
-      updateProject(activeProject.id, { mode });
-    }
-  }, [activeProject, updateProject]);
-
-  const handleSend = useCallback(async (message: string, files: File[]) => {
-    let projectId = activeProjectId;
-    const currentMode = activeProject?.mode || 'chatbot';
-
-    if (!projectId) {
-      const id = generateId();
-      setProjects(prev => [{
-        id, name: message.slice(0, 40) || `Projekt ${prev.length + 1}`, mode: currentMode,
-        messages: [], createdAt: new Date(), updatedAt: new Date(),
-        archived: false, ragEnabled: false,
-      }, ...prev]);
-      setActiveProjectId(id);
-      projectId = id;
-    }
-
-    const userMsg: ChatMessage = {
-      id: generateId(), role: 'user',
-      content: message || `[${files.length} plik(ów)]`,
-      timestamp: new Date(), mode: currentMode,
-    };
-
-    const currentMsgs = projects.find(p => p.id === projectId)?.messages || [];
-    
-    const updates: Partial<Project> = {
-      messages: [...currentMsgs, userMsg],
-    };
-    
-    if (currentMsgs.length === 0 && message.trim() !== '') {
-      updates.name = message.slice(0, 40);
-    }
-    
-    updateProject(projectId, updates);
-
-    setIsLoading(true);
-
-    try {
-      const ragProject = projects.find(p => p.id === projectId);
-      const response = await api.sendMessage({
-        project_id: projectId, mode: currentMode, message, language,
-        canvas_content: isCanvasOpen ? canvasContent : undefined,
-        rag_context_id: ragProject?.ragContextId,
-        files: files.length > 0 ? files : undefined,
-      });
-
-      const assistantMsg: ChatMessage = {
-        id: generateId(), role: 'assistant', content: response.message,
-        timestamp: new Date(), mode: currentMode,
-        draftData: response.draft_data, chartPaths: response.chart_paths,
-      };
-
-      setProjects(prev => prev.map(p => {
-        if (p.id !== projectId) return p;
-        const msgs = [...p.messages, assistantMsg];
-        const upd: Partial<Project> = { messages: msgs, updatedAt: new Date() };
-        if (response.draft_data) {
-          const html = draftToHtml(response.draft_data, language === 'pl');
-          upd.canvasContent = html; upd.draft = response.draft_data;
-          upd.chartPaths = response.chart_paths || [];
-          setCanvasContent(html); setChartPaths(response.chart_paths || []); setIsCanvasOpen(true);
-        }
-        if (response.canvas_html) { upd.canvasContent = response.canvas_html; setCanvasContent(response.canvas_html); }
-        return { ...p, ...upd };
-      }));
-    } catch (error) {
-      console.error('API error:', error);
-      const errMsg: ChatMessage = { id: generateId(), role: 'assistant', content: labels.errorAi, timestamp: new Date(), mode: currentMode };
-      setProjects(prev => prev.map(p =>
-        p.id === projectId ? { ...p, messages: [...p.messages, errMsg], updatedAt: new Date() } : p
-      ));
-    } finally { setIsLoading(false); }
-  }, [activeProjectId, activeProject, language, canvasContent, isCanvasOpen, labels.errorAi, updateProject, projects]);
-
-  const handleCanvasChange = useCallback((c: string) => {
-    setCanvasContent(c);
-    if (activeProjectId) updateProject(activeProjectId, { canvasContent: c });
-  }, [activeProjectId, updateProject]);
-
-  const handleExport = useCallback(async (format: 'pdf' | 'docx' | 'md') => {
-    setExportMessage(labels.generatingFile);
-    try {
-      const text = format === 'md' ? htmlToMarkdown(canvasContent) : stripHtml(canvasContent);
-      const result = await api.exportReport({ project_name: activeProject?.name || 'Report', edited_text: text, format, language, author: 'User', chart_paths: chartPaths });
-      setExportMessage(`${labels.successFile} ${result.filepath}`);
-    } catch { setExportMessage(labels.errorExport); }
-  }, [canvasContent, activeProject, language, chartPaths, labels]);
-
-  const getModeBadge = (mode: AppMode) => {
-    const map: Record<AppMode, { label: keyof Labels; bg: string; color: string }> = {
-      chatbot: { label: 'modeChatbot', bg: 'rgba(59,130,246,0.08)', color: '#3b82f6' },
-      gonogo: { label: 'modeGoNogo', bg: 'rgba(227,0,15,0.06)', color: '#e3000f' },
-      translator: { label: 'modeTranslator', bg: 'rgba(22,163,74,0.06)', color: '#16a34a' },
-      analysis: { label: 'modeAnalysis', bg: 'rgba(217,119,6,0.06)', color: '#d97706' },
-    };
-    const m = map[mode];
-    return (
-      <span style={{
-        display: 'inline-block', padding: '4px 12px', borderRadius: 6,
-        fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em',
-        backgroundColor: m.bg, color: m.color,
-      }}>
-        {labels[m.label]}
-      </span>
-    );
-  };
-
-  return (
-    <div style={{ display: 'flex', height: '100vh', width: '100vw', overflow: 'hidden', backgroundColor: 'var(--color-bg)' }}>
-      {/* ─── Sidebar ─── */}
-      <div style={{
-        width: isSidebarOpen ? 288 : 0,
-        flexShrink: 0,
-        height: '100%',
-        overflow: 'hidden',
-        transition: 'width 0.3s ease',
-      }}>
-        <Sidebar
-          projects={projects} activeProjectId={activeProjectId}
-          onSelectProject={handleSelectProject} onNewProject={handleNewProject}
-          onDeleteProject={handleDeleteProject} onRenameProject={handleRenameProject}
-          onArchiveProject={handleArchiveProject} onToggleRag={handleToggleRag}
-          ragLoadingId={ragLoadingId} labels={labels} theme={theme} onToggleTheme={toggleTheme}
-        />
-      </div>
-
-      {/* ─── Main area ─── */}
-      <div style={{ position: 'relative', display: 'flex', flex: 1, minWidth: 0, height: '100%' }}>
-        {/* Toggle sticks to left edge of main area */}
-        <SidebarToggle isOpen={isSidebarOpen} onToggle={() => setIsSidebarOpen(prev => !prev)} />
-
-        {/* ─── Chat column ─── */}
-        <div style={{
-          display: 'flex', flexDirection: 'column',
-          width: isCanvasOpen ? '50%' : '100%',
-          minWidth: 0, height: '100%',
-          transition: 'width 0.3s ease',
-        }}>
-          {/* Header */}
-          <div style={{
-            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-            borderBottom: '1px solid var(--color-border)',
-            backgroundColor: 'var(--color-surface)',
-            padding: '16px 32px',
-            flexShrink: 0,
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 14, minWidth: 0 }}>
-              <h2 style={{
-                fontSize: 16, fontWeight: 700, margin: 0,
-                color: 'var(--color-text-primary)',
-                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-              }}>
-                {activeProject?.name || labels.headerTitle}
-              </h2>
-              {activeProject && getModeBadge(activeProject.mode)}
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
-              <button
-                onClick={() => setLanguage(prev => (prev === 'pl' ? 'en' : 'pl'))}
-                style={{
-                  padding: '7px 14px', borderRadius: 8,
-                  border: '1px solid var(--color-border)',
-                  backgroundColor: 'var(--color-surface)',
-                  fontSize: 13, fontWeight: 600,
-                  color: 'var(--color-text-secondary)',
-                  cursor: 'pointer', transition: 'all 0.15s',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                }}
-                onMouseEnter={e => { e.currentTarget.style.backgroundColor = 'var(--color-surface-tertiary)'; }}
-                onMouseLeave={e => { e.currentTarget.style.backgroundColor = 'var(--color-surface)'; }}
-              >
-                {language.toUpperCase()}
-              </button>
-
-              {canvasContent && (
-                <button
-                  onClick={() => setIsCanvasOpen(prev => !prev)}
-                  style={{
-                    padding: '7px 18px', borderRadius: 8,
-                    border: isCanvasOpen ? '1px solid #e3000f' : '1px solid var(--color-border)',
-                    backgroundColor: isCanvasOpen ? '#e3000f' : 'var(--color-surface)',
-                    fontSize: 13, fontWeight: 600,
-                    color: isCanvasOpen ? '#fff' : 'var(--color-text-secondary)',
-                    cursor: 'pointer', transition: 'all 0.15s',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  }}
-                  onMouseEnter={e => {
-                    if (!isCanvasOpen) { e.currentTarget.style.borderColor = 'rgba(227,0,15,0.4)'; e.currentTarget.style.color = '#e3000f'; }
-                  }}
-                  onMouseLeave={e => {
-                    if (!isCanvasOpen) { e.currentTarget.style.borderColor = 'var(--color-border)'; e.currentTarget.style.color = 'var(--color-text-secondary)'; }
-                  }}
-                >
-                  {isCanvasOpen ? labels.closeCanvas : labels.openCanvas}
-                </button>
-              )}
-            </div>
-          </div>
-
-          {/* Chat feed — takes all remaining vertical space */}
-          <ChatFeed
-            messages={activeProject?.messages || []}
-            isLoading={isLoading}
-            onOpenCanvas={() => setIsCanvasOpen(true)}
-            labels={labels}
-          />
-
-          {/* Input — pinned at bottom */}
-          <InputArea
-            mode={activeProject?.mode || 'chatbot'}
-            onModeChange={handleModeChange}
-            onSend={handleSend}
-            isLoading={isLoading}
-            labels={labels}
-          />
-        </div>
-
-        {/* ─── Canvas ─── */}
-        <div style={{
-          width: isCanvasOpen ? '50%' : 0,
-          height: '100%',
-          overflow: 'hidden',
-          transition: 'width 0.3s ease',
-        }}>
-          <CanvasPanel
-            isOpen={isCanvasOpen}
-            content={canvasContent}
-            onChange={handleCanvasChange}
-            onClose={() => setIsCanvasOpen(false)}
-            onExport={handleExport}
-            exportMessage={exportMessage}
-            labels={labels}
-          />
-        </div>
-      </div>
-    </div>
-  );
-}
-
-export default App;
-
-============================================================
---- PLIK: .\frontend\src\main.tsx ---
-============================================================
-
-// frontend/src/main.tsx
-import { StrictMode } from 'react'
-import { createRoot } from 'react-dom/client'
-import App from './App.tsx'
-
-createRoot(document.getElementById('root')!).render(
-  <StrictMode>
-    <App />
-  </StrictMode>,
-)
-
-============================================================
---- PLIK: .\frontend\src\api\client.ts ---
-============================================================
-
-// frontend/src/api/client.ts
-import type { ChatRequest, ChatResponse, ExportRequest, RagIndexRequest, RagIndexResponse } from '../types';
-
-const getBaseUrl = (): string => {
-  if (window.location.port === '5173') {
-    return '/api/v2';
-  }
-  let path = window.location.pathname.replace(/[^/]*$/, '');
-  if (!path.endsWith('/')) path += '/';
-  return path + 'api/v2';
-};
-
-const BASE_URL = getBaseUrl();
-
-async function request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
-  const url = `${BASE_URL}/${endpoint}`;
-  const res = await fetch(url, {
-    ...options,
-    headers: {
-      ...(options.body instanceof FormData ? {} : { 'Content-Type': 'application/json' }),
-      ...options.headers,
-    },
-  });
-
-  if (!res.ok) {
-    const errorText = await res.text().catch(() => 'Unknown error');
-    throw new Error(`API Error ${res.status}: ${errorText}`);
-  }
-
-  return res.json();
-}
-
-export const api = {
-  async sendMessage(req: ChatRequest): Promise<ChatResponse> {
-    if (req.files && req.files.length > 0) {
-      const formData = new FormData();
-      formData.append('project_id', req.project_id);
-      formData.append('mode', req.mode);
-      formData.append('message', req.message);
-      formData.append('language', req.language);
-      if (req.canvas_content) formData.append('canvas_content', req.canvas_content);
-      if (req.rag_context_id) formData.append('rag_context_id', req.rag_context_id);
-      req.files.forEach(f => formData.append('files', f));
-      return request<ChatResponse>('chat', { method: 'POST', body: formData });
-    }
-
-    return request<ChatResponse>('chat', {
-      method: 'POST',
-      body: JSON.stringify({
-        project_id: req.project_id,
-        mode: req.mode,
-        message: req.message,
-        language: req.language,
-        canvas_content: req.canvas_content,
-        rag_context_id: req.rag_context_id,
-      }),
-    });
-  },
-
-  async exportReport(payload: ExportRequest): Promise<{ filepath: string }> {
-    return request<{ filepath: string }>('reports/export', {
-      method: 'POST',
-      body: JSON.stringify(payload),
-    });
-  },
-
-  async connectRag(payload: RagIndexRequest): Promise<RagIndexResponse> {
-    return request<RagIndexResponse>('rag/connect', {
-      method: 'POST',
-      body: JSON.stringify(payload),
-    });
-  },
-
-  async disconnectRag(projectId: string): Promise<{ status: string }> {
-    return request<{ status: string }>('rag/disconnect', {
-      method: 'POST',
-      body: JSON.stringify({ project_id: projectId }),
-    });
-  },
-};
-
-============================================================
---- PLIK: .\frontend\src\components\Sidebar.tsx ---
-============================================================
-
-// frontend/src/components/Sidebar.tsx
-import { useState, useRef, useEffect } from 'react';
-import {
-  Plus,
-  MessageSquare,
-  Search,
-  FileCheck,
-  Languages,
-  BarChart3,
-  Bot,
-  Trash2,
-  Archive,
-  ArchiveRestore,
-  Pencil,
-  Check,
-  X,
-  Database,
-  Loader2,
-  Moon,
-  Sun,
-  MoreHorizontal,
-} from 'lucide-react';
-import type { Project, Labels, AppMode, ThemeMode } from '../types';
-import { cn, isToday, isYesterday } from '../lib/utils';
-
-interface SidebarProps {
-  projects: Project[];
-  activeProjectId: string | null;
-  onSelectProject: (id: string) => void;
-  onNewProject: () => void;
-  onDeleteProject: (id: string) => void;
-  onRenameProject: (id: string, name: string) => void;
-  onArchiveProject: (id: string) => void;
-  onToggleRag: (id: string) => void;
-  ragLoadingId: string | null;
-  labels: Labels;
-  theme: ThemeMode;
-  onToggleTheme: () => void;
-}
-
-const modeIcons: Record<AppMode, React.ReactNode> = {
-  chatbot: <Bot size={14} />,
-  gonogo: <FileCheck size={14} />,
-  translator: <Languages size={14} />,
-  analysis: <BarChart3 size={14} />,
-};
-
-const modeColors: Record<AppMode, string> = {
-  chatbot: 'text-blue-500',
-  gonogo: 'text-orlen',
-  translator: 'text-green-500',
-  analysis: 'text-amber-500',
-};
-
-export const Sidebar = ({
-  projects,
-  activeProjectId,
-  onSelectProject,
-  onNewProject,
-  onDeleteProject,
-  onRenameProject,
-  onArchiveProject,
-  onToggleRag,
-  ragLoadingId,
-  labels,
-  theme,
-  onToggleTheme,
-}: SidebarProps) => {
-  const [search, setSearch] = useState('');
-  const [showArchived, setShowArchived] = useState(false);
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [editName, setEditName] = useState('');
-  const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
-  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
-  const editInputRef = useRef<HTMLInputElement>(null);
-  const menuRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (editingId && editInputRef.current) {
-      editInputRef.current.focus();
-      editInputRef.current.select();
-    }
-  }, [editingId]);
-
-  useEffect(() => {
-    const handleClick = (e: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        setMenuOpenId(null);
-        setConfirmDeleteId(null);
-      }
-    };
-    document.addEventListener('mousedown', handleClick);
-    return () => document.removeEventListener('mousedown', handleClick);
-  }, []);
-
-  const activeProjects = projects.filter(p => !p.archived);
-  const archivedProjects = projects.filter(p => p.archived);
-
-  const filterList = (list: Project[]) =>
-    list.filter(p => (p.name || '').toLowerCase().includes(search.toLowerCase()));
-
-  const filtered = filterList(showArchived ? archivedProjects : activeProjects);
-
-  const grouped = {
-    today: filtered.filter(p => isToday(p.updatedAt)),
-    yesterday: filtered.filter(p => isYesterday(p.updatedAt)),
-    older: filtered.filter(p => !isToday(p.updatedAt) && !isYesterday(p.updatedAt)),
-  };
-
-  const startRename = (project: Project) => {
-    setEditingId(project.id);
-    setEditName(project.name);
-    setMenuOpenId(null);
-  };
-
-  const submitRename = () => {
-    if (editingId && editName.trim()) onRenameProject(editingId, editName.trim());
-    setEditingId(null);
-    setEditName('');
-  };
-
-  const cancelRename = () => {
-    setEditingId(null);
-    setEditName('');
-  };
-
-  const handleDelete = (id: string) => {
-    if (confirmDeleteId === id) {
-      onDeleteProject(id);
-      setConfirmDeleteId(null);
-      setMenuOpenId(null);
-    } else {
-      setConfirmDeleteId(id);
-    }
-  };
-
-  const renderProject = (project: Project) => {
-    const isEditing = editingId === project.id;
-    const isActive = project.id === activeProjectId;
-    const isMenuOpen = menuOpenId === project.id;
-    const isRagLoading = ragLoadingId === project.id;
-
-    return (
-      <div
-        key={project.id}
-        className={cn(
-          'sidebar-project-item group relative',
-          isActive && 'active',
-        )}
-      >
-        {isEditing ? (
-          <div className="flex items-center gap-1.5 px-3 py-1.5">
-            <input
-              ref={editInputRef}
-              value={editName}
-              onChange={e => setEditName(e.target.value)}
-              onKeyDown={e => {
-                if (e.key === 'Enter') submitRename();
-                if (e.key === 'Escape') cancelRename();
-              }}
-              className="flex-1 min-w-0 rounded-md bg-surface px-2 py-1 text-sm text-text-primary outline-none focus:ring-2 focus:ring-orlen/30 border border-border"
-              data-gramm="false"
-            />
-            <button onClick={submitRename} className="shrink-0 rounded p-1 text-green-500 hover:bg-surface">
-              <Check size={14} />
-            </button>
-            <button onClick={cancelRename} className="shrink-0 rounded p-1 text-text-tertiary hover:bg-surface">
-              <X size={14} />
-            </button>
-          </div>
-        ) : (
-          <div
-            className="flex cursor-pointer items-center gap-3 px-3 py-2.5"
-            onClick={() => onSelectProject(project.id)}
-          >
-            <span className={cn('shrink-0', modeColors[project.mode])}>
-              {modeIcons[project.mode]}
-            </span>
-            <span className="truncate flex-1 text-sm font-medium">{project.name}</span>
-
-            {project.ragEnabled && (
-              <span className="shrink-0" title={labels.ragConnected}>
-                {isRagLoading ? (
-                  <Loader2 size={12} className="text-amber-500 animate-spin" />
-                ) : (
-                  <Database size={12} className="text-green-500" />
-                )}
-              </span>
-            )}
-
-            <button
-              className={cn('sidebar-more-btn shrink-0 p-1 text-text-tertiary', isMenuOpen && 'visible')}
-              onClick={e => {
-                e.stopPropagation();
-                setMenuOpenId(isMenuOpen ? null : project.id);
-                setConfirmDeleteId(null);
-              }}
-            >
-              <MoreHorizontal size={14} />
-            </button>
-          </div>
-        )}
-
-        {isMenuOpen && !isEditing && (
-          <div
-            ref={menuRef}
-            className="ctx-menu animate-ctx-menu absolute right-1 top-full z-50 mt-1"
-          >
-            <button
-              onClick={e => { e.stopPropagation(); startRename(project); }}
-              className="ctx-menu-item"
-            >
-              <Pencil size={12} />
-              <span>{labels.editName}</span>
-            </button>
-            <button
-              onClick={e => {
-                e.stopPropagation();
-                onToggleRag(project.id);
-                setMenuOpenId(null);
-              }}
-              className="ctx-menu-item"
-            >
-              <Database size={12} />
-              <span>{project.ragEnabled ? labels.ragDisconnect : labels.ragConnect}</span>
-            </button>
-            <button
-              onClick={e => {
-                e.stopPropagation();
-                onArchiveProject(project.id);
-                setMenuOpenId(null);
-              }}
-              className="ctx-menu-item"
-            >
-              {project.archived ? <ArchiveRestore size={12} /> : <Archive size={12} />}
-              <span>{project.archived ? labels.unarchive : labels.archive}</span>
-            </button>
-            <div className="ctx-menu-divider" />
-            {confirmDeleteId === project.id ? (
-              <div className="ctx-menu-delete-confirm">
-                <span className="ctx-menu-delete-confirm-text">{labels.confirmDelete}</span>
-                <div className="ctx-menu-delete-confirm-actions">
-                  <button
-                    onClick={e => { e.stopPropagation(); onDeleteProject(project.id); setConfirmDeleteId(null); setMenuOpenId(null); }}
-                    className="ctx-menu-delete-yes"
-                  >
-                    <Trash2 size={11} />
-                    <span>{labels.deleteProject}</span>
-                  </button>
-                  <button
-                    onClick={e => { e.stopPropagation(); setConfirmDeleteId(null); }}
-                    className="ctx-menu-delete-no"
-                  >
-                    {labels.cancel}
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <button
-                onClick={e => { e.stopPropagation(); handleDelete(project.id); }}
-                className="ctx-menu-item danger"
-              >
-                <Trash2 size={12} />
-                <span>{labels.deleteProject}</span>
-              </button>
-            )}
-          </div>
-        )}
-      </div>
-    );
-  };
-
-  const renderGroup = (label: string, items: Project[]) => {
-    if (items.length === 0) return null;
-    return (
-      <div className="mb-2">
-        <div className="flex items-center gap-3 px-5 py-2">
-          <div className="sidebar-group-label flex-1" />
-          <span className="text-[0.6rem] font-bold uppercase tracking-widest text-text-muted whitespace-nowrap">
-            {label}
-          </span>
-          <div className="sidebar-group-label flex-1" />
-        </div>
-        {items.map(renderProject)}
-      </div>
-    );
-  };
-
-  return (
-    <div className="sidebar-root flex h-full w-full flex-col transition-colors duration-200">
-      {/* Header */}
-      <div className="sidebar-header flex items-center gap-3 px-5 py-5">
-        <div className="sidebar-logo-icon flex h-8 w-8 items-center justify-center rounded-lg">
-          <MessageSquare size={16} className="text-white" />
-        </div>
-        <span className="text-sm font-bold text-text-primary tracking-wide">QA Assistant</span>
-      </div>
-
-      {/* New project */}
-      <div className="p-4">
-        <button
-          onClick={onNewProject}
-          className="sidebar-new-btn flex w-full items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold text-text-primary"
-        >
-          <Plus size={16} />
-          {labels.newProject}
-        </button>
-      </div>
-
-      {/* Search */}
-      <div className="px-4 pb-3">
-        <div className="sidebar-search relative rounded-lg">
-          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-tertiary" />
-          <input
-            type="text"
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            placeholder={labels.searchProjects}
-            className="w-full rounded-lg bg-transparent py-2 pl-9 pr-3 text-sm text-text-primary placeholder-text-muted outline-none"
-            data-gramm="false"
-          />
-        </div>
-      </div>
-
-      {/* Active / Archived toggle */}
-      <div className="flex mx-4 mb-3 p-1 sidebar-tab-group rounded-lg">
-        <button
-          onClick={() => setShowArchived(false)}
-          className={cn(
-            'flex-1 rounded-md px-3 py-1.5 text-xs font-semibold transition-all',
-            !showArchived ? 'sidebar-tab-active text-text-primary' : 'text-text-secondary hover:text-text-primary'
-          )}
-        >
-          {labels.active} ({activeProjects.length})
-        </button>
-        <button
-          onClick={() => setShowArchived(true)}
-          className={cn(
-            'flex-1 rounded-md px-3 py-1.5 text-xs font-semibold transition-all',
-            showArchived ? 'sidebar-tab-active text-text-primary' : 'text-text-secondary hover:text-text-primary'
-          )}
-        >
-          {labels.archived} ({archivedProjects.length})
-        </button>
-      </div>
-
-      {/* List */}
-      <div className="flex-1 overflow-y-auto custom-scrollbar py-1">
-        {filtered.length === 0 ? (
-          <div className="px-4 py-12 text-center text-sm font-medium text-text-tertiary">
-            {labels.noProjects}
-          </div>
-        ) : (
-          <>
-            {renderGroup(labels.today, grouped.today)}
-            {renderGroup(labels.yesterday, grouped.yesterday)}
-            {renderGroup(labels.older, grouped.older)}
-          </>
-        )}
-      </div>
-
-      {/* Footer */}
-      <div className="sidebar-footer p-3">
-        <button
-          onClick={onToggleTheme}
-          className="sidebar-theme-btn flex w-full items-center justify-center gap-2.5 px-3 py-2 text-sm font-semibold text-text-secondary"
-        >
-          {theme === 'dark' ? <Sun size={15} /> : <Moon size={15} />}
-          {theme === 'dark' ? labels.lightMode : labels.darkMode}
-        </button>
-      </div>
-    </div>
-  );
-};
-
-============================================================
---- PLIK: .\frontend\src\components\ChatFeed.tsx ---
-============================================================
-
-// frontend/src/components/ChatFeed.tsx
-
-import { useEffect, useRef } from 'react';
-import ReactMarkdown from 'react-markdown';
-import { Bot, FileText } from 'lucide-react';
-import type { ChatMessage, Labels } from '../types';
-import { formatTime } from '../lib/utils';
-
-interface ChatFeedProps {
-  messages: ChatMessage[];
-  isLoading: boolean;
-  onOpenCanvas: () => void;
-  labels: Labels;
-}
-
-export const ChatFeed = ({ messages, isLoading, onOpenCanvas, labels }: ChatFeedProps) => {
-  const bottomRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages, isLoading]);
-
-  if (messages.length === 0 && !isLoading) {
-    return (
-      <div style={{
-        flex: 1,
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: '40px 24px',
-        textAlign: 'center',
-      }}>
-        <div style={{
-          marginBottom: 32,
-          width: 88,
-          height: 88,
-          borderRadius: 16,
-          background: 'linear-gradient(135deg, rgba(227,0,15,0.1), rgba(227,0,15,0.04))',
-          border: '1px solid rgba(227,0,15,0.15)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-        }}>
-          <Bot size={44} color="#e3000f" />
-        </div>
-        <h2 style={{ fontSize: 26, fontWeight: 700, marginBottom: 8, color: 'var(--color-text-primary)' }}>
-          {labels.welcome}
-        </h2>
-        <p style={{ fontSize: 15, color: 'var(--color-text-tertiary)', maxWidth: 480, lineHeight: 1.7 }}>
-          {labels.welcomeSub}
-        </p>
-        <div style={{ marginTop: 40, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, maxWidth: 420, width: '100%' }}>
-          {[
-            { icon: '💬', label: labels.modeChatbot, desc: 'Pytania i odpowiedzi' },
-            { icon: '✅', label: labels.modeGoNogo, desc: 'Raporty Go/No-Go' },
-            { icon: '🌐', label: labels.modeTranslator, desc: 'Tłumaczenia techniczne' },
-            { icon: '📊', label: labels.modeAnalysis, desc: 'Analiza danych' },
-          ].map(item => (
-            <div key={item.label} style={{
-              padding: 20,
-              borderRadius: 10,
-              border: '1px solid var(--color-border)',
-              backgroundColor: 'var(--color-surface)',
-              textAlign: 'left',
-              transition: 'box-shadow 0.2s, border-color 0.2s',
-              cursor: 'default',
-            }}>
-              <div style={{ fontSize: 28, marginBottom: 10 }}>{item.icon}</div>
-              <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--color-text-primary)' }}>{item.label}</div>
-              <div style={{ fontSize: 12, color: 'var(--color-text-tertiary)', marginTop: 4 }}>{item.desc}</div>
-            </div>
-          ))}
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div style={{ flex: 1, overflowY: 'auto', padding: '32px 24px' }} className="custom-scrollbar">
-      <div style={{ maxWidth: 720, margin: '0 auto' }}>
-        {messages.map(msg => (
-          <div key={msg.id} className="animate-fade-in-up">
-            {msg.role === 'user'
-              ? <UserBubble message={msg} />
-              : <AssistantBubble message={msg} onOpenCanvas={onOpenCanvas} labels={labels} />
-            }
-          </div>
-        ))}
-
-        {isLoading && (
-          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 16, padding: '20px 0' }} className="animate-fade-in-up">
-            <div style={{
-              width: 36, height: 36, borderRadius: '50%', flexShrink: 0,
-              backgroundColor: 'var(--color-surface-tertiary)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-            }}>
-              <Bot size={18} color="var(--color-text-tertiary)" />
-            </div>
-            <div style={{
-              display: 'flex', alignItems: 'center', gap: 8,
-              borderRadius: 16, backgroundColor: 'var(--color-surface-tertiary)',
-              padding: '16px 24px',
-            }}>
-              <div className="typing-dot" />
-              <div className="typing-dot" />
-              <div className="typing-dot" />
-            </div>
-          </div>
-        )}
-
-        <div ref={bottomRef} />
-      </div>
-    </div>
-  );
-};
-
-const UserBubble = ({ message }: { message: ChatMessage }) => (
-  <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '12px 0' }}>
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', maxWidth: '80%' }}>
-      <div style={{
-        borderRadius: 'var(--radius-lg)',
-        backgroundColor: 'var(--color-surface-secondary)',
-        border: '1px solid var(--color-border)',
-        padding: '12px 16px',
-        color: 'var(--color-text-primary)',
-        boxShadow: '0 1px 2px rgba(0,0,0,0.02)',
-      }}>
-        <p style={{ fontSize: 15, lineHeight: 1.65, whiteSpace: 'pre-wrap', margin: 0 }}>{message.content}</p>
-      </div>
-      <span style={{ marginTop: 6, fontSize: 11, color: 'var(--color-text-muted)', fontWeight: 500 }}>
-        {formatTime(message.timestamp)} · Użytkownik
-      </span>
-    </div>
-  </div>
-);
-const AssistantBubble = ({
-  message, onOpenCanvas, labels,
-}: { message: ChatMessage; onOpenCanvas: () => void; labels: Labels }) => (
-  <div style={{ display: 'flex', alignItems: 'flex-start', gap: 16, padding: '16px 0' }}>
-    <div style={{
-      width: 32, height: 32, flexShrink: 0, borderRadius: 'var(--radius-md)',
-      backgroundColor: 'var(--color-orlen)',
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-      marginTop: 2,
-    }}>
-      <Bot size={18} color="#ffffff" />
-    </div>
-    <div style={{ display: 'flex', flexDirection: 'column', maxWidth: '85%' }}>
-      <div style={{
-        borderRadius: 'var(--radius-md)',
-        backgroundColor: 'var(--color-surface)',
-        border: '1px solid var(--color-border)',
-        borderLeft: '3px solid var(--color-orlen)', /* Akcent Orlenu */
-        padding: '16px 20px',
-        boxShadow: '0 2px 6px rgba(0,0,0,0.03)',
-      }}>
-        <div className="chat-markdown" style={{ fontSize: 15, color: 'var(--color-text-primary)' }}>
-          <ReactMarkdown>{message.content}</ReactMarkdown>
-        </div>
-      </div>
-
-      {message.draftData && (
-        <button
-          onClick={onOpenCanvas}
-          style={{
-            marginTop: 12,
-            display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-            alignSelf: 'flex-start',
-            borderRadius: 'var(--radius-md)',
-            border: '1px solid var(--color-orlen)',
-            backgroundColor: 'var(--color-surface)',
-            padding: '8px 16px',
-            fontSize: 13, fontWeight: 600, color: 'var(--color-orlen)',
-            transition: 'all 0.15s',
-          }}
-          onMouseEnter={e => {
-            e.currentTarget.style.backgroundColor = 'var(--color-orlen)';
-            e.currentTarget.style.color = '#ffffff';
-          }}
-          onMouseLeave={e => {
-            e.currentTarget.style.backgroundColor = 'var(--color-surface)';
-            e.currentTarget.style.color = 'var(--color-orlen)';
-          }}
-        >
-          <FileText size={15} />
-          {labels.openCanvas}
-        </button>
-      )}
-
-      <span style={{ marginTop: 8, fontSize: 11, color: 'var(--color-text-muted)', fontWeight: 500 }}>
-        {formatTime(message.timestamp)} · System QA
-      </span>
-    </div>
-  </div>
-);
-
-============================================================
---- PLIK: .\frontend\src\components\InputArea.tsx ---
-============================================================
-
-// frontend/src/components/InputArea.tsx
-import { useState, useRef, useCallback, useEffect } from 'react';
-import {
-  Send, Paperclip, X, MessageSquare, FileCheck,
-  Languages, BarChart3, FileSpreadsheet, FileIcon,
-} from 'lucide-react';
-import type { AppMode, AttachedFile, Labels } from '../types';
-import { generateId, formatFileSize } from '../lib/utils';
-
-interface InputAreaProps {
-  mode: AppMode;
-  onModeChange: (mode: AppMode) => void;
-  onSend: (message: string, files: File[]) => void;
-  isLoading: boolean;
-  labels: Labels;
-}
-
-const MAX_FILES = 20;
-
-const modes: { key: AppMode; icon: React.ReactNode; labelKey: keyof Labels; color: string; activeBg: string; activeRing: string }[] = [
-  { key: 'chatbot', icon: <MessageSquare size={15} />, labelKey: 'modeChatbot', color: '#3b82f6', activeBg: 'rgba(59,130,246,0.08)', activeRing: 'rgba(59,130,246,0.35)' },
-  { key: 'gonogo', icon: <FileCheck size={15} />, labelKey: 'modeGoNogo', color: '#e3000f', activeBg: 'rgba(227,0,15,0.06)', activeRing: 'rgba(227,0,15,0.35)' },
-  { key: 'translator', icon: <Languages size={15} />, labelKey: 'modeTranslator', color: '#16a34a', activeBg: 'rgba(22,163,74,0.06)', activeRing: 'rgba(22,163,74,0.35)' },
-  { key: 'analysis', icon: <BarChart3 size={15} />, labelKey: 'modeAnalysis', color: '#d97706', activeBg: 'rgba(217,119,6,0.06)', activeRing: 'rgba(217,119,6,0.35)' },
-];
-
-const getFileIcon = (name: string) => {
-  const ext = name.split('.').pop()?.toLowerCase();
-  if (ext === 'csv' || ext === 'xls' || ext === 'xlsx') return <FileSpreadsheet size={14} color="#16a34a" />;
-  if (ext === 'pdf') return <FileIcon size={14} color="#e3000f" />;
-  return <FileIcon size={14} color="var(--color-text-tertiary)" />;
-};
-
-export const InputArea = ({ mode, onModeChange, onSend, isLoading, labels }: InputAreaProps) => {
-  const [text, setText] = useState('');
-  const [attachedFiles, setAttachedFiles] = useState<AttachedFile[]>([]);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
-
-  const adjustHeight = useCallback(() => {
-    const ta = textareaRef.current;
-    if (!ta) return;
-    ta.style.height = 'auto';
-    ta.style.height = `${Math.min(ta.scrollHeight, 200)}px`;
-  }, []);
-
-  useEffect(() => { adjustHeight(); }, [text, adjustHeight]);
-
-  const handleSend = () => {
-    const trimmed = text.trim();
-    if (!trimmed && attachedFiles.length === 0) return;
-    onSend(trimmed, attachedFiles.map(af => af.file));
-    setText('');
-    setAttachedFiles([]);
-    if (fileInputRef.current) fileInputRef.current.value = '';
-    setTimeout(() => { if (textareaRef.current) textareaRef.current.style.height = 'auto'; }, 0);
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); }
-  };
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!e.target.files) return;
-    const newFiles: AttachedFile[] = Array.from(e.target.files).map(f => ({ file: f, id: generateId() }));
-    setAttachedFiles(prev => [...prev, ...newFiles].slice(0, MAX_FILES));
-  };
-
-  const removeFile = (id: string) => setAttachedFiles(prev => prev.filter(f => f.id !== id));
-
-  const canSend = text.trim() || attachedFiles.length > 0;
-
-  return (
-    <div style={{
-      borderTop: '1px solid var(--color-border)',
-      backgroundColor: 'var(--color-surface)',
-      padding: '20px 24px 24px',
-      flexShrink: 0,
-    }}>
-      <div style={{ maxWidth: 720, margin: '0 auto' }}>
-        {/* File chips */}
-        {attachedFiles.length > 0 && (
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 14 }}>
-            {attachedFiles.map(af => (
-              <div key={af.id} className="animate-fade-in-up" style={{
-                display: 'inline-flex', alignItems: 'center', gap: 8,
-                borderRadius: 8, border: '1px solid var(--color-border)',
-                backgroundColor: 'var(--color-surface-secondary)',
-                padding: '8px 12px', fontSize: 13,
-              }}>
-                {getFileIcon(af.file.name)}
-                <span style={{ maxWidth: 150, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 500, color: 'var(--color-text-primary)' }}>
-                  {af.file.name}
-                </span>
-                <span style={{ color: 'var(--color-text-muted)', fontSize: 12 }}>{formatFileSize(af.file.size)}</span>
-                <button onClick={() => removeFile(af.id)} style={{
-                  padding: 4, borderRadius: '50%', color: 'var(--color-text-tertiary)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                }}>
-                  <X size={12} />
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* Input box */}
-        <div className="input-box-wrapper" style={{
-          display: 'flex', alignItems: 'flex-end', gap: 12,
-          padding: '12px 16px',
-        }}>
-          {/* Attach */}
-          <button
-            className="input-attach-btn"
-            onClick={() => fileInputRef.current?.click()}
-            title={labels.attachFiles}
-            style={{ flexShrink: 0 }}
-          >
-            <Paperclip size={20} />
-          </button>
-          <input ref={fileInputRef} type="file" multiple accept=".csv,.xls,.xlsx,.pdf,.json,.xml,.txt" onChange={handleFileChange} style={{ display: 'none' }} />
-
-          {/* Textarea */}
-          <textarea
-            ref={textareaRef}
-            value={text}
-            onChange={e => setText(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder={labels.chatPlaceholder}
-            rows={1}
-            disabled={isLoading}
-            style={{
-              flex: 1, resize: 'none', border: 'none', outline: 'none',
-              backgroundColor: 'transparent',
-              padding: '10px 4px', fontSize: 15, lineHeight: 1.6,
-              color: 'var(--color-text-primary)',
-              fontFamily: 'inherit',
-              maxHeight: 200,
-              opacity: isLoading ? 0.5 : 1,
-            }}
-            data-gramm="false"
-            data-gramm_editor="false"
-            data-enable-grammarly="false"
-          />
-
-          {/* Send */}
-          <button
-            className={`input-send-btn ${canSend && !isLoading ? 'enabled' : 'disabled'}`}
-            onClick={handleSend}
-            disabled={isLoading || !canSend}
-            style={{ flexShrink: 0 }}
-          >
-            <Send size={18} />
-          </button>
-        </div>
-
-        {/* Mode buttons BELOW */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 14 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            {modes.map(m => {
-              const isActive = mode === m.key;
-              return (
-                <button
-                  key={m.key}
-                  onClick={() => onModeChange(m.key)}
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: 8,
-                    padding: '9px 18px',
-                    borderRadius: 8,
-                    fontSize: 13,
-                    fontWeight: 600,
-                    border: 'none',
-                    cursor: 'pointer',
-                    transition: 'all 0.15s',
-                    backgroundColor: isActive ? m.activeBg : 'transparent',
-                    color: isActive ? m.color : 'var(--color-text-secondary)',
-                    boxShadow: isActive ? `inset 0 0 0 1.5px ${m.activeRing}` : 'none',
-                  }}
-                  onMouseEnter={e => {
-                    if (!isActive) {
-                      e.currentTarget.style.backgroundColor = 'var(--color-surface-tertiary)';
-                      e.currentTarget.style.color = m.color;
-                    }
-                  }}
-                  onMouseLeave={e => {
-                    if (!isActive) {
-                      e.currentTarget.style.backgroundColor = 'transparent';
-                      e.currentTarget.style.color = 'var(--color-text-secondary)';
-                    }
-                  }}
-                >
-                  {m.icon}
-                  <span>{labels[m.labelKey]}</span>
-                </button>
-              );
-            })}
-          </div>
-          <span style={{ fontSize: 11, color: 'var(--color-text-muted)' }}>
-            Enter ↵ {labels.sendMessage} · Shift+Enter {labels.newLine}
-          </span>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-============================================================
---- PLIK: .\frontend\src\components\CanvasPanel.tsx ---
-============================================================
-
-// frontend/src/components/CanvasPanel.tsx
-import { useRef } from 'react';
-import ReactQuill from 'react-quill-new';
-import 'react-quill-new/dist/quill.snow.css';
-import { X, Download, FileType2, FileCode } from 'lucide-react';
-import type { Labels } from '../types';
-
-interface CanvasPanelProps {
-  isOpen: boolean;
-  content: string;
-  onChange: (content: string) => void;
-  onClose: () => void;
-  onExport: (format: 'pdf' | 'docx' | 'md') => void;
-  exportMessage: string;
-  labels: Labels;
-}
-
-const QUILL_MODULES = {
-  toolbar: [
-    [{ header: [1, 2, 3, false] }],
-    ['bold', 'italic', 'underline', 'strike'],
-    [{ list: 'ordered' }, { list: 'bullet' }],
-    [{ color: [] }, { background: [] }],
-    ['blockquote', 'code-block'],
-    ['clean'],
-  ],
-};
-
-const QUILL_FORMATS = [
-  'header', 'bold', 'italic', 'underline', 'strike',
-  'list', 'color', 'background', 'blockquote', 'code-block',
-];
-
-const exportBtnStyle = (): React.CSSProperties => ({
-  display: 'inline-flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  gap: 8,
-  padding: '9px 18px',
-  borderRadius: 8,
-  border: '1px solid var(--color-border)',
-  backgroundColor: 'var(--color-surface)',
-  fontSize: 13,
-  fontWeight: 600,
-  color: 'var(--color-text-secondary)',
-  cursor: 'pointer',
-  transition: 'all 0.15s',
-});
-
-export const CanvasPanel = ({
-  isOpen, content, onChange, onClose, onExport, exportMessage, labels,
-}: CanvasPanelProps) => {
-  const quillRef = useRef<ReactQuill>(null);
-
-  if (!isOpen) return null;
-
-  return (
-    <div className="animate-slide-in-right" style={{
-      display: 'flex', flexDirection: 'column', height: '100%', width: '100%',
-      borderLeft: '1px solid var(--color-border)',
-      backgroundColor: 'var(--color-surface)',
-    }}>
-      {/* Toolbar */}
-      <div style={{
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        borderBottom: '1px solid var(--color-border)',
-        backgroundColor: 'var(--color-surface-secondary)',
-        padding: '16px 24px',
-        flexShrink: 0,
-      }}>
-        <h3 style={{ fontSize: 15, fontWeight: 700, color: 'var(--color-text-primary)', margin: 0 }}>
-          {labels.canvasTitle}
-        </h3>
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <button
-            onClick={() => onExport('pdf')}
-            style={exportBtnStyle()}
-            onMouseEnter={e => { e.currentTarget.style.borderColor = '#fca5a5'; e.currentTarget.style.color = '#e3000f'; }}
-            onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--color-border)'; e.currentTarget.style.color = 'var(--color-text-secondary)'; }}
-          >
-            <Download size={14} /> {labels.downloadPdf}
-          </button>
-          <button
-            onClick={() => onExport('docx')}
-            style={exportBtnStyle()}
-            onMouseEnter={e => { e.currentTarget.style.borderColor = '#93c5fd'; e.currentTarget.style.color = '#3b82f6'; }}
-            onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--color-border)'; e.currentTarget.style.color = 'var(--color-text-secondary)'; }}
-          >
-            <FileType2 size={14} /> {labels.downloadDocx}
-          </button>
-          <button
-            onClick={() => onExport('md')}
-            style={exportBtnStyle()}
-            onMouseEnter={e => { e.currentTarget.style.borderColor = '#9ca3af'; e.currentTarget.style.color = 'var(--color-text-primary)'; }}
-            onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--color-border)'; e.currentTarget.style.color = 'var(--color-text-secondary)'; }}
-          >
-            <FileCode size={14} /> {labels.downloadMd}
-          </button>
-
-          <div style={{ width: 1, height: 24, backgroundColor: 'var(--color-border)', margin: '0 8px' }} />
-
-          <button
-            onClick={onClose}
-            style={{
-              padding: 10, borderRadius: 8,
-              color: 'var(--color-text-tertiary)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              transition: 'all 0.15s',
-            }}
-            title={labels.closeCanvas}
-            onMouseEnter={e => { e.currentTarget.style.backgroundColor = 'var(--color-surface-tertiary)'; e.currentTarget.style.color = 'var(--color-text-secondary)'; }}
-            onMouseLeave={e => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = 'var(--color-text-tertiary)'; }}
-          >
-            <X size={20} />
-          </button>
-        </div>
-      </div>
-
-      {/* Editor */}
-      <div className="canvas-editor custom-scrollbar" style={{ flex: 1, overflowY: 'auto' }}>
-        <ReactQuill
-          ref={quillRef}
-          theme="snow"
-          value={content}
-          onChange={onChange}
-          modules={QUILL_MODULES}
-          formats={QUILL_FORMATS}
-        />
-      </div>
-
-      {/* Status */}
-      {exportMessage && (
-        <div style={{
-          borderTop: '1px solid',
-          padding: '12px 24px',
-          textAlign: 'center',
-          fontSize: 13,
-          fontWeight: 500,
-          borderColor: exportMessage.includes('Błąd') || exportMessage.includes('Error') ? '#fca5a5' : '#86efac',
-          backgroundColor: exportMessage.includes('Błąd') || exportMessage.includes('Error') ? '#fef2f2' : '#f0fdf4',
-          color: exportMessage.includes('Błąd') || exportMessage.includes('Error') ? '#dc2626' : '#16a34a',
-        }}>
-          {exportMessage}
-        </div>
-      )}
-    </div>
-  );
-};
-
-============================================================
---- PLIK: .\frontend\src\components\SidebarToggle.tsx ---
-============================================================
-
-// frontend/src/components/SidebarToggle.tsx
-import { ChevronLeft, ChevronRight } from 'lucide-react';
-
-interface SidebarToggleProps {
-  isOpen: boolean;
-  onToggle: () => void;
-}
-
-export const SidebarToggle = ({ isOpen, onToggle }: SidebarToggleProps) => {
-  return (
-    <button
-      onClick={onToggle}
-      style={{
-        position: 'absolute',
-        left: 0,
-        top: '50%',
-        transform: 'translateY(-50%)',
-        zIndex: 50,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        width: '24px',
-        height: '72px',
-        borderRadius: '0 6px 6px 0',
-        border: '1px solid var(--color-border)',
-        borderLeft: 'none',
-        backgroundColor: 'var(--color-surface)',
-        color: 'var(--color-text-tertiary)',
-        boxShadow: '2px 0 8px rgba(0,0,0,0.06)',
-        cursor: 'pointer',
-        transition: 'background-color 0.15s, color 0.15s',
-      }}
-      onMouseEnter={e => {
-        e.currentTarget.style.backgroundColor = 'var(--color-surface-tertiary)';
-        e.currentTarget.style.color = 'var(--color-text-secondary)';
-      }}
-      onMouseLeave={e => {
-        e.currentTarget.style.backgroundColor = 'var(--color-surface)';
-        e.currentTarget.style.color = 'var(--color-text-tertiary)';
-      }}
-      aria-label={isOpen ? 'Close sidebar' : 'Open sidebar'}
-    >
-      {isOpen ? <ChevronLeft size={14} /> : <ChevronRight size={14} />}
-    </button>
-  );
-};
-
-============================================================
---- PLIK: .\frontend\src\components\deprecated\Header.tsx ---
-============================================================
-
-interface HeaderProps {
-  title: string;
-}
-
-export const Header = ({ title }: HeaderProps) => {
-  return (
-    <header style={{
-      backgroundColor: 'var(--orlen-red)',
-      padding: '1.5rem 2rem',
-      color: 'var(--white)',
-      boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
-    }}>
-      <h1 style={{ margin: 0, fontSize: '1.4rem', fontWeight: 600 }}>
-        {title}
-      </h1>
-    </header>
-  );
-};
+# rag.py
+
+import os
+import hashlib
+from typing import Optional, List
+
+import chromadb
+from sentence_transformers import SentenceTransformer
+from langchain_text_splitters import RecursiveCharacterTextSplitter
+
+from src.core.config import Config
+from src.core.logger import get_logger
+
+
+# Singleton for embedder to avoid loading the model multiple times
+_embedder = None
+
+def get_embedder():
+      global _embedder
+      if _embedder is None:
+            model_name = os.getenv("EMBED_MODEL", "sdadas/st-polish-paraphrase-from-distilroberta")
+            _embedder = SentenceTransformer(model_name)
+      return _embedder
+
+class RAGEngine:
+      def __init__(self, llm_client):
+            self.logger = get_logger(self.__class__.__name__)
+            self.llm = llm_client
+            
+            self.parent_chunk_size = Config.PARENT_CHUNK_SIZE
+            self.parent_chunk_overlap = Config.PARENT_CHUNK_OVERLAP
+            self.child_chunk_size = Config.CHILD_CHUNK_SIZE
+            self.child_chunk_overlap = Config.CHILD_CHUNK_OVERLAP
+            self.top_k = Config.TOP_K
+            self.score_threshold = Config.SCORE_THRESHOLD
+            
+            # Main ChromaDB client - encaptures all collections (projects & chats)
+            self.chroma_path = os.path.join(Config.BASE_DATA_PATH, "chroma_db")
+            os.makedirs(self.chroma_path, exist_ok=True)
+            self.chroma_client = chromadb.PersistentClient(path=self.chroma_path)
+
+      def _get_collection(self, collection_name: str):
+            """Gathers or creates collection (isolated vector store)"""
+            class _EmbFn(chromadb.EmbeddingFunction):
+                  def __call__(self, input: List[str]) -> List[List[float]]:
+                        return get_embedder().encode(input, show_progress_bar=False).tolist()
+
+            return self.chroma_client.get_or_create_collection(
+                  name=collection_name,
+                  embedding_function=_EmbFn(),
+                  metadata={"hnsw:space": "cosine"}
+            )
+
+      def _chunk_parent_child(self, text: str) -> List[dict]:
+            """Parent-Child chunking"""
+            parent_splitter = RecursiveCharacterTextSplitter(
+                  chunk_size=self.parent_chunk_size, chunk_overlap=self.parent_chunk_overlap,
+                  separators=["\n\n", "\n", ". ", " ", ""]
+            )
+            child_splitter = RecursiveCharacterTextSplitter(
+                  chunk_size=self.child_chunk_size, chunk_overlap=self.child_chunk_overlap,
+                  separators=["\n\n", "\n", ". ", " ", ""]
+            )
+        
+            results = []
+            for p_idx, p_text in enumerate(parent_splitter.split_text(text)):
+                  for c_idx, c_text in enumerate(child_splitter.split_text(p_text)):
+                        results.append({
+                              "parent_id": p_idx,
+                              "parent_text": p_text,
+                              "child_text": c_text
+                        })
+            return results
+
+      def ingest_document(self, text: str, filename: str, entity_id: str):
+            """
+            Vectorizing and indexing text into collection based on entity_id.
+            entity_id : 'p-12345' (projects) lub 'c-98765' (local chats).
+            """
+            if not text.strip():
+                  return
+            
+            safe_collection_name = entity_id.replace("-", "_")
+            collection = self._get_collection(safe_collection_name)
+            
+            chunks = self._chunk_parent_child(text)
+            ids, docs, metas = [], [], []
+        
+            for i, c in enumerate(chunks):
+                  # Unique hash for each chunk
+                  chunk_hash = hashlib.md5(f"{filename}_{i}_{c['child_text'][:50]}".encode()).hexdigest()
+                  ids.append(f"{filename}_c{chunk_hash[:10]}")
+                  docs.append(c["child_text"])
+                  
+                  # Capturing more information in metadata 
+                  metas.append({
+                        "source": filename,
+                        "parent_text": c["parent_text"], 
+                        "entity_id": entity_id
+                  })
+
+            collection.upsert(ids=ids, documents=docs, metadatas=metas)
+            self.logger.info(f"Zindeksowano {filename} w {safe_collection_name} ({len(chunks)} wektorów)")
+
+      def search_context(self, query: str, project_id: Optional[str], chat_id: str) -> str:
+            """
+            Asks whole project base and chat base - links results based on evidence
+            """
+            all_hits = []
+        
+            # if chat is linked to a project
+            if project_id:
+                  safe_proj = project_id.replace("-", "_")
+                  all_hits.extend(self._search_collection(query, safe_proj))
+            
+            safe_chat = chat_id.replace("-", "_")
+            all_hits.extend(self._search_collection(query, safe_chat))
+
+            if not all_hits:
+                  return ""
+
+            all_hits.sort(key=lambda x: x["score"], reverse=True)
+            best_hits = all_hits[:self.top_k]
+
+            rag_parts = []
+            seen_texts = set()
+        
+            for hit in best_hits:
+                  if hit["text"] not in seen_texts:
+                        rag_parts.append(f"[Plik: {hit['source']}]\n{hit['text']}")
+                        seen_texts.add(hit["text"])
+
+            return "\n\n---\n\n".join(rag_parts)
+
+      def _search_collection(self, query: str, collection_name: str) -> List[dict]:
+            try:
+                  collection = self._get_collection(collection_name)
+                  if collection.count() == 0:
+                        return []
+
+                  results = collection.query(
+                  query_texts=[query],
+                  n_results=self.top_k,
+                  include=["documents", "metadatas", "distances"]
+                  )
+
+                  hits = []
+                  for i in range(len(results["ids"][0])):
+                        score = 1 - results["distances"][0][i]
+                        if score >= self.score_threshold:
+                              meta = results["metadatas"][0][i]
+                              
+                              text_to_use = meta.get("parent_text", results["documents"][0][i])
+                              hits.append({
+                                    "text": text_to_use,
+                                    "source": meta.get("source", "?"),
+                                    "score": score
+                              })
+                  return hits
+            except Exception as e:
+                  self.logger.warning(f"Error while searching collection {collection_name}: {e}")
+                  return []
+
+      def get_historical_context(self, lang="pl") -> str:
+            return "RAG context is now handled by the new search_context() method."
+            
+      def load_structured_rules(self, lang="pl") -> str:
+            return ""
+            
+      def save_approved_report(self, project_name: str, report_data: dict, lang: str = "pl") -> str:
+            return ""
+            
+      def update_structured_rules(self, rules: list, lang: str, author: str) -> str:
+            return ""

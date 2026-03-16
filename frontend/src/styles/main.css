@@ -84,18 +84,18 @@
   --color-text-muted: #64748b;
 
   /* Sidebar specific dark */
-  --sidebar-bg: linear-gradient(180deg, #111827 0%, #0f1419 100%);
-  --sidebar-header-bg: linear-gradient(135deg, #1a1f2e 0%, #151921 100%);
-  --sidebar-item-hover: rgba(255, 255, 255, 0.04);
-  --sidebar-item-active: rgba(227, 0, 15, 0.08);
-  --sidebar-item-active-border: rgba(227, 0, 15, 0.6);
-  --sidebar-new-btn-bg: linear-gradient(135deg, #1e2433 0%, #1a1f2e 100%);
-  --sidebar-new-btn-hover: linear-gradient(135deg, #252d3f 0%, #1e2433 100%);
-  --sidebar-search-bg: #1a1f2e;
+  --sidebar-bg: #111827; /* Czysty, jednolity kolor */
+  --sidebar-header-bg: #111827;
+  --sidebar-item-hover: rgba(255, 255, 255, 0.05);
+  --sidebar-item-active: rgba(227, 0, 15, 0.1);
+  --sidebar-item-active-border: rgba(227, 0, 15, 0.8);
+  --sidebar-new-btn-bg: #1f2937;
+  --sidebar-new-btn-hover: #374151;
+  --sidebar-search-bg: #1f2937;
   --sidebar-search-focus-ring: rgba(227, 0, 15, 0.25);
-  --sidebar-toggle-bg: linear-gradient(135deg, #1e2433 0%, #1a1f2e 100%);
-  --sidebar-toggle-hover: linear-gradient(135deg, #252d3f 0%, #222838 100%);
-  --sidebar-footer-bg: linear-gradient(0deg, #0d1117 0%, #111827 100%);
+  --sidebar-toggle-bg: #1f2937;
+  --sidebar-toggle-hover: #374151;
+  --sidebar-footer-bg: #0f1419; /* Lekko ciemniejszy footer */
   --sidebar-divider: linear-gradient(90deg, transparent, #3f3f46, transparent);
 
   /* Context menu dark */

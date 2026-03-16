@@ -14,17 +14,24 @@ export interface ChatMessage {
 }
 
 export interface Project {
-  id: string;
+  id: string;               // p-xxxxx
+  name: string;
+  createdAt: Date;
+  updatedAt: Date;
+  archived: boolean;
+  instructions?: string;
+  uploadedFiles?: string[];
+}
+
+export interface Chat {
+  id: string;               // c-xxxxx
+  projectId: string | null;
   name: string;
   mode: AppMode;
   messages: ChatMessage[];
   createdAt: Date;
   updatedAt: Date;
   archived: boolean;
-  /** ChromaDB collection ID or S3 prefix for RAG context */
-  ragContextId?: string;
-  /** Whether RAG indexing is enabled */
-  ragEnabled: boolean;
   canvasContent?: string;
   draft?: StructuredDraft;
   chartPaths?: string[];
@@ -38,11 +45,6 @@ export interface StructuredDraft {
   justification: string;
 }
 
-export interface DraftResponse {
-  draft: StructuredDraft;
-  charts: string[];
-}
-
 export interface ExportRequest {
   project_name: string;
   edited_text: string;
@@ -53,12 +55,12 @@ export interface ExportRequest {
 }
 
 export interface ChatRequest {
-  project_id: string;
+  chat_id: string;
+  project_id?: string | null;
   mode: AppMode;
   message: string;
   language: string;
   canvas_content?: string;
-  rag_context_id?: string;
   files?: File[];
 }
 
@@ -74,21 +76,11 @@ export interface AttachedFile {
   id: string;
 }
 
-export interface RagIndexRequest {
-  project_id: string;
-  collection_name: string;
-}
-
-export interface RagIndexResponse {
-  context_id: string;
-  status: string;
-  document_count: number;
-}
-
 export interface Labels {
   headerTitle: string;
   chatPlaceholder: string;
   newProject: string;
+  newChat: string;
   searchProjects: string;
   canvasTitle: string;
   downloadPdf: string;

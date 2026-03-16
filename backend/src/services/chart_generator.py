@@ -1,4 +1,6 @@
-# chart_generator.py
+# ============================================================
+# FILE: .\backend\src\services\chart_generator.py
+# ============================================================
 
 import os
 import matplotlib
@@ -7,7 +9,6 @@ import matplotlib.pyplot as plt
 import matplotlib.ticker as mticker
 import pandas as pd
 import io
-import re
 
 from datetime import datetime
 from src.core.config import Config
@@ -61,9 +62,9 @@ class ChartGenerator:
         Analyzes uploaded test data files and generates all applicable charts.
 
         Args:
-            file_contents: Dict mapping filename to raw bytes (CSV/Excel)
-            project_name: Project name for file naming
-            lang: Language for chart labels
+            file_contents: Dict mapping filename to raw bytes (CSV/Excel).
+            project_name: Project name for file naming.
+            lang: Language for chart labels (bilingual support).
 
         Returns:
             List of file paths to generated chart images.
@@ -92,7 +93,7 @@ class ChartGenerator:
         # Merge all dataframes for aggregate analysis
         merged = pd.concat([df for _, df in all_dataframes], ignore_index=True)
 
-        # Chart 1: Test results distribution (pie/donut)
+        # Chart 1: Test results distribution (donut)
         path = self._chart_test_results_donut(merged, project_name, lang)
         if path:
             chart_paths.append(path)
@@ -259,14 +260,14 @@ class ChartGenerator:
 
         severity_colors = []
         for label in counts.index:
-            l = str(label).lower()
-            if l in ("critical", "krytyczny", "blocker", "1"):
+            l_val = str(label).lower()
+            if l_val in ("critical", "krytyczny", "blocker", "1"):
                 severity_colors.append("#B71C1C")
-            elif l in ("high", "wysoki", "major", "2"):
+            elif l_val in ("high", "wysoki", "major", "2"):
                 severity_colors.append("#F44336")
-            elif l in ("medium", "sredni", "średni", "normal", "3"):
+            elif l_val in ("medium", "sredni", "średni", "normal", "3"):
                 severity_colors.append("#FF9800")
-            elif l in ("low", "niski", "minor", "4"):
+            elif l_val in ("low", "niski", "minor", "4"):
                 severity_colors.append("#4CAF50")
             else:
                 severity_colors.append("#607D8B")

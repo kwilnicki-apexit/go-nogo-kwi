@@ -24,5 +24,5 @@
     "noFallthroughCasesInSwitch": true,
     "noUncheckedSideEffectImports": true
   },
-  "include": ["src"]
+  "include": ["src", "deprecated/App _old.tsx", "deprecated/Sidebar copy.tsx"]
 }

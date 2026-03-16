@@ -1,4 +1,6 @@
-# report_generator.py
+# ============================================================
+# FILE: .\backend\src\services\report_generator.py
+# ============================================================
 
 import os
 import json
@@ -7,9 +9,8 @@ import re
 from datetime import datetime
 from fpdf import FPDF
 from docx import Document
-from docx.shared import Inches, Pt, Cm, RGBColor
+from docx.shared import Inches, Pt, RGBColor
 from docx.enum.text import WD_ALIGN_PARAGRAPH
-from docx.enum.table import WD_TABLE_ALIGNMENT
 
 from src.core.config import Config
 from src.core.logger import get_logger
@@ -17,6 +18,8 @@ from src.core.exceptions import ExportError
 
 
 class ReportGenerator:
+    """Generates structured Go/No-Go decision reports and exports to PDF, DOCX, or Markdown."""
+
     def __init__(self, llm_client):
         self.logger = get_logger(self.__class__.__name__)
         self.llm = llm_client
@@ -24,7 +27,7 @@ class ReportGenerator:
 
         current_dir = os.path.dirname(os.path.abspath(__file__))
         self.font_dir = os.path.join(current_dir, "..", "utils", "fonts")
-        
+
         self.font_regular = os.path.join(self.font_dir, "Roboto-Regular.ttf")
         self.font_bold = os.path.join(self.font_dir, "Roboto-Bold.ttf")
         self.font_italic = os.path.join(self.font_dir, "Roboto-Italic.ttf")
@@ -32,9 +35,10 @@ class ReportGenerator:
 
         os.makedirs(self.final_output_path, exist_ok=True)
 
-    # ─── versioning ──────────────────────────────────────────────
+    # ─── Versioning ──────────────────────────────────────────────
 
     def _get_next_version(self, log_filepath):
+        """Reads the version history file and returns the next incremented version string."""
         if os.path.exists(log_filepath):
             try:
                 with open(log_filepath, "r", encoding="utf-8") as f:
@@ -50,6 +54,7 @@ class ReportGenerator:
         return "1.0"
 
     def _save_version_entry(self, log_filepath, version, filename, author):
+        """Appends a new version entry to the version history JSON file."""
         history = []
         if os.path.exists(log_filepath):
             try:
@@ -69,9 +74,10 @@ class ReportGenerator:
         with open(log_filepath, "w", encoding="utf-8") as f:
             json.dump(history, f, indent=4)
 
-    # ─── localization helpers ────────────────────────────────────
+    # ─── Localization helpers (bilingual user-facing labels) ─────
 
     def _labels(self, lang):
+        """Returns a dict of localized labels for report sections."""
         if lang == "pl":
             return {
                 "title": "Raport Decyzyjny GO/NO-GO",
@@ -110,6 +116,20 @@ class ReportGenerator:
 
     def generate_structured_draft(self, historical_cache, rag_context, parsed_test_data,
                                   user_risks, project_name, lang="pl"):
+        """
+        Generates a structured JSON draft of the Go/No-Go report via LLM.
+
+        Args:
+            historical_cache: Previous draft cache (if any) for context.
+            rag_context: RAG-retrieved context from project/chat documents.
+            parsed_test_data: Markdown-formatted test data tables.
+            user_risks: User-provided risk notes or remarks.
+            project_name: Name/ID of the project or chat.
+            lang: Language for the report content.
+
+        Returns:
+            dict with keys: summary, test_analysis, risks_eval, decision, justification.
+        """
         self.logger.info(f"Generating structured JSON report (lang: {lang})")
 
         if lang == "pl":
@@ -210,6 +230,7 @@ Required keys:
 
     def export_to_pdf(self, final_text, charts_paths, custom_name="Report",
                       author="User", lang="en"):
+        """Exports the report to a styled PDF file."""
         self.logger.info(f"Starting PDF export for project: {custom_name}")
 
         try:
@@ -226,56 +247,50 @@ Required keys:
 
             pdf = _StyledPDF(labels, orientation="P", unit="mm", format="A4")
             pdf.alias_nb_pages()
-            
 
             if os.path.exists(self.font_regular):
-                # style=""
                 pdf.add_font("Roboto", style="", fname=self.font_regular)
-                
-                # style="B"
+
                 if os.path.exists(self.font_bold):
                     pdf.add_font("Roboto", style="B", fname=self.font_bold)
-                
-                # style="I"
+
                 if os.path.exists(self.font_italic):
                     pdf.add_font("Roboto", style="I", fname=self.font_italic)
-                
-                # style="BI"
+
                 if os.path.exists(self.font_bold_italic):
                     pdf.add_font("Roboto", style="BI", fname=self.font_bold_italic)
-                
+
                 pdf.default_font = "Roboto"
             else:
                 pdf.default_font = "Helvetica"
-                self.logger.warning("No Roboto fonts found, using default : Helvetica")
-                
+                self.logger.warning("No Roboto fonts found, using default: Helvetica")
+
             pdf.set_auto_page_break(auto=True, margin=25)
             pdf.add_page()
 
-            # ── Cover / Header Block ──
-            # 1. Thin, vibrant red banner across the top to add a strong visual identity
-            pdf.set_fill_color(227, 0, 15)  # orlen red
+            # Thin red banner across the top
+            pdf.set_fill_color(227, 0, 15)
             pdf.rect(0, 0, 210, 6, "F")
-            
+
             pdf.ln(12)
-            
-            # 2. Main report title - large, bold, dark
-            pdf.set_text_color(30, 41, 59)  # slate-800
+
+            # Main report title
+            pdf.set_text_color(30, 41, 59)
             pdf.set_font(pdf.default_font, "B", 24)
             pdf.cell(0, 10, labels["title"].upper(), ln=True, align="L")
             pdf.ln(4)
-            
-            # 3. Metadata block - subtle light gray background with border
-            pdf.set_fill_color(248, 250, 252)  # slate-50
-            pdf.set_draw_color(226, 232, 240)  # slate-200
+
+            # Metadata block
+            pdf.set_fill_color(248, 250, 252)
+            pdf.set_draw_color(226, 232, 240)
             start_meta_y = pdf.get_y()
-            pdf.rect(10, start_meta_y, 190, 14, "FD")  # F=fill, D=draw
-            
+            pdf.rect(10, start_meta_y, 190, 14, "FD")
+
             pdf.set_y(start_meta_y + 3.5)
             pdf.set_x(14)
             pdf.set_font(pdf.default_font, "B", 10)
-            pdf.set_text_color(71, 85, 105)  # slate-600
-            
+            pdf.set_text_color(71, 85, 105)
+
             meta_text = (
                 f'{labels["project"]}: {custom_name}   |   '
                 f'{labels["version"]}: {version}   |   '
@@ -283,7 +298,7 @@ Required keys:
                 f'{labels["date"]}: {timestamp_display}'
             )
             pdf.cell(0, 7, meta_text, ln=True, align="L")
-            
+
             pdf.ln(14)
 
             sections = self._parse_sections_from_text(final_text)
@@ -297,11 +312,11 @@ Required keys:
 
                 pdf.ln(4)
                 start_y = pdf.get_y()
-                
-                # red vertical accent - left side
+
+                # Red vertical accent on the left side
                 pdf.set_fill_color(227, 0, 15)
                 pdf.rect(10, start_y + 1.5, 1.5, 5, "F")
-                
+
                 pdf.set_x(14)
                 pdf.set_font(pdf.default_font, "B", 12)
                 pdf.set_text_color(30, 41, 59)
@@ -312,18 +327,18 @@ Required keys:
                     self._pdf_decision_badge(pdf, body.strip())
                     pdf.ln(6)
                     continue
-                
+
                 pdf.set_x(10)
                 pdf.set_font(pdf.default_font, "", 10.5)
-                pdf.set_text_color(51, 65, 85)  # slate-700
+                pdf.set_text_color(51, 65, 85)
                 pdf.multi_cell(190, 6.5, body.strip())
                 pdf.ln(5)
 
+            # Charts attachments
             valid_charts = [c for c in charts_paths if os.path.exists(c)]
             if valid_charts:
                 pdf.add_page()
-                
-                # header for attachments section
+
                 pdf.set_fill_color(227, 0, 15)
                 pdf.rect(10, pdf.get_y() + 1.5, 1.5, 6, "F")
                 pdf.set_x(14)
@@ -335,12 +350,12 @@ Required keys:
                 for chart in valid_charts:
                     if pdf.get_y() > 180:
                         pdf.add_page()
-                    
+
                     img_y = pdf.get_y()
-                    
+
                     pdf.set_draw_color(226, 232, 240)
                     pdf.rect(14, img_y - 1, 182, 102, "D")
-                    
+
                     pdf.image(chart, x=15, w=180)
                     pdf.ln(110)
 
@@ -355,7 +370,7 @@ Required keys:
             raise ExportError(f"PDF generation failed: {e}")
 
     def _pdf_decision_badge(self, pdf, decision_text):
-        """Renders a colored GO / NO-GO badge in the PDF"""
+        """Renders a colored GO / NO-GO badge in the PDF."""
         is_go = decision_text.upper().strip() == "GO"
         if is_go:
             pdf.set_fill_color(76, 175, 80)
@@ -375,6 +390,7 @@ Required keys:
 
     def export_to_docx(self, final_text, charts_paths, custom_name="Report",
                        author="User", lang="en"):
+        """Exports the report to a styled DOCX file."""
         self.logger.info(f"Starting DOCX export for project: {custom_name}")
 
         try:
@@ -391,17 +407,17 @@ Required keys:
 
             doc = Document()
 
-            # ── Default style ──
+            # Default style
             style = doc.styles["Normal"]
             style.font.name = "Calibri"
             style.font.size = Pt(11)
             style.font.color.rgb = RGBColor(45, 45, 45)
             style.paragraph_format.space_after = Pt(6)
 
-            # ── Header table (simulates a colored banner) ──
+            # Header table (simulates a colored banner)
             table = doc.add_table(rows=1, cols=1)
             cell = table.cell(0, 0)
-            
+
             p_title = cell.paragraphs[0]
             p_title.alignment = WD_ALIGN_PARAGRAPH.CENTER
             run = p_title.add_run(labels["title"])
@@ -422,7 +438,7 @@ Required keys:
 
             doc.add_paragraph("")
 
-            # ── Sections ──
+            # Sections
             sections = self._parse_sections_from_text(final_text)
             section_keys = ["summary", "test_analysis", "risks_eval", "decision", "justification"]
 
@@ -447,7 +463,7 @@ Required keys:
                 else:
                     doc.add_paragraph(body.strip())
 
-            # ── Charts ──
+            # Charts
             valid_charts = [c for c in charts_paths if os.path.exists(c)]
             if valid_charts:
                 doc.add_page_break()
@@ -459,7 +475,7 @@ Required keys:
                     doc.add_picture(chart, width=Inches(6.2))
                     doc.add_paragraph("")
 
-            # ── Footer ──
+            # Footer
             footer_p = doc.add_paragraph()
             footer_p.alignment = WD_ALIGN_PARAGRAPH.CENTER
             footer_run = footer_p.add_run(labels["generated"])
@@ -480,6 +496,7 @@ Required keys:
 
     def export_to_md(self, final_text, charts_paths, custom_name="Report",
                      author="User", lang="en"):
+        """Exports the report to a Markdown file."""
         self.logger.info(f"Starting Markdown export for project: {custom_name}")
 
         try:
@@ -556,7 +573,6 @@ Required keys:
     def _parse_sections_from_text(self, text: str) -> dict:
         """
         Parses the concatenated export text back into named sections.
-
         Looks for ## headings and maps them to known keys.
         """
         result = {
@@ -611,7 +627,7 @@ Required keys:
 
 
 class _StyledPDF(FPDF):
-    """Custom FPDF subclass with headers and footers."""
+    """Custom FPDF subclass with branded headers and footers."""
 
     def __init__(self, labels, *args, **kwargs):
         super().__init__(*args, **kwargs)

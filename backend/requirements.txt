@@ -1,14 +1,30 @@
+# TODO: review nest asyncio usage and remove if not needed
+# added to fix RuntimeError in Jupyter when running async code (like LLM calls) 
+# in the same event loop
+nest-asyncio
+
+# backend dependencies
 fastapi
 uvicorn
+python-dotenv
 python-multipart
-pydantic
 requests
 pandas
+matplotlib
+
+# for data validation and settings management
+pydantic
+urllib3
+
+# for file parsing and report generation
 openpyxl
 pdfplumber
-matplotlib
 fpdf2
 python-docx
-python-dotenv
-nest-asyncio
 tabulate
+
+# for vector database and embeddings
+chromadb
+sentence-transformers
+langchain-text-splitters
+charset-normalizer

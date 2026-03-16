@@ -1,16 +1,16 @@
-# main.py
+# ============================================================
+# FILE: .\backend\main.py
+# ============================================================
 
-from fastapi import FastAPI, HTTPException, Request, File, Form, UploadFile, Depends
+from fastapi import FastAPI, HTTPException, Request, File, UploadFile, Depends
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from typing import List, Optional
+from typing import List
 
 import uvicorn
 import uuid
 import os
-import json
-from datetime import datetime
 
 from src.integration.llm_client import LLMClient
 from src.integration.auth import get_current_user
@@ -33,6 +33,7 @@ app = FastAPI(
 
 @app.middleware("http")
 async def log_all_requests(request: Request, call_next):
+    """Assigns a correlation ID to each request and logs entry/exit."""
     correlation_id = str(uuid.uuid4())[:8]
     request_id_var.set(correlation_id)
     logger.info(f"Incoming request: {request.method} {request.url.path}")
@@ -48,9 +49,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Service initialization
 try:
     llm = LLMClient()
-    rag = RAGEngine(llm)
+    rag = RAGEngine()
     file_parser = FileParser()
     storage = StorageManager()
     report_generator = ReportGenerator(llm)
@@ -60,6 +62,9 @@ except Exception as e:
     logger.critical(f"Service initialization failed: {e}")
     raise SystemExit(1)
 
+# ==========================================
+# DATA MODELLING
+# ==========================================
 
 class ExportRequest(BaseModel):
     project_name: str
@@ -68,119 +73,176 @@ class ExportRequest(BaseModel):
     language: str
     author: str
     chart_paths: List[str]
-    
-class ApproveReportRequest(BaseModel):
-    """Request to save an approved report to history."""
-    project_name: str
-    report_data: dict
-    language: str
-
-
-class StructuredRule(BaseModel):
-    """Single decision rule definition."""
-    id: str
-    name_pl: Optional[str] = ""
-    name_en: Optional[str] = ""
-    field: str
-    operator: str
-    threshold: float
-    unit: str
-    severity: str
-    description_pl: Optional[str] = ""
-    description_en: Optional[str] = ""
-
-
-class UpdateRulesRequest(BaseModel):
-    """Request to update structured decision rules."""
-    rules: List[StructuredRule]
-    language: str
-
 
 
 MAX_FILE_SIZE = 5 * 1024 * 1024
 
-# TODO: TESTING - modded
+# ==========================================
+# PROJECT ENDPOINTS (p-xxxxx)
+# ==========================================
+
+@app.post("/api/v2/projects/{project_id}/instructions")
+async def update_project_instructions(project_id: str, request: Request, user: dict = Depends(get_current_user)):
+    """Saves global instructions/assumptions for a project."""
+    try:
+        data = await request.json()
+        instructions = data.get("instructions", "")
+        storage.save_project_instructions(project_id, instructions)
+        return {"status": "success", "message": "Project instructions saved successfully."}
+    except Exception as e:
+        logger.error(f"Failed to save project instructions: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+
+@app.post("/api/v2/projects/{project_id}/upload")
+async def upload_project_files(project_id: str, files: List[UploadFile] = File(...), user: dict = Depends(get_current_user)):
+    """Uploads knowledge files (PDF, DOCX) to a project and indexes them in the ChromaDB vector store."""
+    try:
+        proj_uploads_dir = storage.get_project_uploads_dir(project_id)
+        ingested_count = 0
+
+        for file in files:
+            content = await file.read()
+            file_path = os.path.join(proj_uploads_dir, file.filename)
+            with open(file_path, "wb") as f:
+                f.write(content)
+
+            # Extract text from PDF/DOCX/TXT via FileParser and ingest into RAG
+            text_content = file_parser.extract_history_text(file_path)
+            if text_content:
+                rag.ingest_document(text_content, file.filename, entity_id=project_id)
+                ingested_count += 1
+
+        return {"status": "success", "message": f"Uploaded and vectorized {ingested_count} project knowledge file(s)."}
+    except Exception as e:
+        logger.error(f"Failed to upload project files: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+
+# ==========================================
+# MAIN CHAT ENDPOINT (c-xxxxx)
+# ==========================================
 @app.post("/api/v2/chat")
 async def chat_endpoint(request: Request, user: dict = Depends(get_current_user)):
-    """
-    Główny router aplikacji.
-    Odbiera zapytania z frontendu, rozpoznaje tryb (mode) i kieruje do odpowiednich modułów.
-    """
     try:
         content_type = request.headers.get("content-type", "")
-        
-        # 1. Dekodowanie payloadu (z plikami lub bez)
+
+        # Payload handling for both JSON and multipart/form-data (for file uploads)
         if "multipart/form-data" in content_type:
             form = await request.form()
             message = form.get("message", "")
             mode = form.get("mode", "chatbot")
             language = form.get("language", "pl")
-            project_id = form.get("project_id", "default")
+            chat_id = form.get("chat_id")
+            project_id = form.get("project_id")
             files = form.getlist("files")
         else:
             data = await request.json()
             message = data.get("message", "")
             mode = data.get("mode", "chatbot")
             language = data.get("language", "pl")
-            project_id = data.get("project_id", "default")
+            chat_id = data.get("chat_id")
+            project_id = data.get("project_id")
             files = []
 
-        # ---------------------------------------------------------
-        # TRYB 1: GO/NO-GO (Zintegrowany z Twoim dotychczasowym API)
-        # ---------------------------------------------------------
+        if project_id in ["", "null", "undefined", "default"]:
+            project_id = None
+
+        if not chat_id:
+            raise HTTPException(status_code=400, detail="No chat_id provided in the request")
+
+        chat_created_dir = storage.get_chat_created_dir(chat_id)
+        chart_generator.output_dir = chat_created_dir
+        report_generator.final_output_path = chat_created_dir
+
+        # -------------------
+        # MODE: GO/NO-GO
+        # -------------------
         if mode == "gonogo":
             if not files:
-                return {
-                    "message": "Aby wygenerować raport Go/No-Go, proszę załącz pliki z wynikami testów (CSV lub Excel) za pomocą ikony spinacza."
-                }
+                logger.info(f"Go/No-Go request received without files | chat_id={chat_id} | project_id={project_id}")
+                if language == "pl":
+                    return {"message": "Aby wygenerować raport Go/No-Go, proszę załącz pliki z wynikami testów."}
+                return {"message": "To generate a Go/No-Go report, please attach files with test results."}
 
+            # Save uploaded files to local storage under chat-specific directory
+            chat_uploads_dir = storage.get_chat_uploads_dir(chat_id)
             contents = {}
+
             for file in files:
                 content = await file.read()
                 if len(content) > MAX_FILE_SIZE:
-                    raise HTTPException(status_code=413, detail=f"Plik {file.filename} jest za duży (max 5MB)")
-                
-                # Zabezpieczenie przed niewłaściwym formatem
+                    raise HTTPException(status_code=413, detail=f"File {file.filename} exceeds size limit.")
+
                 ext = os.path.splitext(file.filename)[1].lower()
                 if ext not in {'.csv', '.xls', '.xlsx'}:
-                    return {"message": f"Ignoruję plik {file.filename}. Raporty Go/No-Go wymagają plików CSV lub Excel."}
-                
+                    continue
+
+                file_path = os.path.join(chat_uploads_dir, file.filename)
+                with open(file_path, "wb") as f:
+                    f.write(content)
+
                 contents[file.filename] = content
 
+                try:
+                    text_content = file_parser.extract_test_data_from_bytes({file.filename: content})
+                    rag.ingest_document(text_content, file.filename, entity_id=chat_id)
+                except Exception as e:
+                    logger.warning(f"Could not process (vectorize) {file.filename}: {e}")
+
             if not contents:
-                return {"message": "Nie załączono żadnych prawidłowych plików tabelarycznych."}
+                logger.info(f"No valid files uploaded for Go/No-Go | chat_id={chat_id} | project_id={project_id}")
+                if language == "pl":
+                    return {"message": "Nie załączono żadnych prawidłowych plików tabelarycznych."}
+                return {"message": "No valid tabular files were uploaded."}
 
-            # URUCHOMIENIE PIPELINE'U QA:
             parsed_test_data = file_parser.extract_test_data_from_bytes(contents)
-            rag_context = rag.get_historical_context(lang=language)
-            historical_cache = storage.get_latest_history(project_name=project_id)
 
-            # Generowanie wykresów
+            project_instructions = ""
+            if project_id:
+                project_instructions = storage.load_project_instructions(project_id)
+
+            rag_context = rag.search_context(query=message, project_id=project_id, chat_id=chat_id)
+
+            if project_instructions:
+                rag_context = (
+                    f"[GLOBAL PROJECT GUIDELINES]\n{project_instructions}\n\n"
+                    f"[RAG DOCUMENTS]\n{rag_context}"
+                )
+
+            historical_cache = storage.get_latest_history(chat_id=chat_id)
+
             chart_paths = chart_generator.generate_all_charts(
                 file_contents=contents,
-                project_name=project_id,
+                project_name=chat_id,
                 lang=language
             )
 
-            # Traktujemy tekst wpisany przez usera jako "Ryzyka" / "Komentarz" do raportu
-            user_risks = message if message else "Brak dodatkowych komentarzy od użytkownika."
+            if message:
+                user_risks = message
+            elif language == "pl":
+                user_risks = "Brak dodatkowych uwag."
+            else:
+                user_risks = "No additional remarks."
 
-            # Właściwe generowanie draftu z LLM
             draft_json = report_generator.generate_structured_draft(
                 historical_cache=historical_cache,
                 rag_context=rag_context,
                 parsed_test_data=parsed_test_data,
                 user_risks=user_risks,
-                project_name=project_id,
+                project_name=chat_id,
                 lang=language
             )
 
-            storage.save_to_cache(project_name=project_id, structured_data=draft_json)
+            storage.save_to_cache(chat_id=chat_id, structured_data=draft_json)
 
-            msg_response = (
-                "Zakończyłem analizę wdrożenia i wygenerowałem wykresy. "
-                "Raport został przygotowany – możesz go zweryfikować i edytować w prawym panelu."
-            ) if language == "pl" else "Analysis complete. Please review the interactive report on the right."
+            if language == "pl":
+                msg_response = (
+                    "Zakończyłem analizę wdrożenia i wygenerowałem wykresy. "
+                    "Raport został przygotowany – możesz go zweryfikować i edytować w prawym panelu."
+                )
+            else:
+                msg_response = "Analysis complete. Please review the report on the right."
 
             return {
                 "message": msg_response,
@@ -189,85 +251,26 @@ async def chat_endpoint(request: Request, user: dict = Depends(get_current_user)
             }
 
         # ---------------------------------------------------------
-        # TRYB 2: ZWYKŁY CHATBOT
+        # MODE 2: CHATBOT
         # ---------------------------------------------------------
         elif mode == "chatbot":
-            sys_prompt = "Jesteś pomocnym asystentem QA (Quality Assurance) i inżynierem oprogramowania."
-            # Bezpośrednie odpytanie LLM zdefiniowanego w systemie
+            sys_prompt = (
+                "You are a helpful QA (Quality Assurance) assistant and software engineer."
+            )
             reply = llm.generate_response(sys_prompt, message, temperature=0.3)
             return {"message": reply}
 
         # ---------------------------------------------------------
-        # TRYB 3 & 4: TŁUMACZ / ANALIZA (Placeholdery dla kolegi)
+        # MODE 3 & 4: TRANSLATOR / ANALYSIS (placeholders)
         # ---------------------------------------------------------
         elif mode == "translator":
-            return {"message": f"Moduł tłumacza odbiera dane. [To funkcja, którą Twój kolega podepnie pod endpoint HPE]. Twoja wiadomość to: {message}"}
-            
+            return {"message": f"Translator module. Your message: {message}"}
+
         elif mode == "analysis":
-            return {"message": f"Moduł analityczny z agentem Pandas uruchomiony. [Zarezerwowane pod integrację]. Przekazano plików: {len(files)}"}
+            return {"message": f"Analysis module. Files received: {len(files)}"}
 
         else:
-            return {"message": "Nieznany tryb działania."}
-
-    except Exception as e:
-        logger.error(f"Błąd w chat_endpoint: {e}", exc_info=True)
-        # Zwracamy błąd jako wiadomość czatu, żeby nie wysypać UI
-        return {"message": f"**Wystąpił błąd serwera:** {str(e)}"}
-    
-
-@app.post("/api/v2/reports/draft")
-async def generate_draft(
-    project_name: str = Form(...),
-    user_risks: str = Form(...),
-    language: str = Form(...),
-    files: List[UploadFile] = File(...),
-    user: dict = Depends(get_current_user)
-):
-    try:
-        contents = {}
-        for file in files:
-            content = await file.read()
-            if len(content) > MAX_FILE_SIZE:
-                raise HTTPException(
-                    status_code=413,
-                    detail=f"File {file.filename} exceeds the 5MB limit"
-                )
-
-            # validating file extension
-            allowed_extensions = {'.csv', '.xls', '.xlsx'}
-            ext = os.path.splitext(file.filename)[1].lower()
-            if ext not in allowed_extensions:
-                raise HTTPException(
-                    status_code=400,
-                    detail=f"Unsupported file type: {file.filename}. Allowed: CSV, XLS, XLSX"
-                )
-
-            contents[file.filename] = content
-
-
-        parsed_test_data = file_parser.extract_test_data_from_bytes(contents)
-        rag_context = rag.get_historical_context(lang=language)
-        historical_cache = storage.get_latest_history(project_name=project_name)
-
-        # Generate charts from uploaded data
-        chart_paths = chart_generator.generate_all_charts(
-            file_contents=contents,
-            project_name=project_name,
-            lang=language
-        )
-
-        draft_json = report_generator.generate_structured_draft(
-            historical_cache=historical_cache,
-            rag_context=rag_context,
-            parsed_test_data=parsed_test_data,
-            user_risks=user_risks,
-            project_name=project_name,
-            lang=language
-        )
-
-        storage.save_to_cache(project_name=project_name, structured_data=draft_json)
-
-        return {"draft": draft_json, "charts": chart_paths}
+            return {"message": "Unknown mode of operation."}
 
     except LLMConnectionError as e:
         logger.error(f"LLM connection failed: {e}")
@@ -278,44 +281,39 @@ async def generate_draft(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Unexpected error during draft generation: {e}", exc_info=True)
+        logger.error(f"Unexpected error during chat processing: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
+# ==========================================
+# EXPORT ENDPOINT & CACHE
+# ==========================================
 @app.post("/api/v2/reports/export")
 def export_report(req: ExportRequest, user: dict = Depends(get_current_user)):
     try:
         fmt = req.format.lower()
 
+        # Set output folder to chat-specific directory
+        chat_created_dir = storage.get_chat_created_dir(req.project_name)
+        report_generator.final_output_path = chat_created_dir
+
         if fmt == "pdf":
             filepath = report_generator.export_to_pdf(
-                final_text=req.edited_text,
-                charts_paths=req.chart_paths,
-                custom_name=req.project_name,
-                author=req.author,
-                lang=req.language
+                final_text=req.edited_text, charts_paths=req.chart_paths,
+                custom_name=req.project_name, author=req.author, lang=req.language
             )
         elif fmt == "docx":
             filepath = report_generator.export_to_docx(
-                final_text=req.edited_text,
-                charts_paths=req.chart_paths,
-                custom_name=req.project_name,
-                author=req.author,
-                lang=req.language
+                final_text=req.edited_text, charts_paths=req.chart_paths,
+                custom_name=req.project_name, author=req.author, lang=req.language
             )
         elif fmt == "md":
             filepath = report_generator.export_to_md(
-                final_text=req.edited_text,
-                charts_paths=req.chart_paths,
-                custom_name=req.project_name,
-                author=req.author,
-                lang=req.language
+                final_text=req.edited_text, charts_paths=req.chart_paths,
+                custom_name=req.project_name, author=req.author, lang=req.language
             )
         else:
-            raise HTTPException(
-                status_code=400,
-                detail="Unsupported format. Use 'pdf', 'docx', or 'md'."
-            )
+            raise HTTPException(status_code=400, detail="Unsupported format.")
 
         return {"status": "success", "filepath": filepath}
 
@@ -329,19 +327,19 @@ def export_report(req: ExportRequest, user: dict = Depends(get_current_user)):
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
-@app.delete("/api/v2/cache/{project_name}")
-def delete_project_cache(project_name: str, user: dict = Depends(get_current_user)):
+@app.delete("/api/v2/cache/{chat_id}")
+def delete_project_cache(chat_id: str, user: dict = Depends(get_current_user)):
     try:
-        success = storage.clear_cache(project_name)
+        success = storage.clear_cache(chat_id=chat_id)
         if success:
             return {
                 "status": "success",
-                "message": f"Cache for project '{project_name}' deleted successfully"
+                "message": f"Cache for chat '{chat_id}' deleted successfully"
             }
         else:
             raise HTTPException(
                 status_code=404,
-                detail=f"No cache found for project '{project_name}'"
+                detail=f"No cache found for chat '{chat_id}'"
             )
     except HTTPException:
         raise
@@ -350,107 +348,9 @@ def delete_project_cache(project_name: str, user: dict = Depends(get_current_use
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
-@app.post("/api/v2/history/approve")
-def approve_report_to_history(
-    req: ApproveReportRequest,
-    user: dict = Depends(get_current_user)
-):
-    """
-    Saves an approved report to the history directory so it becomes
-    part of the RAG context for future analyses. This is how the
-    knowledge base grows over time.
-    """
-    try:
-        filepath = rag.save_approved_report(
-            project_name=req.project_name,
-            report_data=req.report_data,
-            lang=req.language
-        )
-        return {
-            "status": "success",
-            "message": f"Report saved to history",
-            "filepath": filepath
-        }
-    except DataProcessingError as e:
-        raise HTTPException(status_code=500, detail=str(e))
-    except Exception as e:
-        logger.error(f"Failed to approve report: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail="Internal server error")
-
-
-@app.get("/api/v2/history/rules/{language}")
-def get_structured_rules(language: str, user: dict = Depends(get_current_user)):
-    """Returns the current structured decision rules."""
-    try:
-        rules_text = rag.load_structured_rules(lang=language)
-        rules_path = os.path.join(
-            Config.HISTORY_PATH, language, "structured_rules.json"
-        )
-
-        if os.path.exists(rules_path):
-            with open(rules_path, "r", encoding="utf-8") as f:
-                rules_data = json.load(f)
-            return {"status": "success", "data": rules_data}
-        else:
-            return {"status": "success", "data": {"rules": []}}
-
-    except Exception as e:
-        logger.error(f"Failed to load rules: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail="Internal server error")
-
-
-@app.put("/api/v2/history/rules")
-def update_structured_rules(
-    req: UpdateRulesRequest,
-    user: dict = Depends(get_current_user)
-):
-    """Updates the structured decision rules."""
-    try:
-        rules_dicts = [rule.model_dump() for rule in req.rules]
-        filepath = rag.update_structured_rules(
-            rules=rules_dicts,
-            lang=req.language,
-            author=user.get("username", "unknown")
-        )
-        return {
-            "status": "success",
-            "message": "Rules updated",
-            "filepath": filepath
-        }
-    except DataProcessingError as e:
-        raise HTTPException(status_code=500, detail=str(e))
-    except Exception as e:
-        logger.error(f"Failed to update rules: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail="Internal server error")
-
-
-@app.get("/api/v2/history/reports/{language}")
-def list_history_reports(language: str, user: dict = Depends(get_current_user)):
-    """Lists all history report files for a given language."""
-    try:
-        dir_path = os.path.join(Config.HISTORY_PATH, language)
-        if not os.path.exists(dir_path):
-            return {"status": "success", "reports": []}
-
-        reports = []
-        for filename in sorted(os.listdir(dir_path)):
-            if filename.endswith(".txt"):
-                filepath = os.path.join(dir_path, filename)
-                stat = os.stat(filepath)
-                reports.append({
-                    "filename": filename,
-                    "size_kb": round(stat.st_size / 1024, 1),
-                    "modified": datetime.fromtimestamp(
-                        stat.st_mtime
-                    ).strftime("%Y-%m-%d %H:%M:%S"),
-                })
-
-        return {"status": "success", "reports": reports}
-
-    except Exception as e:
-        logger.error(f"Failed to list history: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail="Internal server error")
-        
+# ==========================
+# FRONTEND MOUNT
+# ==========================
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
 frontend_dist_path = os.path.join(current_dir, "..", "frontend", "dist")

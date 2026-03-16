@@ -1,6 +1,6 @@
-# auth.py
-
-# authentication adapter stub
+# ============================================================
+# FILE: .\backend\src\integration\auth.py
+# ============================================================
 
 from fastapi import Request
 from src.core.logger import get_logger
@@ -15,9 +15,8 @@ def get_current_user(request: Request) -> dict:
     Returns:
         dict with keys: username, role, display_name.
     """
-    
-    # TODO: replace with AD/LDAP integration
-    
+
+    # TODO: Replace with AD/LDAP integration
     # username = request.headers.get("X-Remote-User", "")
     # role = request.headers.get("X-Remote-Role", "tester")
     # if not username:

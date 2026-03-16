@@ -1,4 +1,6 @@
-# file_parser.py
+# ============================================================
+# FILE: .\backend\src\services\file_parser.py
+# ============================================================
 
 import pandas as pd
 import io
@@ -11,6 +13,8 @@ from src.core.logger import get_logger
 
 
 class FileParser:
+    """Parses test data files (CSV, Excel) and knowledge documents (PDF, DOCX, TXT)."""
+
     def __init__(self):
         self.logger = get_logger(self.__class__.__name__)
 
