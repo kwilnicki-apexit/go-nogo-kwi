@@ -25,6 +25,8 @@ from src.core.exceptions import LLMConnectionError, DataProcessingError, ExportE
 from src.utils.validators import (
     validate_message,
     validate_upload,
+    validate_mime,
+    assert_within_directory,
     normalize_extracted_text,
     GONOGO_ALLOWED_EXTENSIONS,
     PROJECT_ALLOWED_EXTENSIONS,
@@ -127,6 +129,11 @@ async def upload_project_files(
 ):
     """Uploads knowledge files (PDF, DOCX) to a project and indexes them in the ChromaDB vector store."""
     try:
+        # 4.6.4 — sanitizacja project_id z URL path parametru
+        project_id = re.sub(r"[^a-zA-Z0-9\-_]", "", project_id)[:64]
+        if not project_id:
+            raise HTTPException(status_code=400, detail="Nieprawidłowy project_id.")
+
         proj_uploads_dir = storage.get_project_uploads_dir(project_id)
         ingested_count = 0
 
@@ -137,8 +144,13 @@ async def upload_project_files(
             safe_name, content = validate_upload(
                 file.filename, content, PROJECT_ALLOWED_EXTENSIONS
             )
+            # 4.6.1 — MIME / magic bytes
+            validate_mime(safe_name, content)
 
             file_path = os.path.join(proj_uploads_dir, safe_name)
+            # 4.6.4 — path confinement
+            assert_within_directory(file_path, proj_uploads_dir)
+
             with open(file_path, "wb") as f:
                 f.write(content)
 
@@ -241,12 +253,17 @@ async def chat_endpoint(request: Request, user: dict = Depends(get_current_user)
                 for file in files:
                     content = await file.read()
 
-                    # 4.5.5 / 4.5.6 — jeden centralny walidator dla plików
+                    # 4.5.5 / 4.5.6 — centralny walidator plików
                     safe_name, content = validate_upload(
                         file.filename, content, GONOGO_ALLOWED_EXTENSIONS
                     )
+                    # 4.6.1 — MIME / magic bytes
+                    validate_mime(safe_name, content)
 
                     file_path = os.path.join(chat_uploads_dir, safe_name)
+                    # 4.6.4 — path confinement
+                    assert_within_directory(file_path, chat_uploads_dir)
+
                     with open(file_path, "wb") as f:
                         f.write(content)
 

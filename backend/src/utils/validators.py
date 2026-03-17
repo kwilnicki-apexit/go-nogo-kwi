@@ -301,3 +301,127 @@ def normalize_extracted_text(text: str) -> str:
     text = re.sub(r"[\xa0\u2000-\u200b\u202f\u205f\u3000]", " ", text)
 
     return text
+
+# ── 4.6.1 — MIME / magic bytes validation ────────────────────────────────────
+
+# Magic byte signatures for file types we accept.
+# Key = lowercase extension, value = list of accepted byte prefixes.
+# We check the *actual content*, not just the filename extension.
+_MAGIC_BYTES: dict = {
+    ".pdf":  [b"%PDF"],
+    ".xlsx": [b"PK\x03\x04"],          # XLSX is a ZIP
+    ".xls":  [b"\xD0\xCF\x11\xE0"],    # OLE2 compound document
+    ".docx": [b"PK\x03\x04"],          # DOCX is also a ZIP
+    ".csv":  [],                        # no magic bytes — validated as UTF-8 text
+    ".txt":  [],
+    ".md":   [],
+}
+
+# DOCX/XLSX files that contain this entry are macro-enabled — reject them.
+_MACRO_ENTRY = b"vbaProject.bin"
+
+
+def validate_mime(filename: str, content: bytes) -> None:
+    """Checks that the file content matches the declared extension (4.6.1).
+
+    Compares the first bytes of the file against known magic byte signatures.
+    Also rejects DOCX/XLSX files that contain embedded VBA macros.
+
+    Args:
+        filename:  Already-sanitised filename (extension is trusted at this point).
+        content:   Raw file bytes.
+
+    Raises:
+        HTTPException(400): Content does not match the declared extension,
+                            or the file contains VBA macros.
+    """
+    _, ext = os.path.splitext(filename)
+    ext = ext.lower()
+
+    signatures = _MAGIC_BYTES.get(ext)
+    if signatures is None:
+        # Extension is not in our table — treat as unknown, reject.
+        security_logger.warning(
+            "MIME validation: unknown extension | file=%r", filename
+        )
+        raise HTTPException(
+            status_code=400,
+            detail=f"Nieznany typ pliku: '{ext}'.",
+        )
+
+    # Files with no magic bytes (CSV, TXT, MD) — verify they are valid UTF-8
+    if not signatures:
+        try:
+            content.decode("utf-8")
+        except UnicodeDecodeError:
+            security_logger.warning(
+                "MIME validation: not valid UTF-8 | file=%r", filename
+            )
+            raise HTTPException(
+                status_code=400,
+                detail=f"Plik '{filename}' nie jest prawidłowym plikiem tekstowym UTF-8.",
+            )
+        return
+
+    # Check magic bytes
+    matched = any(content.startswith(sig) for sig in signatures)
+    if not matched:
+        security_logger.warning(
+            "MIME validation: magic bytes mismatch | file=%r | ext=%r | first_bytes=%r",
+            filename,
+            ext,
+            content[:8],
+        )
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                f"Zawartość pliku '{filename}' nie odpowiada jego rozszerzeniu '{ext}'. "
+                "Plik może być uszkodzony lub celowo zmodyfikowany."
+            ),
+        )
+
+    # For ZIP-based formats (DOCX, XLSX) — reject macro-enabled files
+    if ext in (".docx", ".xlsx") and _MACRO_ENTRY in content:
+        security_logger.warning(
+            "MIME validation: macro-enabled file rejected | file=%r", filename
+        )
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                f"Plik '{filename}' zawiera makra VBA, które nie są dozwolone. "
+                "Zapisz plik bez makr i spróbuj ponownie."
+            ),
+        )
+
+
+# ── 4.6.4 — Path confinement check ───────────────────────────────────────────
+
+def assert_within_directory(file_path: str, expected_dir: str) -> None:
+    """Verifies that ``file_path`` resolves to a location inside ``expected_dir``.
+
+    Even after filename sanitisation there are edge cases (symlinks, OS quirks)
+    where the resolved absolute path could escape the intended directory.
+    This is the last line of defence before any open() / write call.
+
+    Args:
+        file_path:    The path that is about to be written to.
+        expected_dir: The directory that must contain ``file_path``.
+
+    Raises:
+        HTTPException(400): Resolved path is outside the expected directory.
+    """
+    real_file = os.path.realpath(file_path)
+    real_dir = os.path.realpath(expected_dir)
+
+    # os.sep suffix prevents "datasources/chats/c-evil" from matching
+    # "datasources/chats/c-evi" (prefix without separator).
+    if not real_file.startswith(real_dir + os.sep):
+        security_logger.warning(
+            "Path confinement violation | expected_dir=%r | resolved=%r",
+            real_dir,
+            real_file,
+        )
+        raise HTTPException(
+            status_code=400,
+            detail="Niedozwolona ścieżka pliku.",
+        )
