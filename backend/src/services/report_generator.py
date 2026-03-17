@@ -152,9 +152,10 @@ class ReportGenerator:
                 "Jesteś Głównym Inżynierem QA, ale działasz jako doradca techniczny. "
                 "Ostateczną instancją decyzyjną (Release Managerem) jest Użytkownik.\n"
                 "ZASADA NADRZĘDNA (AUTORYTET UŻYTKOWNIKA): Jeśli w sekcji [UWAGI UŻYTKOWNIKA] człowiek jawnie akceptuje ryzyka, nakazuje zmianę decyzji lub twierdzi, że błędy są znane, MUSISZ bezwzględnie zmienić decyzję na 'GO'. "
-                "W takiej sytuacji w polu 'justification' wyjaśnij, że mimo błędów technicznych, ryzyko zostało zaakceptowane biznesowo.\n"
+                "W takiej sytuacji w polu 'justification' wyjaśnij, że mimo błędów technicznych, ryzyko zostało zaakceptowane biznesowo ORAZ WYMIEŃ KONKRETNIE WSZYSTKIE BŁĘDY/RYZYKA (np. problemy z wydajnością, błędy konkretnych komponentów), które użytkownik zdecydował się zignorować/zaakceptować.\n"
                 "Zwróć odpowiedź WYŁĄCZNIE jako surowy, poprawny obiekt JSON. Nie używaj znaczników ```json ani Markdown."
             )
+            
             user_prompt = f"""
                             Wygeneruj strukturę raportu w formacie JSON zachowując te klucze:
                             - "summary": (string) krótkie podsumowanie techniczne,
@@ -188,9 +189,10 @@ class ReportGenerator:
             system_prompt = (
                 "You are a Lead QA Engineer acting as a technical advisor. The User is the ultimate Release Manager.\n"
                 "OVERRIDE RULE: If the User in the [USER INPUT] section explicitly accepts risks, commands a decision change, or states that bugs are known/accepted, you MUST set the decision to 'GO'. "
-                "In such cases, use the 'justification' field to state that despite technical failures, the risks were business-accepted by the User.\n"
+                "In such cases, use the 'justification' field to state that despite technical failures, the risks were business-accepted by the User AND EXPLICITLY LIST ALL SPECIFIC BUGS/RISKS (e.g., performance issues, specific component failures) that the User decided to ignore/accept.\n"
                 "Return the response STRICTLY as a valid JSON object. Do not use ```json or Markdown wrappers."
             )
+            
             user_prompt = f"""
                             Generate the report structure in JSON format using exactly these keys:
                             - "summary": brief technical summary,

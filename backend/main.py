@@ -285,41 +285,219 @@ async def chat_endpoint(request: Request, user: dict = Depends(get_current_user)
         # MODE 2: CHATBOT
         # ---------------------------------------------------------
         elif mode == "chatbot":
+            chat_uploads_dir = storage.get_chat_uploads_dir(chat_id)
+            contents = {}
+
+            # REEVALUATION
+            if not files:
+                if os.path.exists(chat_uploads_dir):
+                    for filename in os.listdir(chat_uploads_dir):
+                        file_path = os.path.join(chat_uploads_dir, filename)
+                        ext = os.path.splitext(filename)[1].lower()
+
+                        try:
+                            if ext in {".csv", ".xls", ".xlsx"}:
+                                with open(file_path, "rb") as f:
+                                    text_content = (
+                                        file_parser.extract_test_data_from_bytes(
+                                            {filename: f.read()}
+                                        )
+                                    )
+                            else:
+                                text_content = file_parser.extract_history_text(
+                                    file_path
+                                )
+
+                            if text_content:
+                                contents[filename] = text_content
+                        except Exception as e:
+                            logger.warning(f"Chatbot failed to re-read {filename}: {e}")
+
+            # STANDARD
+            else:
+                for file in files:
+                    content = await file.read()
+                    if len(content) > MAX_FILE_SIZE:
+                        raise HTTPException(
+                            status_code=413,
+                            detail=f"Plik {file.filename} jest za duży.",
+                        )
+
+                    file_path = os.path.join(chat_uploads_dir, file.filename)
+                    with open(file_path, "wb") as f:
+                        f.write(content)
+
+                    ext = os.path.splitext(file.filename)[1].lower()
+                    try:
+                        if ext in {".csv", ".xls", ".xlsx"}:
+                            text_content = file_parser.extract_test_data_from_bytes(
+                                {file.filename: content}
+                            )
+                        else:
+                            text_content = file_parser.extract_history_text(file_path)
+
+                        if text_content:
+                            contents[file.filename] = text_content
+
+                            rag.ingest_document(
+                                text_content, file.filename, entity_id=chat_id
+                            )
+                    except Exception as e:
+                        logger.warning(
+                            f"Chatbot failed to process {file.filename}: {e}"
+                        )
+
+            project_instructions = ""
+            if project_id:
+                project_instructions = storage.load_project_instructions(project_id)
+
+            search_query = message if message else "Podsumowanie plików"
+            rag_context = rag.search_context(
+                query=search_query, project_id=project_id, chat_id=chat_id
+            )
+
+            context_block = ""
+            if project_instructions or rag_context:
+                context_block += "[BAZA WIEDZY PROJEKTU I RAG]\n"
+                if project_instructions:
+                    context_block += f"Wytyczne projektu: {project_instructions}\n"
+                if rag_context:
+                    context_block += f"Materiały referencyjne:\n{rag_context}\n"
+
+            if contents:
+                context_block += "\n[ZAŁĄCZONE PLIKI DO AKTUALNEJ ANALIZY]\n"
+                for fname, txt in contents.items():
+                    context_block += f"--- Plik: {fname} ---\n{txt}\n\n"
+
             if language == "pl":
                 sys_prompt = (
                     "Jesteś wszechstronnym asystentem QA i inżynierem oprogramowania. "
-                    "Obecnie działasz w ogólnym trybie 'Chatbot' (Q&A). "
-                    "BĄDŹ ŚWIADOMY, że Twoja aplikacja posiada 3 inne, dedykowane tryby działania, "
-                    "które użytkownik może wybrać przyciskami pod polem tekstowym:\n"
-                    "1. 'Go/No-Go' - do analizy plików z wynikami testów (CSV/XLS) i generowania raportów decyzyjnych wraz z wykresami.\n"
-                    "2. 'Tłumacz' (Translator) - do profesjonalnych tłumaczeń technicznych.\n"
-                    "3. 'Analiza' (Analysis) - do głębokiej analizy danych z załączonych plików.\n"
-                    "Jeśli użytkownik poprosi Cię o wygenerowanie raportu z testów, tłumaczenie długiego tekstu lub analizę danych tabelarycznych, "
-                    "podejmij próbę odpowiedzi, ale na końcu uprzejmie poinformuj go, że aby uzyskać najlepszy rezultat "
-                    "(np. wygenerować ładny raport PDF z wykresami), powinien przełączyć się na odpowiedni tryb korzystając z ikon pod polem wpisywania wiadomości."
+                    "Obecnie działasz w ogólnym trybie 'Chatbot' (Q&A).\n"
+                    "Jeśli użytkownik dostarczył pliki (w sekcji ZAŁĄCZONE PLIKI) lub kontekst RAG, odnoś się do nich w swoich odpowiedziach i analizuj je zgodnie z poleceniem.\n\n"
+                    "BĄDŹ ŚWIADOMY innych trybów: Jeśli użytkownik poprosi o formalny raport 'Go/No-Go' z testów lub profesjonalne, dokładne tłumaczenie dokumentu "
+                    "(a nie tylko streszczenie), wykonaj polecenie najlepiej jak umiesz, ale na końcu odpowiedzi przypomnij mu, że do takich zadań posiada dedykowane tryby "
+                    "dostępne pod polem wpisywania wiadomości (Tryb Go/No-Go generuje interaktywne wykresy i PDFy, a Tryb Tłumacza oferuje najwyższą jakość przekładu)."
                 )
             else:
                 sys_prompt = (
                     "You are a versatile QA assistant and software engineer. "
-                    "You are currently operating in the general 'Chatbot' (Q&A) mode. "
-                    "BE AWARE that this application has 3 other dedicated modes "
-                    "that the user can select using the buttons below the text input:\n"
-                    "1. 'Go/No-Go' - for advanced analysis of test result files (CSV/XLS) and generating decision reports with charts.\n"
-                    "2. 'Translator' - for professional technical translations.\n"
-                    "3. 'Analysis' - for deep data analysis of attached files.\n"
-                    "If the user asks you to generate a test report, translate text, or analyze tabular data, "
-                    "attempt to answer, but politely inform them at the end that for the best results "
-                    "(e.g., to generate a nice PDF report with charts), they should switch to the appropriate mode using the icons below the input field."
+                    "You are currently operating in the general 'Chatbot' (Q&A) mode.\n"
+                    "If the user provided files (in the ATTACHED FILES section) or RAG context, refer to them in your answers and analyze them according to the prompt.\n\n"
+                    "BE AWARE of other modes: If the user asks for a formal 'Go/No-Go' report from test data or a professional translation of a document, "
+                    "do your best to fulfill the request, but at the end of your message, politely remind them that they have dedicated modes for these tasks "
+                    "below the chat input (Go/No-Go mode generates interactive charts and PDFs, while Translator mode ensures top-quality translation)."
                 )
 
-            reply = llm.generate_response(sys_prompt, message, temperature=0.3)
+            user_prompt = f"{context_block}\n[ZAPYTANIE UŻYTKOWNIKA]\n{message}"
+
+            reply = llm.generate_response(sys_prompt, user_prompt, temperature=0.3)
             return {"message": reply}
 
         # ---------------------------------------------------------
-        # MODE 3 & 4: TRANSLATOR / ANALYSIS (placeholders)
+        # MODE 3: TRANSLATOR
         # ---------------------------------------------------------
         elif mode == "translator":
-            return {"message": f"Translator module. Your message: {message}"}
+            chat_uploads_dir = storage.get_chat_uploads_dir(chat_id)
+            contents = {}
+
+            # REEVALUATION
+            if not files:
+                if os.path.exists(chat_uploads_dir):
+                    for filename in os.listdir(chat_uploads_dir):
+                        ext = os.path.splitext(filename)[1].lower()
+
+                        if ext in {".txt", ".md", ".docx", ".pdf"}:
+                            file_path = os.path.join(chat_uploads_dir, filename)
+                            text_content = file_parser.extract_history_text(file_path)
+                            if text_content:
+                                contents[filename] = text_content
+
+            # STANDARD
+            else:
+                for file in files:
+                    content = await file.read()
+                    if len(content) > MAX_FILE_SIZE:
+                        raise HTTPException(
+                            status_code=413,
+                            detail=f"Plik {file.filename} jest za duży.",
+                        )
+
+                    ext = os.path.splitext(file.filename)[1].lower()
+                    if ext not in {".txt", ".md", ".docx", ".pdf"}:
+                        continue
+
+                    file_path = os.path.join(chat_uploads_dir, file.filename)
+                    with open(file_path, "wb") as f:
+                        f.write(content)
+
+                    text_content = file_parser.extract_history_text(file_path)
+                    if text_content:
+                        contents[file.filename] = text_content
+                        try:
+                            rag.ingest_document(
+                                text_content, file.filename, entity_id=chat_id
+                            )
+                        except Exception as e:
+                            logger.warning(f"Could not vectorize {file.filename}: {e}")
+
+            text_to_translate = ""
+            if contents:
+                text_to_translate = "\n\n".join(
+                    [f"--- Plik: {fname} ---\n{txt}" for fname, txt in contents.items()]
+                )
+
+            if not text_to_translate and not message:
+                msg = (
+                    "Proszę wpisać tekst do przetłumaczenia lub załączyć pliki (TXT, PDF, DOCX)."
+                    if language == "pl"
+                    else "Please enter text to translate or attach files (TXT, PDF, DOCX)."
+                )
+                return {"message": msg}
+
+            project_instructions = ""
+            if project_id:
+                project_instructions = storage.load_project_instructions(project_id)
+
+            search_query = message if message else text_to_translate[:500]
+            rag_context = rag.search_context(
+                query=search_query, project_id=project_id, chat_id=chat_id
+            )
+
+            if language == "pl":
+                sys_prompt = (
+                    "Jesteś profesjonalnym, zaawansowanym tłumaczem technicznym. "
+                    "Twoim zadaniem jest precyzyjne tłumaczenie tekstów (domyślnie z polskiego na angielski lub z angielskiego na polski), zachowując odpowiedni ton i słownictwo branżowe. "
+                    "Zwracaj WYŁĄCZNIE przetłumaczony tekst, bez żadnych wstępów, pozdrowień i uwag, chyba że użytkownik jawnie prosi o analizę lub korektę."
+                )
+            else:
+                sys_prompt = (
+                    "You are a professional, advanced technical translator. "
+                    "Your task is to accurately translate texts (default PL ↔ EN) while maintaining the correct tone and industry vocabulary. "
+                    "Return ONLY the translated text, without any introductions or notes, unless the user explicitly asks for analysis or proofreading."
+                )
+
+            context_block = ""
+            if project_instructions or rag_context:
+                context_block = "[KONTEKST PROJEKTU I SŁOWNICZEK (RAG)]\n"
+                if project_instructions:
+                    context_block += f"Reguły projektu: {project_instructions}\n"
+                if rag_context:
+                    context_block += f"Materiały referencyjne (użyj do zachowania spójności słownictwa):\n{rag_context}\n"
+                context_block += "\nWykorzystaj powyższy kontekst, aby dostosować tłumaczenie do standardów i nomenklatury projektu.\n\n"
+
+            user_prompt = context_block
+
+            if text_to_translate and message:
+                user_prompt += f"Instrukcja od użytkownika: {message}\n\nTekst z dokumentów do przetłumaczenia:\n{text_to_translate}"
+            elif text_to_translate:
+                user_prompt += f"Przetłumacz poniższy tekst z dokumentów (wykryj język i przetłumacz na drugi - PL/EN):\n\n{text_to_translate}"
+            else:
+                user_prompt += f"Przetłumacz lub wykonaj polecenie:\n\n{message}"
+
+            logger.info(f"Executing translator mode for chat {chat_id}")
+            reply = llm.generate_response(sys_prompt, user_prompt, temperature=0.2)
+
+            return {"message": reply}
 
         elif mode == "analysis":
             return {"message": f"Analysis module. Files received: {len(files)}"}
