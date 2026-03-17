@@ -11,6 +11,7 @@ from typing import List
 import uvicorn
 import uuid
 import os
+import re
 
 from src.integration.llm_client import LLMClient
 from src.integration.auth import get_current_user
@@ -191,6 +192,11 @@ async def chat_endpoint(request: Request, user: dict = Depends(get_current_user)
         # ── NOWE — 4.5.1 / 4.5.2 ──────────────────────────────────────────
         message = validate_message(message)
         # ──────────────────────────────────────────────────────────────────
+
+        if chat_id:
+            chat_id = re.sub(r"[^a-zA-Z0-9\-_]", "", chat_id)[:64]
+        if project_id:
+            project_id = re.sub(r"[^a-zA-Z0-9\-_]", "", project_id)[:64]
 
         if not chat_id:
             raise HTTPException(
