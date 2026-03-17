@@ -57,6 +57,16 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
+@app.middleware("http")
+async def set_utf8_content_type(request: Request, call_next):
+    """4.5.3 — jawna deklaracja charset=utf-8 na każdej odpowiedzi JSON."""
+    response = await call_next(request)
+    content_type = response.headers.get("content-type", "")
+    if "application/json" in content_type and "charset" not in content_type:
+        response.headers["content-type"] = "application/json; charset=utf-8"
+    return response
+
 # Service initialization
 try:
     llm = LLMClient()
