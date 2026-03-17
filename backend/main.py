@@ -12,6 +12,7 @@ import uvicorn
 import uuid
 import os
 
+from src.utils.validators import validate_message
 from src.integration.llm_client import LLMClient
 from src.integration.auth import get_current_user
 from src.services.rag import RAGEngine
@@ -161,6 +162,9 @@ async def chat_endpoint(request: Request, user: dict = Depends(get_current_user)
 
         if project_id in ["", "null", "undefined", "default"]:
             project_id = None
+        # ── NOWE — 4.5.1 / 4.5.2 ──────────────────────────────────────────
+        message = validate_message(message)
+        # ──────────────────────────────────────────────────────────────────
 
         if not chat_id:
             raise HTTPException(
