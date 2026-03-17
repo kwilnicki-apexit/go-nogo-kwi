@@ -12,7 +12,6 @@ import uvicorn
 import uuid
 import os
 
-from src.utils.validators import validate_message
 from src.integration.llm_client import LLMClient
 from src.integration.auth import get_current_user
 from src.services.rag import RAGEngine
@@ -22,6 +21,14 @@ from src.services.report_generator import ReportGenerator
 from src.services.chart_generator import ChartGenerator
 from src.core.logger import get_logger, request_id_var
 from src.core.exceptions import LLMConnectionError, DataProcessingError, ExportError
+from src.utils.validators import (
+    validate_message,
+    validate_upload,
+    normalize_extracted_text,
+    GONOGO_ALLOWED_EXTENSIONS,
+    PROJECT_ALLOWED_EXTENSIONS,
+    MAX_FILE_SIZE,
+)
 
 logger = get_logger("FastAPI")
 
@@ -77,7 +84,6 @@ class ExportRequest(BaseModel):
     chart_paths: List[str]
 
 
-MAX_FILE_SIZE = 5 * 1024 * 1024
 
 # ==========================================
 # PROJECT ENDPOINTS (p-xxxxx)
@@ -115,14 +121,24 @@ async def upload_project_files(
 
         for file in files:
             content = await file.read()
-            file_path = os.path.join(proj_uploads_dir, file.filename)
+
+            # 4.5.5 / 4.5.6 — centralny walidator (wcześniej brak jakiejkolwiek walidacji)
+            safe_name, content = validate_upload(
+                file.filename, content, PROJECT_ALLOWED_EXTENSIONS
+            )
+
+            file_path = os.path.join(proj_uploads_dir, safe_name)
             with open(file_path, "wb") as f:
                 f.write(content)
 
             # Extract text from PDF/DOCX/TXT via FileParser and ingest into RAG
             text_content = file_parser.extract_history_text(file_path)
+
+            # 4.5.7 — normalizacja przed indeksowaniem w RAG
+            text_content = normalize_extracted_text(text_content)
+
             if text_content:
-                rag.ingest_document(text_content, file.filename, entity_id=project_id)
+                rag.ingest_document(text_content, safe_name, entity_id=project_id)
                 ingested_count += 1
 
         return {
@@ -208,32 +224,27 @@ async def chat_endpoint(request: Request, user: dict = Depends(get_current_user)
             else:
                 for file in files:
                     content = await file.read()
-                    if len(content) > MAX_FILE_SIZE:
-                        raise HTTPException(
-                            status_code=413,
-                            detail=f"Plik {file.filename} jest za duży.",
-                        )
 
-                    ext = os.path.splitext(file.filename)[1].lower()
-                    if ext not in {".csv", ".xls", ".xlsx"}:
-                        continue
+                    # 4.5.5 / 4.5.6 — jeden centralny walidator dla plików
+                    safe_name, content = validate_upload(
+                        file.filename, content, GONOGO_ALLOWED_EXTENSIONS
+                    )
 
-                    file_path = os.path.join(chat_uploads_dir, file.filename)
+                    file_path = os.path.join(chat_uploads_dir, safe_name)
                     with open(file_path, "wb") as f:
                         f.write(content)
 
-                    contents[file.filename] = content
+                    contents[safe_name] = content
 
                     try:
                         text_content = file_parser.extract_test_data_from_bytes(
-                            {file.filename: content}
+                            {safe_name: content}
                         )
-                        rag.ingest_document(
-                            text_content, file.filename, entity_id=chat_id
-                        )
+                        # 4.5.7 — normalizacja tekstu wyodrębnionego z pliku
+                        text_content = normalize_extracted_text(text_content)
+                        rag.ingest_document(text_content, safe_name, entity_id=chat_id)
                     except Exception as e:
-                        logger.warning(f"Could not vectorize {file.filename}: {e}")
-
+                        logger.warning(f"Could not vectorize {safe_name}: {e}")
             if not contents:
                 return {
                     "message": "Nie załączono żadnych prawidłowych plików tabelarycznych."
