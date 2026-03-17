@@ -43,6 +43,7 @@ PROJECT_ALLOWED_EXTENSIONS: FrozenSet[str] = frozenset({".pdf", ".docx", ".txt",
 # single source of truth; main.py imports this constant instead of
 # defining its own.
 MAX_FILE_SIZE: int = 5 * 1024 * 1024  # 5 MB in bytes
+MAX_FILES: int = 20                    # max files per single upload request
 
 # Maximum character count for a user text message.
 # 4 000 chars covers even long prompts while preventing resource exhaustion

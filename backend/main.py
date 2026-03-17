@@ -28,9 +28,11 @@ from src.utils.validators import (
     validate_mime,
     assert_within_directory,
     normalize_extracted_text,
+    security_logger,
     GONOGO_ALLOWED_EXTENSIONS,
     PROJECT_ALLOWED_EXTENSIONS,
     MAX_FILE_SIZE,
+    MAX_FILES,
 )
 
 logger = get_logger("FastAPI")
@@ -136,6 +138,16 @@ async def upload_project_files(
 
         proj_uploads_dir = storage.get_project_uploads_dir(project_id)
         ingested_count = 0
+        
+        if len(files) > MAX_FILES:
+            security_logger.warning(
+                "Validation failed: too many files | count=%d | limit=%d | project_id=%s",
+                len(files), MAX_FILES, project_id,
+            )
+            raise HTTPException(
+                status_code=400,
+                detail=f"Zbyt wiele plików ({len(files)}). Maksymalna liczba to {MAX_FILES} na raz.",
+            )
 
         for file in files:
             content = await file.read()
@@ -250,6 +262,15 @@ async def chat_endpoint(request: Request, user: dict = Depends(get_current_user)
 
             # STANDARD UPLOAD
             else:
+                if len(files) > MAX_FILES:
+                    security_logger.warning(
+                        "Validation failed: too many files | count=%d | limit=%d | chat_id=%s",
+                        len(files), MAX_FILES, chat_id,
+                    )
+                    raise HTTPException(
+                        status_code=400,
+                        detail=f"Zbyt wiele plików ({len(files)}). Maksymalna liczba to {MAX_FILES} na raz.",
+                    )
                 for file in files:
                     content = await file.read()
 
