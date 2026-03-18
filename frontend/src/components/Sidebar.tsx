@@ -200,7 +200,7 @@ export const Sidebar = ({
               onContextMenu={(e) => handleContextMenu(e, p.id)}
             >
               <div className="flex items-center gap-2 truncate flex-1 min-w-0">
-                <FolderClosed size={14} className="text-orlen flex-shrink-0" />
+                <FolderClosed size={14} className="text-orlen shrink-0" />
                 {renamingId === p.id ? (
                   <input
                     ref={renameInputRef}
@@ -252,7 +252,7 @@ export const Sidebar = ({
                 <div className="flex items-center gap-2 truncate flex-1 min-w-0">
                   <FolderClosed
                     size={14}
-                    className="text-text-muted flex-shrink-0"
+                    className="text-text-muted shrink-0"
                   />
                   {renamingId === p.id ? (
                     <input
@@ -270,7 +270,7 @@ export const Sidebar = ({
                   ) : (
                     <span className="truncate text-sm">{p.name}</span>
                   )}
-                  <span className="text-[9px] font-bold uppercase text-text-muted bg-surface-tertiary px-1.5 py-0.5 rounded flex-shrink-0">
+                  <span className="text-[9px] font-bold uppercase text-text-muted bg-surface-tertiary px-1.5 py-0.5 rounded shrink-0">
                     {labels.archivedBadge}
                   </span>
                 </div>
@@ -329,7 +329,7 @@ export const Sidebar = ({
       >
         <div className="flex items-center gap-3 cursor-pointer p-1.5 hover:bg-surface-tertiary rounded-md transition-colors flex-1 min-w-0">
           <div
-            className="h-8 w-8 rounded-full flex items-center justify-center font-bold text-xs flex-shrink-0"
+            className="h-8 w-8 rounded-full flex items-center justify-center font-bold text-xs shrink-0"
             style={{
               background: "linear-gradient(135deg, #dbeafe, #bfdbfe)",
               color: "#1d4ed8",
@@ -347,7 +347,7 @@ export const Sidebar = ({
           </div>
         </div>
 
-        <div className="flex items-center gap-1 flex-shrink-0">
+        <div className="flex items-center gap-1 shrink-0">
           {/* Quick language toggle */}
           <button
             onClick={onToggleLanguage}

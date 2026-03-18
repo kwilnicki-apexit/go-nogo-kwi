@@ -25,7 +25,6 @@ import type { Project, Chat, ChatMessage, AppMode } from "./types";
 import { CheckCircle, Download, FileText, User, X, Lock } from "lucide-react";
 import "./styles/main.css";
 
-
 function App() {
   const { theme, toggleTheme } = useTheme();
   const { language, toggleLanguage, setLang } = useLanguage();
@@ -457,7 +456,8 @@ function App() {
           format === "md"
             ? htmlToMarkdown(canvasContent)
             : stripHtml(canvasContent);
-        const result = await api.exportReport({
+
+        await api.exportReport({
           project_name: activeChat.id,
           edited_text: text,
           format,
@@ -465,7 +465,8 @@ function App() {
           author: userConfig.authorName,
           chart_paths: chartPaths,
         });
-        setExportMessage(`${labels.successFile} ${result.filepath}`);
+
+        setExportMessage(labels.successFile);
       } catch {
         setExportMessage(labels.errorExport);
       }

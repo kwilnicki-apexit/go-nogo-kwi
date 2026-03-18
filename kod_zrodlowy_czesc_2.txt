@@ -1,6 +1,351 @@
 
 
 ============================================================
+--- PLIK: .\frontend\src\components\InputArea.tsx ---
+============================================================
+
+// ============================================================
+// FILE: .\frontend\src\components\InputArea.tsx
+// ============================================================
+
+import { useState, useRef, useCallback, useEffect } from "react";
+import {
+  Send,
+  Paperclip,
+  X,
+  MessageSquare,
+  FileCheck,
+  Languages,
+  BarChart3,
+  FileSpreadsheet,
+  FileIcon,
+} from "lucide-react";
+import type { AppMode, AttachedFile, Labels } from "../types";
+import { generateId, formatFileSize } from "../lib/utils";
+
+interface InputAreaProps {
+  mode: AppMode;
+  onModeChange: (mode: AppMode) => void;
+  onSend: (message: string, files: File[]) => void;
+  isLoading: boolean;
+  labels: Labels;
+}
+
+const MAX_FILES = 20;
+
+const modes: {
+  key: AppMode;
+  icon: React.ReactNode;
+  labelKey: keyof Labels;
+  color: string;
+  activeBg: string;
+  activeRing: string;
+}[] = [
+  {
+    key: "chatbot",
+    icon: <MessageSquare size={15} />,
+    labelKey: "modeChatbot",
+    color: "#3b82f6",
+    activeBg: "rgba(59,130,246,0.08)",
+    activeRing: "rgba(59,130,246,0.35)",
+  },
+  {
+    key: "gonogo",
+    icon: <FileCheck size={15} />,
+    labelKey: "modeGoNogo",
+    color: "#e3000f",
+    activeBg: "rgba(227,0,15,0.06)",
+    activeRing: "rgba(227,0,15,0.35)",
+  },
+  {
+    key: "translator",
+    icon: <Languages size={15} />,
+    labelKey: "modeTranslator",
+    color: "#16a34a",
+    activeBg: "rgba(22,163,74,0.06)",
+    activeRing: "rgba(22,163,74,0.35)",
+  },
+  {
+    key: "analysis",
+    icon: <BarChart3 size={15} />,
+    labelKey: "modeAnalysis",
+    color: "#d97706",
+    activeBg: "rgba(217,119,6,0.06)",
+    activeRing: "rgba(217,119,6,0.35)",
+  },
+];
+
+const getFileIcon = (name: string) => {
+  const ext = name.split(".").pop()?.toLowerCase();
+  if (ext === "csv" || ext === "xls" || ext === "xlsx")
+    return <FileSpreadsheet size={14} color="#16a34a" />;
+  if (ext === "pdf") return <FileIcon size={14} color="#e3000f" />;
+  return <FileIcon size={14} color="var(--color-text-tertiary)" />;
+};
+
+export const InputArea = ({
+  mode,
+  onModeChange,
+  onSend,
+  isLoading,
+  labels,
+}: InputAreaProps) => {
+  const [text, setText] = useState("");
+  const [attachedFiles, setAttachedFiles] = useState<AttachedFile[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const adjustHeight = useCallback(() => {
+    const ta = textareaRef.current;
+    if (!ta) return;
+    ta.style.height = "auto";
+    ta.style.height = `${Math.min(ta.scrollHeight, 200)}px`;
+  }, []);
+
+  useEffect(() => {
+    adjustHeight();
+  }, [text, adjustHeight]);
+
+  const handleSend = () => {
+    const trimmed = text.trim();
+    if (!trimmed && attachedFiles.length === 0) return;
+    onSend(
+      trimmed,
+      attachedFiles.map((af) => af.file),
+    );
+    setText("");
+    setAttachedFiles([]);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+    setTimeout(() => {
+      if (textareaRef.current) textareaRef.current.style.height = "auto";
+    }, 0);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleSend();
+    }
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files) return;
+    const newFiles: AttachedFile[] = Array.from(e.target.files).map((f) => ({
+      file: f,
+      id: generateId("f"),
+    }));
+    setAttachedFiles((prev) => [...prev, ...newFiles].slice(0, MAX_FILES));
+  };
+
+  const removeFile = (id: string) =>
+    setAttachedFiles((prev) => prev.filter((f) => f.id !== id));
+
+  const canSend = text.trim() || attachedFiles.length > 0;
+
+  return (
+    <div
+      style={{
+        borderTop: "1px solid var(--color-border)",
+        backgroundColor: "var(--color-surface)",
+        padding: "20px 24px 24px",
+        flexShrink: 0,
+      }}
+    >
+      <div style={{ maxWidth: 720, margin: "0 auto" }}>
+        {/* File chips */}
+        {attachedFiles.length > 0 && (
+          <div
+            style={{
+              display: "flex",
+              flexWrap: "wrap",
+              gap: 8,
+              marginBottom: 14,
+            }}
+          >
+            {attachedFiles.map((af) => (
+              <div
+                key={af.id}
+                className="animate-fade-in-up"
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 8,
+                  borderRadius: 8,
+                  border: "1px solid var(--color-border)",
+                  backgroundColor: "var(--color-surface-secondary)",
+                  padding: "8px 12px",
+                  fontSize: 13,
+                }}
+              >
+                {getFileIcon(af.file.name)}
+                <span
+                  style={{
+                    maxWidth: 150,
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap",
+                    fontWeight: 500,
+                    color: "var(--color-text-primary)",
+                  }}
+                >
+                  {af.file.name}
+                </span>
+                <span
+                  style={{ color: "var(--color-text-muted)", fontSize: 12 }}
+                >
+                  {formatFileSize(af.file.size)}
+                </span>
+                <button
+                  onClick={() => removeFile(af.id)}
+                  style={{
+                    padding: 4,
+                    borderRadius: "50%",
+                    color: "var(--color-text-tertiary)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <X size={12} />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Input box */}
+        <div
+          className="input-box-wrapper"
+          style={{
+            display: "flex",
+            alignItems: "flex-end",
+            gap: 12,
+            padding: "12px 16px",
+          }}
+        >
+          {/* Attach button */}
+          <button
+            className="input-attach-btn"
+            onClick={() => fileInputRef.current?.click()}
+            title={labels.attachFiles}
+            style={{ flexShrink: 0 }}
+          >
+            <Paperclip size={20} />
+          </button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            multiple
+            accept=".csv,.xls,.xlsx,.pdf,.json,.xml,.txt"
+            onChange={handleFileChange}
+            style={{ display: "none" }}
+          />
+
+          {/* Textarea */}
+          <textarea
+            ref={textareaRef}
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder={labels.chatPlaceholder}
+            rows={1}
+            disabled={isLoading}
+            style={{
+              flex: 1,
+              resize: "none",
+              border: "none",
+              outline: "none",
+              backgroundColor: "transparent",
+              padding: "10px 4px",
+              fontSize: 15,
+              lineHeight: 1.6,
+              color: "var(--color-text-primary)",
+              fontFamily: "inherit",
+              maxHeight: 200,
+              opacity: isLoading ? 0.5 : 1,
+            }}
+            data-gramm="false"
+            data-gramm_editor="false"
+            data-enable-grammarly="false"
+          />
+
+          {/* Send button */}
+          <button
+            className={`input-send-btn ${canSend && !isLoading ? "enabled" : "disabled"}`}
+            onClick={handleSend}
+            disabled={isLoading || !canSend}
+            style={{ flexShrink: 0 }}
+          >
+            <Send size={18} />
+          </button>
+        </div>
+
+        {/* Mode buttons */}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            marginTop: 14,
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            {modes.map((m) => {
+              const isActive = mode === m.key;
+              return (
+                <button
+                  key={m.key}
+                  onClick={() => onModeChange(m.key)}
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: 8,
+                    padding: "9px 18px",
+                    borderRadius: 8,
+                    fontSize: 13,
+                    fontWeight: 600,
+                    border: "none",
+                    cursor: "pointer",
+                    transition: "all 0.15s",
+                    backgroundColor: isActive ? m.activeBg : "transparent",
+                    color: isActive ? m.color : "var(--color-text-secondary)",
+                    boxShadow: isActive
+                      ? `inset 0 0 0 1.5px ${m.activeRing}`
+                      : "none",
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!isActive) {
+                      e.currentTarget.style.backgroundColor =
+                        "var(--color-surface-tertiary)";
+                      e.currentTarget.style.color = m.color;
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!isActive) {
+                      e.currentTarget.style.backgroundColor = "transparent";
+                      e.currentTarget.style.color =
+                        "var(--color-text-secondary)";
+                    }
+                  }}
+                >
+                  {m.icon}
+                  <span>{labels[m.labelKey]}</span>
+                </button>
+              );
+            })}
+          </div>
+          <span style={{ fontSize: 11, color: "var(--color-text-muted)" }}>
+            Enter ↵ {labels.sendMessage} · Shift+Enter {labels.newLine}
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+
+============================================================
 --- PLIK: .\frontend\src\components\CanvasPanel.tsx ---
 ============================================================
 
@@ -299,8 +644,8 @@ export const SidebarToggle = ({ isOpen, onToggle }: SidebarToggleProps) => {
 // FILE: .\frontend\src\components\SettingsPanel.tsx
 // ============================================================
 
-import { useRef, useEffect } from "react";
-import { X, Globe } from "lucide-react";
+import { useEffect } from "react";
+import { X, Globe, Server, ShieldAlert, KeyRound } from "lucide-react";
 import type { Labels, UserConfig, LangCode } from "../types";
 import { getInitials } from "../lib/utils";
 
@@ -323,27 +668,6 @@ export const SettingsPanel = ({
   onSetLanguage,
   labels,
 }: SettingsPanelProps) => {
-  const panelRef = useRef<HTMLDivElement>(null);
-
-  // Close on click outside
-  useEffect(() => {
-    if (!isOpen) return;
-    const handler = (e: MouseEvent) => {
-      if (panelRef.current && !panelRef.current.contains(e.target as Node)) {
-        onClose();
-      }
-    };
-    // Delay to avoid immediate close from the click that opened it
-    const timer = setTimeout(
-      () => document.addEventListener("mousedown", handler),
-      50,
-    );
-    return () => {
-      clearTimeout(timer);
-      document.removeEventListener("mousedown", handler);
-    };
-  }, [isOpen, onClose]);
-
   // Close on Escape key
   useEffect(() => {
     if (!isOpen) return;
@@ -357,326 +681,396 @@ export const SettingsPanel = ({
   if (!isOpen) return null;
 
   const initials = getInitials(userConfig.displayName);
+  const t = (pl: string, en: string) => (language === "pl" ? pl : en);
 
   return (
     <div
-      ref={panelRef}
-      className="animate-fade-in-up"
       style={{
-        position: "absolute",
-        bottom: 60,
-        left: 8,
-        right: 8,
-        zIndex: 100,
-        borderRadius: 12,
-        border: "1px solid var(--color-border)",
-        backgroundColor: "var(--color-surface)",
-        boxShadow: "0 8px 30px rgba(0,0,0,0.15), 0 2px 8px rgba(0,0,0,0.08)",
-        overflow: "hidden",
+        position: "fixed",
+        inset: 0,
+        zIndex: 9999,
+        backgroundColor: "rgba(0,0,0,0.6)",
+        backdropFilter: "blur(4px)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: 24,
       }}
+      onClick={onClose}
     >
-      {/* Header */}
       <div
+        className="animate-fade-in-up"
         style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          padding: "14px 16px",
-          borderBottom: "1px solid var(--color-border)",
-          backgroundColor: "var(--color-surface-secondary)",
-        }}
-      >
-        <span
-          style={{
-            fontSize: 13,
-            fontWeight: 700,
-            color: "var(--color-text-primary)",
-          }}
-        >
-          {labels.userSettings}
-        </span>
-        <button
-          onClick={onClose}
-          style={{
-            padding: 4,
-            borderRadius: 6,
-            color: "var(--color-text-tertiary)",
-            transition: "all 0.15s",
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.backgroundColor =
-              "var(--color-surface-tertiary)";
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.backgroundColor = "transparent";
-          }}
-          title={labels.closeSettings}
-        >
-          <X size={16} />
-        </button>
-      </div>
-
-      {/* Content */}
-      <div
-        style={{
-          padding: "16px",
+          width: "100%",
+          maxWidth: 580,
+          backgroundColor: "var(--color-surface)",
+          borderRadius: 16,
+          border: "1px solid var(--color-border)",
+          boxShadow: "0 20px 40px rgba(0,0,0,0.3)",
           display: "flex",
           flexDirection: "column",
-          gap: 14,
+          overflow: "hidden",
         }}
+        onClick={(e) => e.stopPropagation()} // Zapobiega zamknięciu przy kliknięciu w okno
       >
-        {/* Avatar preview */}
+        {/* Header */}
         <div
           style={{
             display: "flex",
             alignItems: "center",
-            gap: 12,
-            marginBottom: 4,
+            justifyContent: "space-between",
+            padding: "16px 24px",
+            borderBottom: "1px solid var(--color-border)",
+            backgroundColor: "var(--color-surface-secondary)",
           }}
         >
-          <div
-            style={{
-              width: 40,
-              height: 40,
-              borderRadius: "50%",
-              background: "linear-gradient(135deg, #dbeafe, #bfdbfe)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              fontSize: 14,
-              fontWeight: 700,
-              color: "#1d4ed8",
-              flexShrink: 0,
-            }}
-          >
-            {initials}
-          </div>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div
-              style={{
-                fontSize: 13,
-                fontWeight: 600,
-                color: "var(--color-text-primary)",
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-                whiteSpace: "nowrap",
-              }}
-            >
-              {userConfig.displayName}
-            </div>
-            <div style={{ fontSize: 11, color: "var(--color-text-tertiary)" }}>
-              {userConfig.role}
-            </div>
-          </div>
-        </div>
-
-        {/* Display Name */}
-        <div>
-          <label
-            style={{
-              display: "block",
-              fontSize: 11,
-              fontWeight: 700,
-              color: "var(--color-text-secondary)",
-              textTransform: "uppercase",
-              marginBottom: 4,
-              letterSpacing: "0.03em",
-            }}
-          >
-            {labels.displayNameLabel}
-          </label>
-          <input
-            type="text"
-            value={userConfig.displayName}
-            onChange={(e) => onUpdateConfig({ displayName: e.target.value })}
-            style={{
-              width: "100%",
-              padding: "8px 10px",
-              borderRadius: 6,
-              border: "1px solid var(--color-border)",
-              backgroundColor: "var(--color-surface-secondary)",
-              fontSize: 13,
-              color: "var(--color-text-primary)",
-              outline: "none",
-              transition: "border-color 0.15s",
-            }}
-            onFocus={(e) => {
-              e.currentTarget.style.borderColor = "var(--color-orlen)";
-            }}
-            onBlur={(e) => {
-              e.currentTarget.style.borderColor = "var(--color-border)";
-            }}
-          />
-        </div>
-
-        {/* Role */}
-        <div>
-          <label
-            style={{
-              display: "block",
-              fontSize: 11,
-              fontWeight: 700,
-              color: "var(--color-text-secondary)",
-              textTransform: "uppercase",
-              marginBottom: 4,
-              letterSpacing: "0.03em",
-            }}
-          >
-            {labels.roleLabel}
-          </label>
-          <input
-            type="text"
-            value={userConfig.role}
-            onChange={(e) => onUpdateConfig({ role: e.target.value })}
-            style={{
-              width: "100%",
-              padding: "8px 10px",
-              borderRadius: 6,
-              border: "1px solid var(--color-border)",
-              backgroundColor: "var(--color-surface-secondary)",
-              fontSize: 13,
-              color: "var(--color-text-primary)",
-              outline: "none",
-              transition: "border-color 0.15s",
-            }}
-            onFocus={(e) => {
-              e.currentTarget.style.borderColor = "var(--color-orlen)";
-            }}
-            onBlur={(e) => {
-              e.currentTarget.style.borderColor = "var(--color-border)";
-            }}
-          />
-        </div>
-
-        {/* Author Name (for exports) */}
-        <div>
-          <label
-            style={{
-              display: "block",
-              fontSize: 11,
-              fontWeight: 700,
-              color: "var(--color-text-secondary)",
-              textTransform: "uppercase",
-              marginBottom: 4,
-              letterSpacing: "0.03em",
-            }}
-          >
-            {labels.authorNameLabel}
-          </label>
-          <input
-            type="text"
-            value={userConfig.authorName}
-            onChange={(e) => onUpdateConfig({ authorName: e.target.value })}
-            style={{
-              width: "100%",
-              padding: "8px 10px",
-              borderRadius: 6,
-              border: "1px solid var(--color-border)",
-              backgroundColor: "var(--color-surface-secondary)",
-              fontSize: 13,
-              color: "var(--color-text-primary)",
-              outline: "none",
-              transition: "border-color 0.15s",
-            }}
-            onFocus={(e) => {
-              e.currentTarget.style.borderColor = "var(--color-orlen)";
-            }}
-            onBlur={(e) => {
-              e.currentTarget.style.borderColor = "var(--color-border)";
-            }}
-          />
           <span
             style={{
-              display: "block",
-              fontSize: 10,
-              color: "var(--color-text-muted)",
-              marginTop: 3,
+              fontSize: 15,
+              fontWeight: 700,
+              color: "var(--color-text-primary)",
             }}
           >
-            {labels.authorNameHint}
+            {labels.userSettings}
           </span>
+          <button
+            onClick={onClose}
+            style={{
+              padding: 6,
+              borderRadius: 8,
+              color: "var(--color-text-tertiary)",
+              cursor: "pointer",
+              transition: "all 0.15s",
+              border: "none",
+              background: "transparent",
+            }}
+          >
+            <X size={18} />
+          </button>
         </div>
 
-        {/* Divider */}
+        {/* Content */}
         <div
+          className="custom-scrollbar"
           style={{
-            height: 1,
-            backgroundColor: "var(--color-border)",
-            margin: "2px 0",
+            padding: "24px",
+            display: "flex",
+            flexDirection: "column",
+            gap: 24,
+            maxHeight: "75vh",
+            overflowY: "auto",
           }}
-        />
+        >
+          {/* Avatar & Display Name */}
+          <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+            <div
+              style={{
+                width: 64,
+                height: 64,
+                borderRadius: "50%",
+                background: "linear-gradient(135deg, #dbeafe, #bfdbfe)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontSize: 24,
+                fontWeight: 700,
+                color: "#1d4ed8",
+                flexShrink: 0,
+              }}
+            >
+              {initials}
+            </div>
+            <div style={{ flex: 1 }}>
+              <label
+                style={{
+                  display: "block",
+                  fontSize: 11,
+                  fontWeight: 700,
+                  color: "var(--color-text-secondary)",
+                  textTransform: "uppercase",
+                  marginBottom: 6,
+                }}
+              >
+                {labels.displayNameLabel}
+              </label>
+              <input
+                type="text"
+                value={userConfig.displayName}
+                onChange={(e) =>
+                  onUpdateConfig({ displayName: e.target.value })
+                }
+                style={{
+                  width: "100%",
+                  padding: "10px 12px",
+                  borderRadius: 8,
+                  border: "1px solid var(--color-border)",
+                  backgroundColor: "var(--color-surface-secondary)",
+                  fontSize: 14,
+                  color: "var(--color-text-primary)",
+                  outline: "none",
+                }}
+              />
+            </div>
+          </div>
 
-        {/* Language Selection */}
-        <div>
-          <label
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 6,
-              fontSize: 11,
-              fontWeight: 700,
-              color: "var(--color-text-secondary)",
-              textTransform: "uppercase",
-              marginBottom: 6,
-              letterSpacing: "0.03em",
-            }}
+          <div
+            style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}
           >
-            <Globe size={12} />
-            {labels.languageLabel}
-          </label>
-          <div style={{ display: "flex", gap: 6 }}>
-            <button
-              onClick={() => onSetLanguage("pl")}
+            {/* Role */}
+            <div>
+              <label
+                style={{
+                  display: "block",
+                  fontSize: 11,
+                  fontWeight: 700,
+                  color: "var(--color-text-secondary)",
+                  textTransform: "uppercase",
+                  marginBottom: 6,
+                }}
+              >
+                {labels.roleLabel}
+              </label>
+              <input
+                type="text"
+                value={userConfig.role}
+                onChange={(e) => onUpdateConfig({ role: e.target.value })}
+                style={{
+                  width: "100%",
+                  padding: "10px 12px",
+                  borderRadius: 8,
+                  border: "1px solid var(--color-border)",
+                  backgroundColor: "var(--color-surface-secondary)",
+                  fontSize: 14,
+                  color: "var(--color-text-primary)",
+                  outline: "none",
+                }}
+              />
+            </div>
+
+            {/* Author Name */}
+            <div>
+              <label
+                style={{
+                  display: "block",
+                  fontSize: 11,
+                  fontWeight: 700,
+                  color: "var(--color-text-secondary)",
+                  textTransform: "uppercase",
+                  marginBottom: 6,
+                }}
+              >
+                {labels.authorNameLabel}
+              </label>
+              <input
+                type="text"
+                value={userConfig.authorName}
+                onChange={(e) => onUpdateConfig({ authorName: e.target.value })}
+                style={{
+                  width: "100%",
+                  padding: "10px 12px",
+                  borderRadius: 8,
+                  border: "1px solid var(--color-border)",
+                  backgroundColor: "var(--color-surface-secondary)",
+                  fontSize: 14,
+                  color: "var(--color-text-primary)",
+                  outline: "none",
+                }}
+              />
+            </div>
+          </div>
+
+          <div style={{ height: 1, backgroundColor: "var(--color-border)" }} />
+
+          {/* Active Directory / LDAP Integrations (MOCKS) */}
+          <div>
+            <label
               style={{
-                flex: 1,
-                padding: "8px 12px",
-                borderRadius: 6,
-                fontSize: 12,
-                fontWeight: 600,
-                cursor: "pointer",
-                transition: "all 0.15s",
-                border:
-                  language === "pl"
-                    ? "1.5px solid var(--color-orlen)"
-                    : "1px solid var(--color-border)",
-                backgroundColor:
-                  language === "pl"
-                    ? "rgba(227,0,15,0.06)"
-                    : "var(--color-surface-secondary)",
-                color:
-                  language === "pl"
-                    ? "var(--color-orlen)"
-                    : "var(--color-text-secondary)",
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+                fontSize: 11,
+                fontWeight: 700,
+                color: "var(--color-text-secondary)",
+                textTransform: "uppercase",
+                marginBottom: 12,
               }}
             >
-              🇵🇱 {labels.polish}
-            </button>
-            <button
-              onClick={() => onSetLanguage("en")}
+              <Server size={13} />{" "}
+              {t("Katalog LDAP (Mock)", "LDAP Directory (Mock)")}
+            </label>
+            <div
               style={{
-                flex: 1,
-                padding: "8px 12px",
-                borderRadius: 6,
-                fontSize: 12,
-                fontWeight: 600,
-                cursor: "pointer",
-                transition: "all 0.15s",
-                border:
-                  language === "en"
-                    ? "1.5px solid var(--color-orlen)"
-                    : "1px solid var(--color-border)",
-                backgroundColor:
-                  language === "en"
-                    ? "rgba(227,0,15,0.06)"
-                    : "var(--color-surface-secondary)",
-                color:
-                  language === "en"
-                    ? "var(--color-orlen)"
-                    : "var(--color-text-secondary)",
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr",
+                gap: 16,
               }}
             >
-              🇬🇧 {labels.english}
-            </button>
+              <div>
+                <span
+                  style={{
+                    fontSize: 12,
+                    color: "var(--color-text-muted)",
+                    marginBottom: 4,
+                    display: "block",
+                  }}
+                >
+                  {t("Nazwa użytkownika LDAP", "LDAP Username")}
+                </span>
+                <input
+                  disabled
+                  value="jdeveloper_adm"
+                  style={{
+                    width: "100%",
+                    padding: "10px 12px",
+                    borderRadius: 8,
+                    border: "1px dashed var(--color-border-strong)",
+                    backgroundColor: "var(--color-bg)",
+                    fontSize: 13,
+                    color: "var(--color-text-tertiary)",
+                    outline: "none",
+                    cursor: "not-allowed",
+                  }}
+                />
+              </div>
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  justifyContent: "flex-end",
+                }}
+              >
+                <button
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: 8,
+                    padding: "10px",
+                    borderRadius: 8,
+                    border: "1px solid var(--color-border)",
+                    backgroundColor: "var(--color-surface)",
+                    fontSize: 13,
+                    fontWeight: 600,
+                    color: "var(--color-text-secondary)",
+                    cursor: "not-allowed",
+                    opacity: 0.7,
+                  }}
+                  disabled
+                >
+                  <ShieldAlert size={15} />{" "}
+                  {t("Zsynchronizuj z AD", "Sync with AD")}
+                </button>
+              </div>
+            </div>
+
+            <div style={{ marginTop: 16 }}>
+              <button
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 8,
+                  padding: "10px",
+                  width: "100%",
+                  borderRadius: 8,
+                  border: "1px solid #fecaca",
+                  backgroundColor: "#fef2f2",
+                  fontSize: 13,
+                  fontWeight: 600,
+                  color: "#dc2626",
+                  cursor: "pointer",
+                  transition: "all 0.15s",
+                }}
+                onClick={() =>
+                  alert(
+                    t(
+                      "Opcja dostępna tylko dla administratorów domeny.",
+                      "Option available only for domain administrators.",
+                    ),
+                  )
+                }
+              >
+                <KeyRound size={15} />{" "}
+                {t(
+                  "Wymuś zmianę hasła przy następnym logowaniu",
+                  "Force password reset on next login",
+                )}
+              </button>
+            </div>
+          </div>
+
+          <div style={{ height: 1, backgroundColor: "var(--color-border)" }} />
+
+          {/* Language Selection */}
+          <div>
+            <label
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+                fontSize: 11,
+                fontWeight: 700,
+                color: "var(--color-text-secondary)",
+                textTransform: "uppercase",
+                marginBottom: 8,
+              }}
+            >
+              <Globe size={13} /> {labels.languageLabel}
+            </label>
+            <div style={{ display: "flex", gap: 8 }}>
+              <button
+                onClick={() => onSetLanguage("pl")}
+                style={{
+                  flex: 1,
+                  padding: "10px",
+                  borderRadius: 8,
+                  fontSize: 13,
+                  fontWeight: 600,
+                  cursor: "pointer",
+                  border:
+                    language === "pl"
+                      ? "1.5px solid var(--color-orlen)"
+                      : "1px solid var(--color-border)",
+                  backgroundColor:
+                    language === "pl"
+                      ? "rgba(227,0,15,0.06)"
+                      : "var(--color-surface-secondary)",
+                  color:
+                    language === "pl"
+                      ? "var(--color-orlen)"
+                      : "var(--color-text-secondary)",
+                  transition: "all 0.15s",
+                }}
+              >
+                🇵🇱 {labels.polish}
+              </button>
+              <button
+                onClick={() => onSetLanguage("en")}
+                style={{
+                  flex: 1,
+                  padding: "10px",
+                  borderRadius: 8,
+                  fontSize: 13,
+                  fontWeight: 600,
+                  cursor: "pointer",
+                  border:
+                    language === "en"
+                      ? "1.5px solid var(--color-orlen)"
+                      : "1px solid var(--color-border)",
+                  backgroundColor:
+                    language === "en"
+                      ? "rgba(227,0,15,0.06)"
+                      : "var(--color-surface-secondary)",
+                  color:
+                    language === "en"
+                      ? "var(--color-orlen)"
+                      : "var(--color-text-secondary)",
+                  transition: "all 0.15s",
+                }}
+              >
+                🇬🇧 {labels.english}
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -1904,52 +2298,52 @@ export const getLabels = (lang: string): Labels => {
 
 /* Dark theme declarations */
 .dark {
-  --color-bg: #09090b;
-  --color-surface: #18181b;
-  --color-surface-secondary: #111827;
-  --color-surface-tertiary: #27272a;
+  --color-bg: #0a0a0a;
+  --color-surface: #171717;
+  --color-surface-secondary: #262626;
+  --color-surface-tertiary: #404040;
 
-  --color-border: #27272a;
-  --color-border-strong: #3f3f46;
+  --color-border: #262626;
+  --color-border-strong: #404040;
 
-  --color-text-primary: #f8fafc;
-  --color-text-secondary: #cbd5e1;
-  --color-text-tertiary: #94a3b8;
-  --color-text-muted: #64748b;
+  --color-text-primary: #f5f5f5;
+  --color-text-secondary: #d4d4d4;
+  --color-text-tertiary: #a3a3a3;
+  --color-text-muted: #737373;
 
   /* Sidebar dark */
-  --sidebar-bg: #111827;
-  --sidebar-header-bg: #111827;
+  --sidebar-bg: #121212;
+  --sidebar-header-bg: #121212;
   --sidebar-item-hover: rgba(255, 255, 255, 0.05);
   --sidebar-item-active: rgba(227, 0, 15, 0.1);
   --sidebar-item-active-border: rgba(227, 0, 15, 0.8);
-  --sidebar-new-btn-bg: #1f2937;
-  --sidebar-new-btn-hover: #374151;
-  --sidebar-search-bg: #1f2937;
+  --sidebar-new-btn-bg: #1f1f1f;
+  --sidebar-new-btn-hover: #262626;
+  --sidebar-search-bg: #1f1f1f;
   --sidebar-search-focus-ring: rgba(227, 0, 15, 0.25);
-  --sidebar-toggle-bg: #1f2937;
-  --sidebar-toggle-hover: #374151;
-  --sidebar-footer-bg: #0f1419;
-  --sidebar-divider: linear-gradient(90deg, transparent, #3f3f46, transparent);
+  --sidebar-toggle-bg: #1f1f1f;
+  --sidebar-toggle-hover: #262626;
+  --sidebar-footer-bg: #0f0f0f;
+  --sidebar-divider: linear-gradient(90deg, transparent, #404040, transparent);
 
   /* Context menu dark */
-  --ctx-menu-bg: #1e2433;
+  --ctx-menu-bg: #171717;
   --ctx-menu-shadow:
-    0 8px 30px rgba(0, 0, 0, 0.4), 0 2px 8px rgba(0, 0, 0, 0.3);
-  --ctx-menu-border: #3f3f46;
-  --ctx-delete-confirm-bg: rgba(153, 27, 27, 0.12);
-  --ctx-delete-confirm-border: rgba(220, 38, 38, 0.25);
+    0 8px 30px rgba(0, 0, 0, 0.6), 0 2px 8px rgba(0, 0, 0, 0.5);
+  --ctx-menu-border: #262626;
+  --ctx-delete-confirm-bg: rgba(227, 0, 15, 0.1);
+  --ctx-delete-confirm-border: rgba(227, 0, 15, 0.3);
   --ctx-delete-confirm-text: #fca5a5;
   --ctx-delete-yes-bg: #dc2626;
   --ctx-delete-yes-hover: #ef4444;
   --ctx-delete-no-bg: transparent;
   --ctx-delete-no-hover: rgba(255, 255, 255, 0.06);
-  --ctx-delete-no-text: #94a3b8;
+  --ctx-delete-no-text: #a3a3a3;
 
   /* Input dark */
-  --input-box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  --input-box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
   --input-focus-shadow:
-    0 0 0 2px rgba(227, 0, 15, 0.2), 0 4px 16px rgba(0, 0, 0, 0.3);
+    0 0 0 2px rgba(227, 0, 15, 0.2), 0 4px 16px rgba(0, 0, 0, 0.5);
   --input-focus-border: rgba(227, 0, 15, 0.45);
 }
 

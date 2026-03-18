@@ -588,7 +588,6 @@ def export_report(req: ExportRequest, user: dict = Depends(get_current_user)):
     try:
         fmt = req.format.lower()
 
-        # Set output folder to chat-specific directory
         chat_created_dir = storage.get_chat_created_dir(req.project_name)
         report_generator.final_output_path = chat_created_dir
 
@@ -619,7 +618,27 @@ def export_report(req: ExportRequest, user: dict = Depends(get_current_user)):
         else:
             raise HTTPException(status_code=400, detail="Unsupported format.")
 
-        return {"status": "success", "filepath": filepath}
+        # AUTO-VECTORIZATION OF EXPORTED REPORT (RAG)
+        try:
+            text_content = file_parser.extract_history_text(filepath)
+            if text_content:
+                filename = os.path.basename(filepath)
+                rag.ingest_document(text_content, filename, entity_id=req.project_name)
+                logger.info(
+                    f"Auto-vectorized exported report {filename} into chat {req.project_name}"
+                )
+        except Exception as e:
+            logger.warning(f"Failed to auto-vectorize exported report: {e}")
+
+        filename = os.path.basename(filepath)
+        encoded_filename = urllib.parse.quote(filename)
+        return FileResponse(
+            path=filepath,
+            filename=filename,
+            headers={
+                "Content-Disposition": f"attachment; filename*=UTF-8''{encoded_filename}"
+            },
+        )
 
     except ExportError as e:
         logger.error(f"Export failed: {e}")
