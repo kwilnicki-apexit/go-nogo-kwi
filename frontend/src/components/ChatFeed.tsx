@@ -199,7 +199,7 @@ export const ChatFeed = ({
             },
             {
               icon: "📊",
-              label: labels.modeAnalysis,
+              label: labels.modeRemedy,
               desc: labels.analysisDesc,
             },
           ].map((item) => (

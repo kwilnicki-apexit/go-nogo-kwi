@@ -70,12 +70,12 @@ const MODE_OPTIONS: {
     labelKey: "modeTranslator",
   },
   {
-    key: "analysis",
+    key: "remedy",
     icon: <BarChart3 size={14} />,
     color: "#d97706",
     activeBg: "rgba(217,119,6,0.06)",
     activeRing: "rgba(217,119,6,0.35)",
-    labelKey: "modeAnalysis",
+    labelKey: "modeRemedy",
   },
 ];
 
