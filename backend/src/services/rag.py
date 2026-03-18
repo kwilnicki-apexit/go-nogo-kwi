@@ -81,6 +81,28 @@ class RAGEngine:
                 )
         return results
 
+    def delete_document(self, filename: str, entity_id: str):
+        """
+        Removes vectors associated with a specific file from the entity's collection.
+        """
+        if not filename or not entity_id:
+            return
+
+        safe_collection_name = entity_id.replace("-", "_")
+        try:
+            collection = self._get_collection(safe_collection_name)
+
+            collection.delete(
+                where={"$and": [{"source": filename}, {"entity_id": entity_id}]}
+            )
+            self.logger.info(
+                f"Deleted vectors for file {filename} from collection {safe_collection_name}"
+            )
+        except Exception as e:
+            self.logger.warning(
+                f"Error while deleting document {filename} from collection {safe_collection_name}: {e}"
+            )
+
     def ingest_document(self, text: str, filename: str, entity_id: str):
         """
         Vectorizes and indexes text into a collection based on entity_id.

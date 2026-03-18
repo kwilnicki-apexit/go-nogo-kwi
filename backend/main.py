@@ -562,15 +562,18 @@ async def delete_chat_file(
         chat_uploads_dir = storage.get_chat_uploads_dir(chat_id)
         file_path = os.path.join(chat_uploads_dir, filename)
 
-        if not os.path.exists(file_path):
-            raise HTTPException(status_code=404, detail="File not found")
+        if os.path.exists(file_path):
+            os.remove(file_path)
+            logger.info(f"File {filename} deleted from disk for chat {chat_id}")
 
-        os.remove(file_path)
-        logger.info(f"File {filename} deleted from chat {chat_id}")
+        try:
+            rag.delete_document(filename=filename, entity_id=chat_id)
+        except Exception as e:
+            logger.warning(f"Failed to delete {filename} from RAG vector store: {e}")
 
         return {
             "status": "success",
-            "message": f"File {filename} deleted from chat {chat_id}.",
+            "message": f"Plik {filename} został pomyślnie usunięty z dysku i bazy wektorowej.",
         }
     except Exception as e:
         logger.error(f"Error deleting file {filename}: {e}")
