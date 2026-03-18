@@ -11,6 +11,7 @@ from typing import List
 import uvicorn
 import uuid
 import os
+import re
 
 from src.integration.llm_client import LLMClient
 from src.integration.auth import get_current_user
@@ -21,6 +22,18 @@ from src.services.report_generator import ReportGenerator
 from src.services.chart_generator import ChartGenerator
 from src.core.logger import get_logger, request_id_var
 from src.core.exceptions import LLMConnectionError, DataProcessingError, ExportError
+from src.utils.validators import (
+    validate_message,
+    validate_upload,
+    validate_mime,
+    assert_within_directory,
+    normalize_extracted_text,
+    security_logger,
+    GONOGO_ALLOWED_EXTENSIONS,
+    PROJECT_ALLOWED_EXTENSIONS,
+    MAX_FILE_SIZE,
+    MAX_FILES,
+)
 
 logger = get_logger("FastAPI")
 
@@ -49,6 +62,16 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
+@app.middleware("http")
+async def set_utf8_content_type(request: Request, call_next):
+    """4.5.3 — jawna deklaracja charset=utf-8 na każdej odpowiedzi JSON."""
+    response = await call_next(request)
+    content_type = response.headers.get("content-type", "")
+    if "application/json" in content_type and "charset" not in content_type:
+        response.headers["content-type"] = "application/json; charset=utf-8"
+    return response
+
 # Service initialization
 try:
     llm = LLMClient()
@@ -76,7 +99,6 @@ class ExportRequest(BaseModel):
     chart_paths: List[str]
 
 
-MAX_FILE_SIZE = 5 * 1024 * 1024
 
 # ==========================================
 # PROJECT ENDPOINTS (p-xxxxx)
@@ -109,19 +131,49 @@ async def upload_project_files(
 ):
     """Uploads knowledge files (PDF, DOCX) to a project and indexes them in the ChromaDB vector store."""
     try:
+        # 4.6.4 — sanitizacja project_id z URL path parametru
+        project_id = re.sub(r"[^a-zA-Z0-9\-_]", "", project_id)[:64]
+        if not project_id:
+            raise HTTPException(status_code=400, detail="Nieprawidłowy project_id.")
+
         proj_uploads_dir = storage.get_project_uploads_dir(project_id)
         ingested_count = 0
+        
+        if len(files) > MAX_FILES:
+            security_logger.warning(
+                "Validation failed: too many files | count=%d | limit=%d | project_id=%s",
+                len(files), MAX_FILES, project_id,
+            )
+            raise HTTPException(
+                status_code=400,
+                detail=f"Zbyt wiele plików ({len(files)}). Maksymalna liczba to {MAX_FILES} na raz.",
+            )
 
         for file in files:
             content = await file.read()
-            file_path = os.path.join(proj_uploads_dir, file.filename)
+
+            # 4.5.5 / 4.5.6 — centralny walidator (wcześniej brak jakiejkolwiek walidacji)
+            safe_name, content = validate_upload(
+                file.filename, content, PROJECT_ALLOWED_EXTENSIONS
+            )
+            # 4.6.1 — MIME / magic bytes
+            validate_mime(safe_name, content)
+
+            file_path = os.path.join(proj_uploads_dir, safe_name)
+            # 4.6.4 — path confinement
+            assert_within_directory(file_path, proj_uploads_dir)
+
             with open(file_path, "wb") as f:
                 f.write(content)
 
             # Extract text from PDF/DOCX/TXT via FileParser and ingest into RAG
             text_content = file_parser.extract_history_text(file_path)
+
+            # 4.5.7 — normalizacja przed indeksowaniem w RAG
+            text_content = normalize_extracted_text(text_content)
+
             if text_content:
-                rag.ingest_document(text_content, file.filename, entity_id=project_id)
+                rag.ingest_document(text_content, safe_name, entity_id=project_id)
                 ingested_count += 1
 
         return {
@@ -161,6 +213,14 @@ async def chat_endpoint(request: Request, user: dict = Depends(get_current_user)
 
         if project_id in ["", "null", "undefined", "default"]:
             project_id = None
+        # ── NOWE — 4.5.1 / 4.5.2 ──────────────────────────────────────────
+        message = validate_message(message)
+        # ──────────────────────────────────────────────────────────────────
+
+        if chat_id:
+            chat_id = re.sub(r"[^a-zA-Z0-9\-_]", "", chat_id)[:64]
+        if project_id:
+            project_id = re.sub(r"[^a-zA-Z0-9\-_]", "", project_id)[:64]
 
         if not chat_id:
             raise HTTPException(
@@ -202,34 +262,43 @@ async def chat_endpoint(request: Request, user: dict = Depends(get_current_user)
 
             # STANDARD UPLOAD
             else:
+                if len(files) > MAX_FILES:
+                    security_logger.warning(
+                        "Validation failed: too many files | count=%d | limit=%d | chat_id=%s",
+                        len(files), MAX_FILES, chat_id,
+                    )
+                    raise HTTPException(
+                        status_code=400,
+                        detail=f"Zbyt wiele plików ({len(files)}). Maksymalna liczba to {MAX_FILES} na raz.",
+                    )
                 for file in files:
                     content = await file.read()
-                    if len(content) > MAX_FILE_SIZE:
-                        raise HTTPException(
-                            status_code=413,
-                            detail=f"Plik {file.filename} jest za duży.",
-                        )
 
-                    ext = os.path.splitext(file.filename)[1].lower()
-                    if ext not in {".csv", ".xls", ".xlsx"}:
-                        continue
+                    # 4.5.5 / 4.5.6 — centralny walidator plików
+                    safe_name, content = validate_upload(
+                        file.filename, content, GONOGO_ALLOWED_EXTENSIONS
+                    )
+                    # 4.6.1 — MIME / magic bytes
+                    validate_mime(safe_name, content)
 
-                    file_path = os.path.join(chat_uploads_dir, file.filename)
+                    file_path = os.path.join(chat_uploads_dir, safe_name)
+                    # 4.6.4 — path confinement
+                    assert_within_directory(file_path, chat_uploads_dir)
+
                     with open(file_path, "wb") as f:
                         f.write(content)
 
-                    contents[file.filename] = content
+                    contents[safe_name] = content
 
                     try:
                         text_content = file_parser.extract_test_data_from_bytes(
-                            {file.filename: content}
+                            {safe_name: content}
                         )
-                        rag.ingest_document(
-                            text_content, file.filename, entity_id=chat_id
-                        )
+                        # 4.5.7 — normalizacja tekstu wyodrębnionego z pliku
+                        text_content = normalize_extracted_text(text_content)
+                        rag.ingest_document(text_content, safe_name, entity_id=chat_id)
                     except Exception as e:
-                        logger.warning(f"Could not vectorize {file.filename}: {e}")
-
+                        logger.warning(f"Could not vectorize {safe_name}: {e}")
             if not contents:
                 return {
                     "message": "Nie załączono żadnych prawidłowych plików tabelarycznych."
