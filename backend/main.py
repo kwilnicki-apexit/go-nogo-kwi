@@ -6,11 +6,13 @@ from fastapi import FastAPI, HTTPException, Request, File, UploadFile, Depends
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from typing import List
 
 import uvicorn
 import uuid
 import os
+import urllib.parse
 
 from src.integration.llm_client import LLMClient
 from src.integration.auth import get_current_user
@@ -371,25 +373,26 @@ async def chat_endpoint(request: Request, user: dict = Depends(get_current_user)
 
             if language == "pl":
                 sys_prompt = (
-                    "Jesteś wszechstronnym asystentem QA i inżynierem oprogramowania. "
-                    "Obecnie działasz w ogólnym trybie 'Chatbot' (Q&A).\n"
-                    "Jeśli użytkownik dostarczył pliki (w sekcji ZAŁĄCZONE PLIKI) lub kontekst RAG, odnoś się do nich w swoich odpowiedziach i analizuj je zgodnie z poleceniem.\n\n"
-                    "BĄDŹ ŚWIADOMY innych trybów: Jeśli użytkownik poprosi o formalny raport 'Go/No-Go' z testów lub profesjonalne, dokładne tłumaczenie dokumentu "
-                    "(a nie tylko streszczenie), wykonaj polecenie najlepiej jak umiesz, ale na końcu odpowiedzi przypomnij mu, że do takich zadań posiada dedykowane tryby "
-                    "dostępne pod polem wpisywania wiadomości (Tryb Go/No-Go generuje interaktywne wykresy i PDFy, a Tryb Tłumacza oferuje najwyższą jakość przekładu)."
+                    "Jesteś WYŁĄCZNIE asystentem konwersacyjnym (Chatbot). Twoim zadaniem jest prowadzenie ogólnej rozmowy i odpowiadanie na pytania.\n"
+                    "MASZ SUROWY ZAKAZ wykonywania zadań zarezerwowanych dla innych modułów:\n"
+                    "1) NIE WOLNO Ci tłumaczyć tekstów ani dokumentów.\n"
+                    "2) NIE WOLNO Ci generować ustrukturyzowanych raportów Go/No-Go ani decydować o wdrożeniach.\n"
+                    "3) NIE WOLNO Ci pełnić roli zaawansowanego analityka (Remedy).\n"
+                    "Jeśli użytkownik poprosi Cię o wykonanie któregoś z tych zadań, STANOWCZO ODMÓW i poinstruuj go, "
+                    "aby użył odpowiedniego modułu z menu poniżej (Tłumacz, Go/No-Go, Analiza). Nie próbuj nawet częściowo wykonywać tych zadań."
                 )
             else:
                 sys_prompt = (
-                    "You are a versatile QA assistant and software engineer. "
-                    "You are currently operating in the general 'Chatbot' (Q&A) mode.\n"
-                    "If the user provided files (in the ATTACHED FILES section) or RAG context, refer to them in your answers and analyze them according to the prompt.\n\n"
-                    "BE AWARE of other modes: If the user asks for a formal 'Go/No-Go' report from test data or a professional translation of a document, "
-                    "do your best to fulfill the request, but at the end of your message, politely remind them that they have dedicated modes for these tasks "
-                    "below the chat input (Go/No-Go mode generates interactive charts and PDFs, while Translator mode ensures top-quality translation)."
+                    "You are EXCLUSIVELY a conversational assistant (Chatbot). Your task is general conversation and answering questions.\n"
+                    "YOU ARE STRICTLY FORBIDDEN from performing tasks reserved for other modules:\n"
+                    "1) DO NOT translate texts or documents.\n"
+                    "2) DO NOT generate structured Go/No-Go reports or make deployment decisions.\n"
+                    "3) DO NOT act as an advanced data analyst (Remedy).\n"
+                    "If the user asks you to perform any of these tasks, FIRMLY REFUSE and instruct them "
+                    "to use the appropriate module from the menu below (Translator, Go/No-Go, Analysis). Do not even attempt to partially fulfill these requests."
                 )
 
             user_prompt = f"{context_block}\n[ZAPYTANIE UŻYTKOWNIKA]\n{message}"
-
             reply = llm.generate_response(sys_prompt, user_prompt, temperature=0.3)
             return {"message": reply}
 
@@ -465,15 +468,17 @@ async def chat_endpoint(request: Request, user: dict = Depends(get_current_user)
 
             if language == "pl":
                 sys_prompt = (
-                    "Jesteś profesjonalnym, zaawansowanym tłumaczem technicznym. "
-                    "Twoim zadaniem jest precyzyjne tłumaczenie tekstów (domyślnie z polskiego na angielski lub z angielskiego na polski), zachowując odpowiedni ton i słownictwo branżowe. "
-                    "Zwracaj WYŁĄCZNIE przetłumaczony tekst, bez żadnych wstępów, pozdrowień i uwag, chyba że użytkownik jawnie prosi o analizę lub korektę."
+                    "Jesteś WYŁĄCZNIE modułem tłumaczącym. Twoim jedynym zadaniem jest precyzyjny przekład tekstu (domyślnie PL ↔ EN).\n"
+                    "MASZ SUROWY ZAKAZ: 1) Prowadzenia konwersacji. 2) Odpowiadania na zadane pytania (jeśli użytkownik zadaje pytanie, po prostu je przetłumacz!). 3) Analizowania kodu czy danych.\n"
+                    "Cokolwiek użytkownik napisze w polu zapytania, potraktuj to JAKO TEKST DO PRZETŁUMACZENIA (chyba że to jawna instrukcja zmiany stylu tłumaczenia).\n"
+                    "Zwracaj WYŁĄCZNIE przetłumaczony tekst, bez żadnych wstępów, komentarzy i wyjaśnień."
                 )
             else:
                 sys_prompt = (
-                    "You are a professional, advanced technical translator. "
-                    "Your task is to accurately translate texts (default PL ↔ EN) while maintaining the correct tone and industry vocabulary. "
-                    "Return ONLY the translated text, without any introductions or notes, unless the user explicitly asks for analysis or proofreading."
+                    "You are EXCLUSIVELY a translation module. Your only task is precise text translation (default PL ↔ EN).\n"
+                    "YOU ARE STRICTLY FORBIDDEN from: 1) Engaging in conversation. 2) Answering questions (if the user asks a question, just translate the question itself!). 3) Analyzing code or data.\n"
+                    "Whatever the user writes, treat it AS TEXT TO TRANSLATE (unless it is a clear instruction on translation style).\n"
+                    "Return ONLY the translated text, with no introductions, comments, or explanations."
                 )
 
             context_block = ""
@@ -515,6 +520,60 @@ async def chat_endpoint(request: Request, user: dict = Depends(get_current_user)
         raise
     except Exception as e:
         logger.error(f"Unexpected error during chat processing: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+
+# ==========================================
+# CHAT FILES MANAGEMENT ENDPOINTS
+# ==========================================
+@app.get("/api/v2/chat/{chat_id}/files/{filename}")
+async def download_chat_file(
+    chat_id: str, filename: str, user: dict = Depends(get_current_user)
+):
+    """Download a file from the chat uploads directory."""
+    try:
+        chat_uploads_dir = storage.get_chat_uploads_dir(chat_id)
+        file_path = os.path.join(chat_uploads_dir, filename)
+
+        if not os.path.exists(file_path):
+            raise HTTPException(status_code=404, detail="File not found")
+
+        encoded_filename = urllib.parse.quote(filename)
+        return FileResponse(
+            path=file_path,
+            filename=filename,
+            headers={
+                "Content-Disposition": f"attachment; filename*=UTF-8''{encoded_filename}"
+            },
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error downloading file {filename}: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+
+@app.delete("/api/v2/chat/{chat_id}/files/{filename}")
+async def delete_chat_file(
+    chat_id: str, filename: str, user: dict = Depends(get_current_user)
+):
+    """Delete a file from the chat uploads directory."""
+    try:
+        chat_uploads_dir = storage.get_chat_uploads_dir(chat_id)
+        file_path = os.path.join(chat_uploads_dir, filename)
+
+        if not os.path.exists(file_path):
+            raise HTTPException(status_code=404, detail="File not found")
+
+        os.remove(file_path)
+        logger.info(f"File {filename} deleted from chat {chat_id}")
+
+        return {
+            "status": "success",
+            "message": f"File {filename} deleted from chat {chat_id}.",
+        }
+    except Exception as e:
+        logger.error(f"Error deleting file {filename}: {e}")
         raise HTTPException(status_code=500, detail="Internal server error")
 
 

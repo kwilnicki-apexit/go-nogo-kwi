@@ -21,7 +21,7 @@ import {
   stripHtml,
 } from "./lib/utils";
 import type { Project, Chat, ChatMessage, AppMode } from "./types";
-import { CheckCircle, FileText } from "lucide-react";
+import { CheckCircle, Download, FileText, X } from "lucide-react";
 import "./styles/main.css";
 
 function App() {
@@ -316,6 +316,53 @@ function App() {
     );
   }, []);
 
+  // --- MANAGING FILES IN CHAT ---
+  const handleDownloadChatFile = async (filename: string) => {
+    if (!activeChat) return;
+    try {
+      await api.downloadChatFile(activeChat.id, filename);
+    } catch (error) {
+      console.error("Download failed", error);
+      alert(
+        language === "pl"
+          ? "Nie udało się pobrać pliku."
+          : "Failed to download file.",
+      );
+    }
+  };
+
+  const handleDeleteChatFile = async (filename: string) => {
+    if (!activeChat) return;
+    const confirmMsg =
+      language === "pl"
+        ? `Czy na pewno chcesz usunąć plik ${filename} z pamięci tego czatu?`
+        : `Are you sure you want to delete ${filename} from this chat's memory?`;
+
+    if (!window.confirm(confirmMsg)) return;
+
+    try {
+      await api.deleteChatFile(activeChat.id, filename);
+      setChats((prev) =>
+        prev.map((c) => {
+          if (c.id === activeChat.id) {
+            return {
+              ...c,
+              uploadedFiles: c.uploadedFiles?.filter((f) => f !== filename),
+            };
+          }
+          return c;
+        }),
+      );
+    } catch (error) {
+      console.error("Delete failed", error);
+      alert(
+        language === "pl"
+          ? "Nie udało się usunąć pliku."
+          : "Failed to delete file.",
+      );
+    }
+  };
+
   // --- PROJECT-VIEW ACTIONS ---
   const handleProjectNameChange = useCallback(
     (newName: string) => {
@@ -590,15 +637,50 @@ function App() {
                 activeChat.uploadedFiles.length > 0 && (
                   <div className="mt-4 pt-3 border-t border-border flex items-center gap-2 flex-wrap">
                     <span className="text-[10px] uppercase font-bold text-text-tertiary tracking-wider">
-                      Lokalne pliki czatu:
+                      {language === "pl"
+                        ? "Lokalne pliki czatu:"
+                        : "Local chat files:"}
                     </span>
                     {activeChat.uploadedFiles.map((file, idx) => (
                       <div
                         key={idx}
-                        className="flex items-center gap-1.5 bg-surface-secondary border border-border px-2 py-1 rounded-md text-[11px] font-medium text-text-secondary shadow-sm"
+                        className="group flex items-center gap-1 bg-surface-secondary border border-border pl-2 pr-1 py-1 rounded-md text-[11px] font-medium text-text-secondary shadow-sm transition-colors hover:border-border-strong"
                       >
-                        <FileText size={10} className="text-blue-500" />
-                        {file}
+                        <FileText
+                          size={10}
+                          className="text-blue-500 shrink-0"
+                        />
+                        <span
+                          className="truncate max-w-37.5 cursor-default"
+                          title={file}
+                        >
+                          {file}
+                        </span>
+
+                        <div className="flex items-center gap-0.5 ml-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <button
+                            onClick={() => handleDownloadChatFile(file)}
+                            className="p-1 hover:bg-surface-tertiary rounded text-text-tertiary hover:text-blue-600 transition-colors"
+                            title={
+                              language === "pl"
+                                ? "Pobierz plik"
+                                : "Download file"
+                            }
+                          >
+                            <Download size={10} />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteChatFile(file)}
+                            className="p-1 hover:bg-surface-tertiary rounded text-text-tertiary hover:text-red-500 transition-colors"
+                            title={
+                              language === "pl"
+                                ? "Usuń plik z czatu"
+                                : "Delete file"
+                            }
+                          >
+                            <X size={10} />
+                          </button>
+                        </div>
                       </div>
                     ))}
                   </div>
