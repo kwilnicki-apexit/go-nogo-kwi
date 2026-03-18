@@ -135,7 +135,7 @@ export const ProjectView = ({
       className="flex-1 overflow-y-auto custom-scrollbar"
       style={{ backgroundColor: "var(--color-bg)" }}
     >
-      <div style={{ maxWidth: 960, margin: "0 auto", padding: "48px 32px" }}>
+      <div style={{ maxWidth: 1200, margin: "0 auto", padding: "48px 32px" }}>
         {/* ── Title row ── */}
         <div style={{ marginBottom: 32 }}>
           <div

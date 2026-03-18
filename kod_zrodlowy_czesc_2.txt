@@ -1,6 +1,297 @@
 
 
 ============================================================
+--- PLIK: .\frontend\src\components\CanvasPanel.tsx ---
+============================================================
+
+// ============================================================
+// FILE: .\frontend\src\components\CanvasPanel.tsx
+// ============================================================
+
+import { useRef } from "react";
+import ReactQuill from "react-quill-new";
+import "react-quill-new/dist/quill.snow.css";
+import { X, Download, FileType2, FileCode } from "lucide-react";
+import type { Labels } from "../types";
+
+interface CanvasPanelProps {
+  isOpen: boolean;
+  content: string;
+  onChange: (content: string) => void;
+  onClose: () => void;
+  onExport: (format: "pdf" | "docx" | "md") => void;
+  exportMessage: string;
+  labels: Labels;
+}
+
+const QUILL_MODULES = {
+  toolbar: [
+    [{ header: [1, 2, 3, false] }],
+    ["bold", "italic", "underline", "strike"],
+    [{ list: "ordered" }, { list: "bullet" }],
+    [{ color: [] }, { background: [] }],
+    ["blockquote", "code-block"],
+    ["clean"],
+  ],
+};
+
+const QUILL_FORMATS = [
+  "header",
+  "bold",
+  "italic",
+  "underline",
+  "strike",
+  "list",
+  "color",
+  "background",
+  "blockquote",
+  "code-block",
+];
+
+const exportBtnStyle = (): React.CSSProperties => ({
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  gap: 8,
+  padding: "9px 18px",
+  borderRadius: 8,
+  border: "1px solid var(--color-border)",
+  backgroundColor: "var(--color-surface)",
+  fontSize: 13,
+  fontWeight: 600,
+  color: "var(--color-text-secondary)",
+  cursor: "pointer",
+  transition: "all 0.15s",
+});
+
+/**
+ * Determines if an export status message indicates an error.
+ * Checks both Polish and English error keywords.
+ */
+function isErrorMessage(msg: string): boolean {
+  const lower = msg.toLowerCase();
+  return lower.includes("błąd") || lower.includes("error");
+}
+
+export const CanvasPanel = ({
+  isOpen,
+  content,
+  onChange,
+  onClose,
+  onExport,
+  exportMessage,
+  labels,
+}: CanvasPanelProps) => {
+  const quillRef = useRef<ReactQuill>(null);
+
+  if (!isOpen) return null;
+
+  const isError = isErrorMessage(exportMessage);
+
+  return (
+    <div
+      className="animate-slide-in-right"
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        height: "100%",
+        width: "100%",
+        borderLeft: "1px solid var(--color-border)",
+        backgroundColor: "var(--color-surface)",
+      }}
+    >
+      {/* Toolbar */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          borderBottom: "1px solid var(--color-border)",
+          backgroundColor: "var(--color-surface-secondary)",
+          padding: "16px 24px",
+          flexShrink: 0,
+        }}
+      >
+        <h3
+          style={{
+            fontSize: 15,
+            fontWeight: 700,
+            color: "var(--color-text-primary)",
+            margin: 0,
+          }}
+        >
+          {labels.canvasTitle}
+        </h3>
+
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <button
+            onClick={() => onExport("pdf")}
+            style={exportBtnStyle()}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.borderColor = "#fca5a5";
+              e.currentTarget.style.color = "#e3000f";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.borderColor = "var(--color-border)";
+              e.currentTarget.style.color = "var(--color-text-secondary)";
+            }}
+          >
+            <Download size={14} /> {labels.downloadPdf}
+          </button>
+          <button
+            onClick={() => onExport("docx")}
+            style={exportBtnStyle()}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.borderColor = "#93c5fd";
+              e.currentTarget.style.color = "#3b82f6";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.borderColor = "var(--color-border)";
+              e.currentTarget.style.color = "var(--color-text-secondary)";
+            }}
+          >
+            <FileType2 size={14} /> {labels.downloadDocx}
+          </button>
+          <button
+            onClick={() => onExport("md")}
+            style={exportBtnStyle()}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.borderColor = "#9ca3af";
+              e.currentTarget.style.color = "var(--color-text-primary)";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.borderColor = "var(--color-border)";
+              e.currentTarget.style.color = "var(--color-text-secondary)";
+            }}
+          >
+            <FileCode size={14} /> {labels.downloadMd}
+          </button>
+
+          <div
+            style={{
+              width: 1,
+              height: 24,
+              backgroundColor: "var(--color-border)",
+              margin: "0 8px",
+            }}
+          />
+
+          <button
+            onClick={onClose}
+            style={{
+              padding: 10,
+              borderRadius: 8,
+              color: "var(--color-text-tertiary)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              transition: "all 0.15s",
+            }}
+            title={labels.closeCanvas}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor =
+                "var(--color-surface-tertiary)";
+              e.currentTarget.style.color = "var(--color-text-secondary)";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = "transparent";
+              e.currentTarget.style.color = "var(--color-text-tertiary)";
+            }}
+          >
+            <X size={20} />
+          </button>
+        </div>
+      </div>
+
+      {/* Editor */}
+      <div
+        className="canvas-editor custom-scrollbar"
+        style={{ flex: 1, overflowY: "auto" }}
+      >
+        <ReactQuill
+          ref={quillRef}
+          theme="snow"
+          value={content}
+          onChange={onChange}
+          modules={QUILL_MODULES}
+          formats={QUILL_FORMATS}
+        />
+      </div>
+
+      {/* Status message */}
+      {exportMessage && (
+        <div
+          style={{
+            borderTop: "1px solid",
+            padding: "12px 24px",
+            textAlign: "center",
+            fontSize: 13,
+            fontWeight: 500,
+            borderColor: isError ? "#fca5a5" : "#86efac",
+            backgroundColor: isError ? "#fef2f2" : "#f0fdf4",
+            color: isError ? "#dc2626" : "#16a34a",
+          }}
+        >
+          {exportMessage}
+        </div>
+      )}
+    </div>
+  );
+};
+
+
+============================================================
+--- PLIK: .\frontend\src\components\SidebarToggle.tsx ---
+============================================================
+
+// frontend/src/components/SidebarToggle.tsx
+import { ChevronLeft, ChevronRight } from 'lucide-react';
+
+interface SidebarToggleProps {
+  isOpen: boolean;
+  onToggle: () => void;
+}
+
+export const SidebarToggle = ({ isOpen, onToggle }: SidebarToggleProps) => {
+  return (
+    <button
+      onClick={onToggle}
+      style={{
+        position: 'absolute',
+        left: 0,
+        top: '50%',
+        transform: 'translateY(-50%)',
+        zIndex: 50,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        width: '24px',
+        height: '72px',
+        borderRadius: '0 6px 6px 0',
+        border: '1px solid var(--color-border)',
+        borderLeft: 'none',
+        backgroundColor: 'var(--color-surface)',
+        color: 'var(--color-text-tertiary)',
+        boxShadow: '2px 0 8px rgba(0,0,0,0.06)',
+        cursor: 'pointer',
+        transition: 'background-color 0.15s, color 0.15s',
+      }}
+      onMouseEnter={e => {
+        e.currentTarget.style.backgroundColor = 'var(--color-surface-tertiary)';
+        e.currentTarget.style.color = 'var(--color-text-secondary)';
+      }}
+      onMouseLeave={e => {
+        e.currentTarget.style.backgroundColor = 'var(--color-surface)';
+        e.currentTarget.style.color = 'var(--color-text-tertiary)';
+      }}
+      aria-label={isOpen ? 'Close sidebar' : 'Open sidebar'}
+    >
+      {isOpen ? <ChevronLeft size={14} /> : <ChevronRight size={14} />}
+    </button>
+  );
+};
+
+============================================================
 --- PLIK: .\frontend\src\components\SettingsPanel.tsx ---
 ============================================================
 
@@ -682,7 +973,7 @@ export const ProjectView = ({
       className="flex-1 overflow-y-auto custom-scrollbar"
       style={{ backgroundColor: "var(--color-bg)" }}
     >
-      <div style={{ maxWidth: 960, margin: "0 auto", padding: "48px 32px" }}>
+      <div style={{ maxWidth: 1200, margin: "0 auto", padding: "48px 32px" }}>
         {/* ── Title row ── */}
         <div style={{ marginBottom: 32 }}>
           <div
@@ -1392,11 +1683,11 @@ export const labelsPl: Labels = {
   cancel: "Anuluj",
   save: "Zapisz",
   rename: "Zmień nazwę",
-  projectSettings: "Ustawienia Projektu",
+  projectSettings: "Ustawienia projektu",
   projectSettingsSub:
     "Zarządzaj kontekstem i rozpocznij analizę w ramach tego projektu.",
-  projectId: "ID Projektu",
-  projectName: "Nazwa Projektu",
+  projectId: "ID projektu",
+  projectName: "Nazwa projektu",
   startNewRagChat: "Rozpocznij nowy czat z RAG",
   startNewRagChatSub:
     "Ten czat automatycznie otrzyma dostęp do instrukcji i plików z prawej kolumny.",
@@ -1405,12 +1696,12 @@ export const labelsPl: Labels = {
   saved: "Zapisano",
   saveBtn: "Zapisz",
   uploadingAndVectorizing: "Wgrywanie i wektoryzacja...",
-  projectKnowledgeBase: "Baza Wiedzy Projektu",
+  projectKnowledgeBase: "Baza wiedzy projektu",
   projectKnowledgeBaseSub: "Przeciągnij i upuść pliki (PDF, DOCX, TXT)",
   uploadBtn: "Wgraj",
   noUploadedFiles: "Brak wgranych plików wiedzy.",
   projectContextActive: "Kontekst projektu aktywny",
-  newConversation: "Nowa Konwersacja",
+  newConversation: "Nowa konwersacja",
   uploadedNFiles: "Wgrano plików:",
   uploadError: "Błąd podczas wgrywania plików.",
   userLabel: "Użytkownik",

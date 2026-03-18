@@ -47,11 +47,13 @@ from fastapi import FastAPI, HTTPException, Request, File, UploadFile, Depends
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from typing import List
 
 import uvicorn
 import uuid
 import os
+import urllib.parse
 
 from src.integration.llm_client import LLMClient
 from src.integration.auth import get_current_user
@@ -412,25 +414,26 @@ async def chat_endpoint(request: Request, user: dict = Depends(get_current_user)
 
             if language == "pl":
                 sys_prompt = (
-                    "Jesteś wszechstronnym asystentem QA i inżynierem oprogramowania. "
-                    "Obecnie działasz w ogólnym trybie 'Chatbot' (Q&A).\n"
-                    "Jeśli użytkownik dostarczył pliki (w sekcji ZAŁĄCZONE PLIKI) lub kontekst RAG, odnoś się do nich w swoich odpowiedziach i analizuj je zgodnie z poleceniem.\n\n"
-                    "BĄDŹ ŚWIADOMY innych trybów: Jeśli użytkownik poprosi o formalny raport 'Go/No-Go' z testów lub profesjonalne, dokładne tłumaczenie dokumentu "
-                    "(a nie tylko streszczenie), wykonaj polecenie najlepiej jak umiesz, ale na końcu odpowiedzi przypomnij mu, że do takich zadań posiada dedykowane tryby "
-                    "dostępne pod polem wpisywania wiadomości (Tryb Go/No-Go generuje interaktywne wykresy i PDFy, a Tryb Tłumacza oferuje najwyższą jakość przekładu)."
+                    "Jesteś WYŁĄCZNIE asystentem konwersacyjnym (Chatbot). Twoim zadaniem jest prowadzenie ogólnej rozmowy i odpowiadanie na pytania.\n"
+                    "MASZ SUROWY ZAKAZ wykonywania zadań zarezerwowanych dla innych modułów:\n"
+                    "1) NIE WOLNO Ci tłumaczyć tekstów ani dokumentów.\n"
+                    "2) NIE WOLNO Ci generować ustrukturyzowanych raportów Go/No-Go ani decydować o wdrożeniach.\n"
+                    "3) NIE WOLNO Ci pełnić roli zaawansowanego analityka (Remedy).\n"
+                    "Jeśli użytkownik poprosi Cię o wykonanie któregoś z tych zadań, STANOWCZO ODMÓW i poinstruuj go, "
+                    "aby użył odpowiedniego modułu z menu poniżej (Tłumacz, Go/No-Go, Analiza). Nie próbuj nawet częściowo wykonywać tych zadań."
                 )
             else:
                 sys_prompt = (
-                    "You are a versatile QA assistant and software engineer. "
-                    "You are currently operating in the general 'Chatbot' (Q&A) mode.\n"
-                    "If the user provided files (in the ATTACHED FILES section) or RAG context, refer to them in your answers and analyze them according to the prompt.\n\n"
-                    "BE AWARE of other modes: If the user asks for a formal 'Go/No-Go' report from test data or a professional translation of a document, "
-                    "do your best to fulfill the request, but at the end of your message, politely remind them that they have dedicated modes for these tasks "
-                    "below the chat input (Go/No-Go mode generates interactive charts and PDFs, while Translator mode ensures top-quality translation)."
+                    "You are EXCLUSIVELY a conversational assistant (Chatbot). Your task is general conversation and answering questions.\n"
+                    "YOU ARE STRICTLY FORBIDDEN from performing tasks reserved for other modules:\n"
+                    "1) DO NOT translate texts or documents.\n"
+                    "2) DO NOT generate structured Go/No-Go reports or make deployment decisions.\n"
+                    "3) DO NOT act as an advanced data analyst (Remedy).\n"
+                    "If the user asks you to perform any of these tasks, FIRMLY REFUSE and instruct them "
+                    "to use the appropriate module from the menu below (Translator, Go/No-Go, Analysis). Do not even attempt to partially fulfill these requests."
                 )
 
             user_prompt = f"{context_block}\n[ZAPYTANIE UŻYTKOWNIKA]\n{message}"
-
             reply = llm.generate_response(sys_prompt, user_prompt, temperature=0.3)
             return {"message": reply}
 
@@ -506,15 +509,17 @@ async def chat_endpoint(request: Request, user: dict = Depends(get_current_user)
 
             if language == "pl":
                 sys_prompt = (
-                    "Jesteś profesjonalnym, zaawansowanym tłumaczem technicznym. "
-                    "Twoim zadaniem jest precyzyjne tłumaczenie tekstów (domyślnie z polskiego na angielski lub z angielskiego na polski), zachowując odpowiedni ton i słownictwo branżowe. "
-                    "Zwracaj WYŁĄCZNIE przetłumaczony tekst, bez żadnych wstępów, pozdrowień i uwag, chyba że użytkownik jawnie prosi o analizę lub korektę."
+                    "Jesteś WYŁĄCZNIE modułem tłumaczącym. Twoim jedynym zadaniem jest precyzyjny przekład tekstu (domyślnie PL ↔ EN).\n"
+                    "MASZ SUROWY ZAKAZ: 1) Prowadzenia konwersacji. 2) Odpowiadania na zadane pytania (jeśli użytkownik zadaje pytanie, po prostu je przetłumacz!). 3) Analizowania kodu czy danych.\n"
+                    "Cokolwiek użytkownik napisze w polu zapytania, potraktuj to JAKO TEKST DO PRZETŁUMACZENIA (chyba że to jawna instrukcja zmiany stylu tłumaczenia).\n"
+                    "Zwracaj WYŁĄCZNIE przetłumaczony tekst, bez żadnych wstępów, komentarzy i wyjaśnień."
                 )
             else:
                 sys_prompt = (
-                    "You are a professional, advanced technical translator. "
-                    "Your task is to accurately translate texts (default PL ↔ EN) while maintaining the correct tone and industry vocabulary. "
-                    "Return ONLY the translated text, without any introductions or notes, unless the user explicitly asks for analysis or proofreading."
+                    "You are EXCLUSIVELY a translation module. Your only task is precise text translation (default PL ↔ EN).\n"
+                    "YOU ARE STRICTLY FORBIDDEN from: 1) Engaging in conversation. 2) Answering questions (if the user asks a question, just translate the question itself!). 3) Analyzing code or data.\n"
+                    "Whatever the user writes, treat it AS TEXT TO TRANSLATE (unless it is a clear instruction on translation style).\n"
+                    "Return ONLY the translated text, with no introductions, comments, or explanations."
                 )
 
             context_block = ""
@@ -556,6 +561,63 @@ async def chat_endpoint(request: Request, user: dict = Depends(get_current_user)
         raise
     except Exception as e:
         logger.error(f"Unexpected error during chat processing: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+
+# ==========================================
+# CHAT FILES MANAGEMENT ENDPOINTS
+# ==========================================
+@app.get("/api/v2/chat/{chat_id}/files/{filename}")
+async def download_chat_file(
+    chat_id: str, filename: str, user: dict = Depends(get_current_user)
+):
+    """Download a file from the chat uploads directory."""
+    try:
+        chat_uploads_dir = storage.get_chat_uploads_dir(chat_id)
+        file_path = os.path.join(chat_uploads_dir, filename)
+
+        if not os.path.exists(file_path):
+            raise HTTPException(status_code=404, detail="File not found")
+
+        encoded_filename = urllib.parse.quote(filename)
+        return FileResponse(
+            path=file_path,
+            filename=filename,
+            headers={
+                "Content-Disposition": f"attachment; filename*=UTF-8''{encoded_filename}"
+            },
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error downloading file {filename}: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+
+@app.delete("/api/v2/chat/{chat_id}/files/{filename}")
+async def delete_chat_file(
+    chat_id: str, filename: str, user: dict = Depends(get_current_user)
+):
+    """Delete a file from the chat uploads directory."""
+    try:
+        chat_uploads_dir = storage.get_chat_uploads_dir(chat_id)
+        file_path = os.path.join(chat_uploads_dir, filename)
+
+        if os.path.exists(file_path):
+            os.remove(file_path)
+            logger.info(f"File {filename} deleted from disk for chat {chat_id}")
+
+        try:
+            rag.delete_document(filename=filename, entity_id=chat_id)
+        except Exception as e:
+            logger.warning(f"Failed to delete {filename} from RAG vector store: {e}")
+
+        return {
+            "status": "success",
+            "message": f"Plik {filename} został pomyślnie usunięty z dysku i bazy wektorowej.",
+        }
+    except Exception as e:
+        logger.error(f"Error deleting file {filename}: {e}")
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
@@ -2269,6 +2331,28 @@ class RAGEngine:
                 )
         return results
 
+    def delete_document(self, filename: str, entity_id: str):
+        """
+        Removes vectors associated with a specific file from the entity's collection.
+        """
+        if not filename or not entity_id:
+            return
+
+        safe_collection_name = entity_id.replace("-", "_")
+        try:
+            collection = self._get_collection(safe_collection_name)
+
+            collection.delete(
+                where={"$and": [{"source": filename}, {"entity_id": entity_id}]}
+            )
+            self.logger.info(
+                f"Deleted vectors for file {filename} from collection {safe_collection_name}"
+            )
+        except Exception as e:
+            self.logger.warning(
+                f"Error while deleting document {filename} from collection {safe_collection_name}: {e}"
+            )
+
     def ingest_document(self, text: str, filename: str, entity_id: str):
         """
         Vectorizes and indexes text into a collection based on entity_id.
@@ -2652,7 +2736,7 @@ import {
   stripHtml,
 } from "./lib/utils";
 import type { Project, Chat, ChatMessage, AppMode } from "./types";
-import { CheckCircle, FileText } from "lucide-react";
+import { CheckCircle, Download, FileText, X } from "lucide-react";
 import "./styles/main.css";
 
 function App() {
@@ -2947,6 +3031,53 @@ function App() {
     );
   }, []);
 
+  // --- MANAGING FILES IN CHAT ---
+  const handleDownloadChatFile = async (filename: string) => {
+    if (!activeChat) return;
+    try {
+      await api.downloadChatFile(activeChat.id, filename);
+    } catch (error) {
+      console.error("Download failed", error);
+      alert(
+        language === "pl"
+          ? "Nie udało się pobrać pliku."
+          : "Failed to download file.",
+      );
+    }
+  };
+
+  const handleDeleteChatFile = async (filename: string) => {
+    if (!activeChat) return;
+    const confirmMsg =
+      language === "pl"
+        ? `Czy na pewno chcesz usunąć plik ${filename} z pamięci tego czatu?`
+        : `Are you sure you want to delete ${filename} from this chat's memory?`;
+
+    if (!window.confirm(confirmMsg)) return;
+
+    try {
+      await api.deleteChatFile(activeChat.id, filename);
+      setChats((prev) =>
+        prev.map((c) => {
+          if (c.id === activeChat.id) {
+            return {
+              ...c,
+              uploadedFiles: c.uploadedFiles?.filter((f) => f !== filename),
+            };
+          }
+          return c;
+        }),
+      );
+    } catch (error) {
+      console.error("Delete failed", error);
+      alert(
+        language === "pl"
+          ? "Nie udało się usunąć pliku."
+          : "Failed to delete file.",
+      );
+    }
+  };
+
   // --- PROJECT-VIEW ACTIONS ---
   const handleProjectNameChange = useCallback(
     (newName: string) => {
@@ -3221,15 +3352,50 @@ function App() {
                 activeChat.uploadedFiles.length > 0 && (
                   <div className="mt-4 pt-3 border-t border-border flex items-center gap-2 flex-wrap">
                     <span className="text-[10px] uppercase font-bold text-text-tertiary tracking-wider">
-                      Lokalne pliki czatu:
+                      {language === "pl"
+                        ? "Lokalne pliki czatu:"
+                        : "Local chat files:"}
                     </span>
                     {activeChat.uploadedFiles.map((file, idx) => (
                       <div
                         key={idx}
-                        className="flex items-center gap-1.5 bg-surface-secondary border border-border px-2 py-1 rounded-md text-[11px] font-medium text-text-secondary shadow-sm"
+                        className="group flex items-center gap-1 bg-surface-secondary border border-border pl-2 pr-1 py-1 rounded-md text-[11px] font-medium text-text-secondary shadow-sm transition-colors hover:border-border-strong"
                       >
-                        <FileText size={10} className="text-blue-500" />
-                        {file}
+                        <FileText
+                          size={10}
+                          className="text-blue-500 shrink-0"
+                        />
+                        <span
+                          className="truncate max-w-37.5 cursor-default"
+                          title={file}
+                        >
+                          {file}
+                        </span>
+
+                        <div className="flex items-center gap-0.5 ml-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <button
+                            onClick={() => handleDownloadChatFile(file)}
+                            className="p-1 hover:bg-surface-tertiary rounded text-text-tertiary hover:text-blue-600 transition-colors"
+                            title={
+                              language === "pl"
+                                ? "Pobierz plik"
+                                : "Download file"
+                            }
+                          >
+                            <Download size={10} />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteChatFile(file)}
+                            className="p-1 hover:bg-surface-tertiary rounded text-text-tertiary hover:text-red-500 transition-colors"
+                            title={
+                              language === "pl"
+                                ? "Usuń plik z czatu"
+                                : "Delete file"
+                            }
+                          >
+                            <X size={10} />
+                          </button>
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -3424,6 +3590,35 @@ export const api = {
       method: "POST",
       body: JSON.stringify(payload),
     });
+  },
+
+  /**
+   * Deletes a file from a chat session.
+   */
+  async deleteChatFile(chatId: string, filename: string): Promise<{ status: string; message: string }> {
+    return request(`chat/${chatId}/files/${encodeURIComponent(filename)}`, {
+      method: "DELETE",
+    });
+  },
+
+  /**
+   * Downloads a file from a chat session.
+   */
+  async downloadChatFile(chatId: string, filename: string): Promise<void> {
+    const url = `${BASE_URL}/chat/${chatId}/files/${encodeURIComponent(filename)}`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error("Failed to download file");
+    
+    const blob = await res.blob();
+    const blobUrl = window.URL.createObjectURL(blob);
+    
+    const a = document.createElement('a');
+    a.href = blobUrl;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(blobUrl);
   },
 };
 
@@ -3857,9 +4052,9 @@ export const Sidebar = ({
 // FILE: .\frontend\src\components\ChatFeed.tsx
 // ============================================================
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
-import { Bot, FileText } from "lucide-react";
+import { Bot, Check, Copy, FileText } from "lucide-react";
 import type { ChatMessage, Labels } from "../types";
 import { formatTime } from "../lib/utils";
 
@@ -3869,6 +4064,109 @@ interface ChatFeedProps {
   onOpenCanvas: () => void;
   labels: Labels;
 }
+
+interface CodeBlockProps extends React.HTMLAttributes<HTMLElement> {
+  inline?: boolean;
+  className?: string;
+  children?: React.ReactNode;
+}
+
+const CodeBlock = ({
+  inline,
+  className,
+  children,
+  ...props
+}: CodeBlockProps) => {
+  const match = /language-(\w+)/.exec(className || "");
+  const lang = match ? match[1] : "";
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(String(children).replace(/\n$/, ""));
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  if (!inline && match) {
+    return (
+      <div
+        style={{
+          margin: "16px 0",
+          borderRadius: "8px",
+          overflow: "hidden",
+          border: "1px solid var(--color-border)",
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            backgroundColor: "var(--color-surface-tertiary)",
+            padding: "6px 16px",
+          }}
+        >
+          <span
+            style={{
+              fontSize: "11px",
+              fontWeight: 700,
+              textTransform: "uppercase",
+              color: "var(--color-text-tertiary)",
+            }}
+          >
+            {lang}
+          </span>
+          <button
+            onClick={handleCopy}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "6px",
+              fontSize: "11px",
+              fontWeight: 600,
+              color: "var(--color-text-secondary)",
+              cursor: "pointer",
+              border: "none",
+              background: "none",
+            }}
+          >
+            {copied ? <Check size={14} color="#10b981" /> : <Copy size={14} />}
+            {copied ? "Skopiowano" : "Kopiuj"}
+          </button>
+        </div>
+        <pre
+          style={{
+            margin: 0,
+            padding: "16px",
+            backgroundColor: "var(--color-surface-secondary)",
+            overflowX: "auto",
+            fontSize: "13px",
+            color: "var(--color-text-primary)",
+          }}
+        >
+          <code className={className} {...props}>
+            {children}
+          </code>
+        </pre>
+      </div>
+    );
+  }
+  return (
+    <code
+      style={{
+        backgroundColor: "var(--color-surface-tertiary)",
+        padding: "2px 6px",
+        borderRadius: "4px",
+        fontSize: "13px",
+        fontFamily: "monospace",
+        color: "var(--color-orlen)",
+      }}
+      {...props}
+    >
+      {children}
+    </code>
+  );
+};
 
 export const ChatFeed = ({
   messages,
@@ -4160,7 +4458,9 @@ const AssistantBubble = ({
           className="chat-markdown"
           style={{ fontSize: 15, color: "var(--color-text-primary)" }}
         >
-          <ReactMarkdown>{message.content}</ReactMarkdown>
+          <ReactMarkdown components={{ code: CodeBlock }}>
+            {message.content}
+          </ReactMarkdown>
         </div>
       </div>
 
@@ -4553,297 +4853,5 @@ export const InputArea = ({
         </div>
       </div>
     </div>
-  );
-};
-
-
-============================================================
---- PLIK: .\frontend\src\components\CanvasPanel.tsx ---
-============================================================
-
-// ============================================================
-// FILE: .\frontend\src\components\CanvasPanel.tsx
-// ============================================================
-
-import { useRef } from "react";
-import ReactQuill from "react-quill-new";
-import "react-quill-new/dist/quill.snow.css";
-import { X, Download, FileType2, FileCode } from "lucide-react";
-import type { Labels } from "../types";
-
-interface CanvasPanelProps {
-  isOpen: boolean;
-  content: string;
-  onChange: (content: string) => void;
-  onClose: () => void;
-  onExport: (format: "pdf" | "docx" | "md") => void;
-  exportMessage: string;
-  labels: Labels;
-}
-
-const QUILL_MODULES = {
-  toolbar: [
-    [{ header: [1, 2, 3, false] }],
-    ["bold", "italic", "underline", "strike"],
-    [{ list: "ordered" }, { list: "bullet" }],
-    [{ color: [] }, { background: [] }],
-    ["blockquote", "code-block"],
-    ["clean"],
-  ],
-};
-
-const QUILL_FORMATS = [
-  "header",
-  "bold",
-  "italic",
-  "underline",
-  "strike",
-  "list",
-  "color",
-  "background",
-  "blockquote",
-  "code-block",
-];
-
-const exportBtnStyle = (): React.CSSProperties => ({
-  display: "inline-flex",
-  alignItems: "center",
-  justifyContent: "center",
-  gap: 8,
-  padding: "9px 18px",
-  borderRadius: 8,
-  border: "1px solid var(--color-border)",
-  backgroundColor: "var(--color-surface)",
-  fontSize: 13,
-  fontWeight: 600,
-  color: "var(--color-text-secondary)",
-  cursor: "pointer",
-  transition: "all 0.15s",
-});
-
-/**
- * Determines if an export status message indicates an error.
- * Checks both Polish and English error keywords.
- */
-function isErrorMessage(msg: string): boolean {
-  const lower = msg.toLowerCase();
-  return lower.includes("błąd") || lower.includes("error");
-}
-
-export const CanvasPanel = ({
-  isOpen,
-  content,
-  onChange,
-  onClose,
-  onExport,
-  exportMessage,
-  labels,
-}: CanvasPanelProps) => {
-  const quillRef = useRef<ReactQuill>(null);
-
-  if (!isOpen) return null;
-
-  const isError = isErrorMessage(exportMessage);
-
-  return (
-    <div
-      className="animate-slide-in-right"
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        height: "100%",
-        width: "100%",
-        borderLeft: "1px solid var(--color-border)",
-        backgroundColor: "var(--color-surface)",
-      }}
-    >
-      {/* Toolbar */}
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          borderBottom: "1px solid var(--color-border)",
-          backgroundColor: "var(--color-surface-secondary)",
-          padding: "16px 24px",
-          flexShrink: 0,
-        }}
-      >
-        <h3
-          style={{
-            fontSize: 15,
-            fontWeight: 700,
-            color: "var(--color-text-primary)",
-            margin: 0,
-          }}
-        >
-          {labels.canvasTitle}
-        </h3>
-
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <button
-            onClick={() => onExport("pdf")}
-            style={exportBtnStyle()}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.borderColor = "#fca5a5";
-              e.currentTarget.style.color = "#e3000f";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.borderColor = "var(--color-border)";
-              e.currentTarget.style.color = "var(--color-text-secondary)";
-            }}
-          >
-            <Download size={14} /> {labels.downloadPdf}
-          </button>
-          <button
-            onClick={() => onExport("docx")}
-            style={exportBtnStyle()}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.borderColor = "#93c5fd";
-              e.currentTarget.style.color = "#3b82f6";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.borderColor = "var(--color-border)";
-              e.currentTarget.style.color = "var(--color-text-secondary)";
-            }}
-          >
-            <FileType2 size={14} /> {labels.downloadDocx}
-          </button>
-          <button
-            onClick={() => onExport("md")}
-            style={exportBtnStyle()}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.borderColor = "#9ca3af";
-              e.currentTarget.style.color = "var(--color-text-primary)";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.borderColor = "var(--color-border)";
-              e.currentTarget.style.color = "var(--color-text-secondary)";
-            }}
-          >
-            <FileCode size={14} /> {labels.downloadMd}
-          </button>
-
-          <div
-            style={{
-              width: 1,
-              height: 24,
-              backgroundColor: "var(--color-border)",
-              margin: "0 8px",
-            }}
-          />
-
-          <button
-            onClick={onClose}
-            style={{
-              padding: 10,
-              borderRadius: 8,
-              color: "var(--color-text-tertiary)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              transition: "all 0.15s",
-            }}
-            title={labels.closeCanvas}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor =
-                "var(--color-surface-tertiary)";
-              e.currentTarget.style.color = "var(--color-text-secondary)";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = "transparent";
-              e.currentTarget.style.color = "var(--color-text-tertiary)";
-            }}
-          >
-            <X size={20} />
-          </button>
-        </div>
-      </div>
-
-      {/* Editor */}
-      <div
-        className="canvas-editor custom-scrollbar"
-        style={{ flex: 1, overflowY: "auto" }}
-      >
-        <ReactQuill
-          ref={quillRef}
-          theme="snow"
-          value={content}
-          onChange={onChange}
-          modules={QUILL_MODULES}
-          formats={QUILL_FORMATS}
-        />
-      </div>
-
-      {/* Status message */}
-      {exportMessage && (
-        <div
-          style={{
-            borderTop: "1px solid",
-            padding: "12px 24px",
-            textAlign: "center",
-            fontSize: 13,
-            fontWeight: 500,
-            borderColor: isError ? "#fca5a5" : "#86efac",
-            backgroundColor: isError ? "#fef2f2" : "#f0fdf4",
-            color: isError ? "#dc2626" : "#16a34a",
-          }}
-        >
-          {exportMessage}
-        </div>
-      )}
-    </div>
-  );
-};
-
-
-============================================================
---- PLIK: .\frontend\src\components\SidebarToggle.tsx ---
-============================================================
-
-// frontend/src/components/SidebarToggle.tsx
-import { ChevronLeft, ChevronRight } from 'lucide-react';
-
-interface SidebarToggleProps {
-  isOpen: boolean;
-  onToggle: () => void;
-}
-
-export const SidebarToggle = ({ isOpen, onToggle }: SidebarToggleProps) => {
-  return (
-    <button
-      onClick={onToggle}
-      style={{
-        position: 'absolute',
-        left: 0,
-        top: '50%',
-        transform: 'translateY(-50%)',
-        zIndex: 50,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        width: '24px',
-        height: '72px',
-        borderRadius: '0 6px 6px 0',
-        border: '1px solid var(--color-border)',
-        borderLeft: 'none',
-        backgroundColor: 'var(--color-surface)',
-        color: 'var(--color-text-tertiary)',
-        boxShadow: '2px 0 8px rgba(0,0,0,0.06)',
-        cursor: 'pointer',
-        transition: 'background-color 0.15s, color 0.15s',
-      }}
-      onMouseEnter={e => {
-        e.currentTarget.style.backgroundColor = 'var(--color-surface-tertiary)';
-        e.currentTarget.style.color = 'var(--color-text-secondary)';
-      }}
-      onMouseLeave={e => {
-        e.currentTarget.style.backgroundColor = 'var(--color-surface)';
-        e.currentTarget.style.color = 'var(--color-text-tertiary)';
-      }}
-      aria-label={isOpen ? 'Close sidebar' : 'Open sidebar'}
-    >
-      {isOpen ? <ChevronLeft size={14} /> : <ChevronRight size={14} />}
-    </button>
   );
 };
