@@ -59,14 +59,6 @@ const modes: {
     activeBg: "rgba(22,163,74,0.06)",
     activeRing: "rgba(22,163,74,0.35)",
   },
-  {
-    key: "remedy",
-    icon: <ExternalLink size={15} />,
-    labelKey: "modeRemedy",
-    color: "#8b5cf6",
-    activeBg: "rgba(139,92,246,0.06)",
-    activeRing: "rgba(139,92,246,0.35)",
-  },
 ];
 
 const getFileIcon = (name: string) => {
