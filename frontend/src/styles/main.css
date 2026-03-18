@@ -72,52 +72,52 @@
 
 /* Dark theme declarations */
 .dark {
-  --color-bg: #09090b;
-  --color-surface: #18181b;
-  --color-surface-secondary: #111827;
-  --color-surface-tertiary: #27272a;
+  --color-bg: #0a0a0a;
+  --color-surface: #171717;
+  --color-surface-secondary: #262626;
+  --color-surface-tertiary: #404040;
 
-  --color-border: #27272a;
-  --color-border-strong: #3f3f46;
+  --color-border: #262626;
+  --color-border-strong: #404040;
 
-  --color-text-primary: #f8fafc;
-  --color-text-secondary: #cbd5e1;
-  --color-text-tertiary: #94a3b8;
-  --color-text-muted: #64748b;
+  --color-text-primary: #f5f5f5;
+  --color-text-secondary: #d4d4d4;
+  --color-text-tertiary: #a3a3a3;
+  --color-text-muted: #737373;
 
   /* Sidebar dark */
-  --sidebar-bg: #111827;
-  --sidebar-header-bg: #111827;
+  --sidebar-bg: #121212;
+  --sidebar-header-bg: #121212;
   --sidebar-item-hover: rgba(255, 255, 255, 0.05);
   --sidebar-item-active: rgba(227, 0, 15, 0.1);
   --sidebar-item-active-border: rgba(227, 0, 15, 0.8);
-  --sidebar-new-btn-bg: #1f2937;
-  --sidebar-new-btn-hover: #374151;
-  --sidebar-search-bg: #1f2937;
+  --sidebar-new-btn-bg: #1f1f1f;
+  --sidebar-new-btn-hover: #262626;
+  --sidebar-search-bg: #1f1f1f;
   --sidebar-search-focus-ring: rgba(227, 0, 15, 0.25);
-  --sidebar-toggle-bg: #1f2937;
-  --sidebar-toggle-hover: #374151;
-  --sidebar-footer-bg: #0f1419;
-  --sidebar-divider: linear-gradient(90deg, transparent, #3f3f46, transparent);
+  --sidebar-toggle-bg: #1f1f1f;
+  --sidebar-toggle-hover: #262626;
+  --sidebar-footer-bg: #0f0f0f;
+  --sidebar-divider: linear-gradient(90deg, transparent, #404040, transparent);
 
   /* Context menu dark */
-  --ctx-menu-bg: #1e2433;
+  --ctx-menu-bg: #171717;
   --ctx-menu-shadow:
-    0 8px 30px rgba(0, 0, 0, 0.4), 0 2px 8px rgba(0, 0, 0, 0.3);
-  --ctx-menu-border: #3f3f46;
-  --ctx-delete-confirm-bg: rgba(153, 27, 27, 0.12);
-  --ctx-delete-confirm-border: rgba(220, 38, 38, 0.25);
+    0 8px 30px rgba(0, 0, 0, 0.6), 0 2px 8px rgba(0, 0, 0, 0.5);
+  --ctx-menu-border: #262626;
+  --ctx-delete-confirm-bg: rgba(227, 0, 15, 0.1);
+  --ctx-delete-confirm-border: rgba(227, 0, 15, 0.3);
   --ctx-delete-confirm-text: #fca5a5;
   --ctx-delete-yes-bg: #dc2626;
   --ctx-delete-yes-hover: #ef4444;
   --ctx-delete-no-bg: transparent;
   --ctx-delete-no-hover: rgba(255, 255, 255, 0.06);
-  --ctx-delete-no-text: #94a3b8;
+  --ctx-delete-no-text: #a3a3a3;
 
   /* Input dark */
-  --input-box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  --input-box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
   --input-focus-shadow:
-    0 0 0 2px rgba(227, 0, 15, 0.2), 0 4px 16px rgba(0, 0, 0, 0.3);
+    0 0 0 2px rgba(227, 0, 15, 0.2), 0 4px 16px rgba(0, 0, 0, 0.5);
   --input-focus-border: rgba(227, 0, 15, 0.45);
 }
 

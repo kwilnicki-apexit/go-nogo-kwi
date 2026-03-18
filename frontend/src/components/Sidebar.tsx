@@ -11,7 +11,6 @@ import {
   Settings,
   Sun,
   Moon,
-  Globe,
   MoreHorizontal,
   Trash2,
 } from "lucide-react";
@@ -25,7 +24,6 @@ import type {
 } from "../types";
 import { cn, getInitials } from "../lib/utils";
 import { ProjectContextMenu } from "./ProjectContextMenu";
-import { SettingsPanel } from "./SettingsPanel";
 
 interface SidebarProps {
   projects: Project[];
@@ -46,6 +44,7 @@ interface SidebarProps {
   language: LangCode;
   onSetLanguage: (lang: LangCode) => void;
   onToggleLanguage: () => void;
+  onOpenSettings: () => void;
 }
 
 export const Sidebar = ({
@@ -63,13 +62,10 @@ export const Sidebar = ({
   theme,
   onToggleTheme,
   userConfig,
-  onUpdateUserConfig,
-  language,
-  onSetLanguage,
   onToggleLanguage,
+  onOpenSettings,
 }: SidebarProps) => {
   const [search, setSearch] = useState("");
-  const [settingsOpen, setSettingsOpen] = useState(false);
 
   // Context menu state
   const [ctxMenu, setCtxMenu] = useState<{
@@ -143,7 +139,7 @@ export const Sidebar = ({
     >
       {/* Header */}
       <div className="sidebar-header flex items-center gap-3 px-5 py-5 border-b border-border">
-        <div className="flex h-8 w-8 items-center justify-center rounded-md bg-orlen shadow-sm">
+        <div className="sidebar-logo-icon flex h-8 w-8 items-center justify-center rounded-md shadow-sm">
           <MessageSquare size={16} className="text-white" />
         </div>
         <span className="text-sm font-bold text-text-primary tracking-wide">
@@ -358,7 +354,7 @@ export const Sidebar = ({
             className="p-2 text-text-tertiary hover:text-text-primary hover:bg-surface-tertiary rounded-md transition-colors"
             title={labels.languageLabel}
           >
-            <Globe size={15} />
+            {/* <Globe size={15} /> */}
           </button>
           {/* Theme toggle */}
           <button
@@ -370,29 +366,13 @@ export const Sidebar = ({
           </button>
           {/* Settings */}
           <button
-            onClick={() => setSettingsOpen(!settingsOpen)}
-            className={cn(
-              "p-2 rounded-md transition-colors",
-              settingsOpen
-                ? "text-orlen bg-surface-tertiary"
-                : "text-text-tertiary hover:text-text-primary hover:bg-surface-tertiary",
-            )}
+            onClick={onOpenSettings}
+            className="p-2 text-text-tertiary hover:text-text-primary hover:bg-surface-tertiary rounded-md transition-colors"
             title={labels.settings}
           >
             <Settings size={15} />
           </button>
         </div>
-
-        {/* Settings Panel */}
-        <SettingsPanel
-          isOpen={settingsOpen}
-          onClose={() => setSettingsOpen(false)}
-          userConfig={userConfig}
-          onUpdateConfig={onUpdateUserConfig}
-          language={language}
-          onSetLanguage={onSetLanguage}
-          labels={labels}
-        />
       </div>
 
       {/* Project Context Menu */}

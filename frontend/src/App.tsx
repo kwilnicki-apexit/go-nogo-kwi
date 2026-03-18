@@ -9,6 +9,7 @@ import { ChatFeed } from "./components/ChatFeed";
 import { InputArea } from "./components/InputArea";
 import { CanvasPanel } from "./components/CanvasPanel";
 import { ProjectView } from "./components/ProjectView";
+import { SettingsPanel } from "./components/SettingsPanel";
 import { useTheme } from "./hooks/useTheme";
 import { useLanguage } from "./hooks/useLanguage";
 import { useUserConfig } from "./hooks/useUserConfig";
@@ -21,13 +22,18 @@ import {
   stripHtml,
 } from "./lib/utils";
 import type { Project, Chat, ChatMessage, AppMode } from "./types";
-import { CheckCircle, Download, FileText, X } from "lucide-react";
+import { CheckCircle, Download, FileText, User, X, Lock } from "lucide-react";
 import "./styles/main.css";
+
 
 function App() {
   const { theme, toggleTheme } = useTheme();
   const { language, toggleLanguage, setLang } = useLanguage();
   const { userConfig, updateUserConfig } = useUserConfig();
+
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isCanvasOpen, setIsCanvasOpen] = useState(false);
 
@@ -487,6 +493,152 @@ function App() {
     [activeChat],
   );
 
+  if (!isAuthenticated) {
+    return (
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          height: "100vh",
+          width: "100vw",
+          backgroundColor: "var(--color-bg)",
+        }}
+      >
+        <div
+          className="animate-fade-in-up"
+          style={{
+            width: 400,
+            backgroundColor: "var(--color-surface)",
+            padding: 40,
+            borderRadius: 16,
+            border: "1px solid var(--color-border)",
+            boxShadow: "0 10px 30px rgba(0,0,0,0.1)",
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "center",
+              marginBottom: 24,
+            }}
+          >
+            <div className="sidebar-logo-icon flex h-14 w-14 items-center justify-center rounded-xl shadow-lg">
+              <Lock size={28} className="text-white" />
+            </div>
+          </div>
+          <h1
+            style={{
+              textAlign: "center",
+              fontSize: 24,
+              fontWeight: 700,
+              marginBottom: 8,
+              color: "var(--color-text-primary)",
+            }}
+          >
+            Sign In to QA Engine
+          </h1>
+          <p
+            style={{
+              textAlign: "center",
+              fontSize: 14,
+              color: "var(--color-text-tertiary)",
+              marginBottom: 32,
+            }}
+          >
+            Use your corporate Active Directory credentials.
+          </p>
+
+          <div style={{ marginBottom: 16 }}>
+            <label
+              style={{
+                display: "block",
+                fontSize: 12,
+                fontWeight: 600,
+                color: "var(--color-text-secondary)",
+                marginBottom: 6,
+              }}
+            >
+              Username (LDAP)
+            </label>
+            <div style={{ position: "relative" }}>
+              <User
+                size={16}
+                color="var(--color-text-tertiary)"
+                style={{ position: "absolute", left: 12, top: 12 }}
+              />
+              <input
+                type="text"
+                defaultValue="jdeveloper_adm"
+                style={{
+                  width: "100%",
+                  padding: "10px 12px 10px 38px",
+                  borderRadius: 8,
+                  border: "1px solid var(--color-border)",
+                  backgroundColor: "var(--color-surface-secondary)",
+                  color: "var(--color-text-primary)",
+                  outline: "none",
+                }}
+              />
+            </div>
+          </div>
+
+          <div style={{ marginBottom: 32 }}>
+            <label
+              style={{
+                display: "block",
+                fontSize: 12,
+                fontWeight: 600,
+                color: "var(--color-text-secondary)",
+                marginBottom: 6,
+              }}
+            >
+              Password
+            </label>
+            <div style={{ position: "relative" }}>
+              <Lock
+                size={16}
+                color="var(--color-text-tertiary)"
+                style={{ position: "absolute", left: 12, top: 12 }}
+              />
+              <input
+                type="password"
+                defaultValue="••••••••"
+                style={{
+                  width: "100%",
+                  padding: "10px 12px 10px 38px",
+                  borderRadius: 8,
+                  border: "1px solid var(--color-border)",
+                  backgroundColor: "var(--color-surface-secondary)",
+                  color: "var(--color-text-primary)",
+                  outline: "none",
+                }}
+              />
+            </div>
+          </div>
+
+          <button
+            onClick={() => setIsAuthenticated(true)}
+            style={{
+              width: "100%",
+              padding: 12,
+              borderRadius: 8,
+              background: "linear-gradient(135deg, #e3000f 0%, #c5000d 100%)",
+              color: "white",
+              fontWeight: 600,
+              fontSize: 15,
+              cursor: "pointer",
+              border: "none",
+              boxShadow: "0 4px 12px rgba(227, 0, 15, 0.2)",
+            }}
+          >
+            Sign In
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div
       style={{
@@ -526,6 +678,7 @@ function App() {
           language={language}
           onSetLanguage={setLang}
           onToggleLanguage={toggleLanguage}
+          onOpenSettings={() => setIsSettingsOpen(true)}
         />
       </div>
 
@@ -732,6 +885,17 @@ function App() {
             />
           </div>
         )}
+
+        {/* GLOBAL SETTINGS MODAL */}
+        <SettingsPanel
+          isOpen={isSettingsOpen}
+          onClose={() => setIsSettingsOpen(false)}
+          userConfig={userConfig}
+          onUpdateConfig={updateUserConfig}
+          language={language}
+          onSetLanguage={setLang}
+          labels={labels}
+        />
       </div>
     </div>
   );

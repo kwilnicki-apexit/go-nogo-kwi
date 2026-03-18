@@ -2,8 +2,8 @@
 // FILE: .\frontend\src\components\SettingsPanel.tsx
 // ============================================================
 
-import { useRef, useEffect } from "react";
-import { X, Globe } from "lucide-react";
+import { useEffect } from "react";
+import { X, Globe, Server, ShieldAlert, KeyRound } from "lucide-react";
 import type { Labels, UserConfig, LangCode } from "../types";
 import { getInitials } from "../lib/utils";
 
@@ -26,27 +26,6 @@ export const SettingsPanel = ({
   onSetLanguage,
   labels,
 }: SettingsPanelProps) => {
-  const panelRef = useRef<HTMLDivElement>(null);
-
-  // Close on click outside
-  useEffect(() => {
-    if (!isOpen) return;
-    const handler = (e: MouseEvent) => {
-      if (panelRef.current && !panelRef.current.contains(e.target as Node)) {
-        onClose();
-      }
-    };
-    // Delay to avoid immediate close from the click that opened it
-    const timer = setTimeout(
-      () => document.addEventListener("mousedown", handler),
-      50,
-    );
-    return () => {
-      clearTimeout(timer);
-      document.removeEventListener("mousedown", handler);
-    };
-  }, [isOpen, onClose]);
-
   // Close on Escape key
   useEffect(() => {
     if (!isOpen) return;
@@ -60,326 +39,396 @@ export const SettingsPanel = ({
   if (!isOpen) return null;
 
   const initials = getInitials(userConfig.displayName);
+  const t = (pl: string, en: string) => (language === "pl" ? pl : en);
 
   return (
     <div
-      ref={panelRef}
-      className="animate-fade-in-up"
       style={{
-        position: "absolute",
-        bottom: 60,
-        left: 8,
-        right: 8,
-        zIndex: 100,
-        borderRadius: 12,
-        border: "1px solid var(--color-border)",
-        backgroundColor: "var(--color-surface)",
-        boxShadow: "0 8px 30px rgba(0,0,0,0.15), 0 2px 8px rgba(0,0,0,0.08)",
-        overflow: "hidden",
+        position: "fixed",
+        inset: 0,
+        zIndex: 9999,
+        backgroundColor: "rgba(0,0,0,0.6)",
+        backdropFilter: "blur(4px)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: 24,
       }}
+      onClick={onClose}
     >
-      {/* Header */}
       <div
+        className="animate-fade-in-up"
         style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          padding: "14px 16px",
-          borderBottom: "1px solid var(--color-border)",
-          backgroundColor: "var(--color-surface-secondary)",
-        }}
-      >
-        <span
-          style={{
-            fontSize: 13,
-            fontWeight: 700,
-            color: "var(--color-text-primary)",
-          }}
-        >
-          {labels.userSettings}
-        </span>
-        <button
-          onClick={onClose}
-          style={{
-            padding: 4,
-            borderRadius: 6,
-            color: "var(--color-text-tertiary)",
-            transition: "all 0.15s",
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.backgroundColor =
-              "var(--color-surface-tertiary)";
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.backgroundColor = "transparent";
-          }}
-          title={labels.closeSettings}
-        >
-          <X size={16} />
-        </button>
-      </div>
-
-      {/* Content */}
-      <div
-        style={{
-          padding: "16px",
+          width: "100%",
+          maxWidth: 580,
+          backgroundColor: "var(--color-surface)",
+          borderRadius: 16,
+          border: "1px solid var(--color-border)",
+          boxShadow: "0 20px 40px rgba(0,0,0,0.3)",
           display: "flex",
           flexDirection: "column",
-          gap: 14,
+          overflow: "hidden",
         }}
+        onClick={(e) => e.stopPropagation()} // Zapobiega zamknięciu przy kliknięciu w okno
       >
-        {/* Avatar preview */}
+        {/* Header */}
         <div
           style={{
             display: "flex",
             alignItems: "center",
-            gap: 12,
-            marginBottom: 4,
+            justifyContent: "space-between",
+            padding: "16px 24px",
+            borderBottom: "1px solid var(--color-border)",
+            backgroundColor: "var(--color-surface-secondary)",
           }}
         >
-          <div
-            style={{
-              width: 40,
-              height: 40,
-              borderRadius: "50%",
-              background: "linear-gradient(135deg, #dbeafe, #bfdbfe)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              fontSize: 14,
-              fontWeight: 700,
-              color: "#1d4ed8",
-              flexShrink: 0,
-            }}
-          >
-            {initials}
-          </div>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div
-              style={{
-                fontSize: 13,
-                fontWeight: 600,
-                color: "var(--color-text-primary)",
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-                whiteSpace: "nowrap",
-              }}
-            >
-              {userConfig.displayName}
-            </div>
-            <div style={{ fontSize: 11, color: "var(--color-text-tertiary)" }}>
-              {userConfig.role}
-            </div>
-          </div>
-        </div>
-
-        {/* Display Name */}
-        <div>
-          <label
-            style={{
-              display: "block",
-              fontSize: 11,
-              fontWeight: 700,
-              color: "var(--color-text-secondary)",
-              textTransform: "uppercase",
-              marginBottom: 4,
-              letterSpacing: "0.03em",
-            }}
-          >
-            {labels.displayNameLabel}
-          </label>
-          <input
-            type="text"
-            value={userConfig.displayName}
-            onChange={(e) => onUpdateConfig({ displayName: e.target.value })}
-            style={{
-              width: "100%",
-              padding: "8px 10px",
-              borderRadius: 6,
-              border: "1px solid var(--color-border)",
-              backgroundColor: "var(--color-surface-secondary)",
-              fontSize: 13,
-              color: "var(--color-text-primary)",
-              outline: "none",
-              transition: "border-color 0.15s",
-            }}
-            onFocus={(e) => {
-              e.currentTarget.style.borderColor = "var(--color-orlen)";
-            }}
-            onBlur={(e) => {
-              e.currentTarget.style.borderColor = "var(--color-border)";
-            }}
-          />
-        </div>
-
-        {/* Role */}
-        <div>
-          <label
-            style={{
-              display: "block",
-              fontSize: 11,
-              fontWeight: 700,
-              color: "var(--color-text-secondary)",
-              textTransform: "uppercase",
-              marginBottom: 4,
-              letterSpacing: "0.03em",
-            }}
-          >
-            {labels.roleLabel}
-          </label>
-          <input
-            type="text"
-            value={userConfig.role}
-            onChange={(e) => onUpdateConfig({ role: e.target.value })}
-            style={{
-              width: "100%",
-              padding: "8px 10px",
-              borderRadius: 6,
-              border: "1px solid var(--color-border)",
-              backgroundColor: "var(--color-surface-secondary)",
-              fontSize: 13,
-              color: "var(--color-text-primary)",
-              outline: "none",
-              transition: "border-color 0.15s",
-            }}
-            onFocus={(e) => {
-              e.currentTarget.style.borderColor = "var(--color-orlen)";
-            }}
-            onBlur={(e) => {
-              e.currentTarget.style.borderColor = "var(--color-border)";
-            }}
-          />
-        </div>
-
-        {/* Author Name (for exports) */}
-        <div>
-          <label
-            style={{
-              display: "block",
-              fontSize: 11,
-              fontWeight: 700,
-              color: "var(--color-text-secondary)",
-              textTransform: "uppercase",
-              marginBottom: 4,
-              letterSpacing: "0.03em",
-            }}
-          >
-            {labels.authorNameLabel}
-          </label>
-          <input
-            type="text"
-            value={userConfig.authorName}
-            onChange={(e) => onUpdateConfig({ authorName: e.target.value })}
-            style={{
-              width: "100%",
-              padding: "8px 10px",
-              borderRadius: 6,
-              border: "1px solid var(--color-border)",
-              backgroundColor: "var(--color-surface-secondary)",
-              fontSize: 13,
-              color: "var(--color-text-primary)",
-              outline: "none",
-              transition: "border-color 0.15s",
-            }}
-            onFocus={(e) => {
-              e.currentTarget.style.borderColor = "var(--color-orlen)";
-            }}
-            onBlur={(e) => {
-              e.currentTarget.style.borderColor = "var(--color-border)";
-            }}
-          />
           <span
             style={{
-              display: "block",
-              fontSize: 10,
-              color: "var(--color-text-muted)",
-              marginTop: 3,
+              fontSize: 15,
+              fontWeight: 700,
+              color: "var(--color-text-primary)",
             }}
           >
-            {labels.authorNameHint}
+            {labels.userSettings}
           </span>
+          <button
+            onClick={onClose}
+            style={{
+              padding: 6,
+              borderRadius: 8,
+              color: "var(--color-text-tertiary)",
+              cursor: "pointer",
+              transition: "all 0.15s",
+              border: "none",
+              background: "transparent",
+            }}
+          >
+            <X size={18} />
+          </button>
         </div>
 
-        {/* Divider */}
+        {/* Content */}
         <div
+          className="custom-scrollbar"
           style={{
-            height: 1,
-            backgroundColor: "var(--color-border)",
-            margin: "2px 0",
+            padding: "24px",
+            display: "flex",
+            flexDirection: "column",
+            gap: 24,
+            maxHeight: "75vh",
+            overflowY: "auto",
           }}
-        />
+        >
+          {/* Avatar & Display Name */}
+          <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+            <div
+              style={{
+                width: 64,
+                height: 64,
+                borderRadius: "50%",
+                background: "linear-gradient(135deg, #dbeafe, #bfdbfe)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontSize: 24,
+                fontWeight: 700,
+                color: "#1d4ed8",
+                flexShrink: 0,
+              }}
+            >
+              {initials}
+            </div>
+            <div style={{ flex: 1 }}>
+              <label
+                style={{
+                  display: "block",
+                  fontSize: 11,
+                  fontWeight: 700,
+                  color: "var(--color-text-secondary)",
+                  textTransform: "uppercase",
+                  marginBottom: 6,
+                }}
+              >
+                {labels.displayNameLabel}
+              </label>
+              <input
+                type="text"
+                value={userConfig.displayName}
+                onChange={(e) =>
+                  onUpdateConfig({ displayName: e.target.value })
+                }
+                style={{
+                  width: "100%",
+                  padding: "10px 12px",
+                  borderRadius: 8,
+                  border: "1px solid var(--color-border)",
+                  backgroundColor: "var(--color-surface-secondary)",
+                  fontSize: 14,
+                  color: "var(--color-text-primary)",
+                  outline: "none",
+                }}
+              />
+            </div>
+          </div>
 
-        {/* Language Selection */}
-        <div>
-          <label
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 6,
-              fontSize: 11,
-              fontWeight: 700,
-              color: "var(--color-text-secondary)",
-              textTransform: "uppercase",
-              marginBottom: 6,
-              letterSpacing: "0.03em",
-            }}
+          <div
+            style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}
           >
-            <Globe size={12} />
-            {labels.languageLabel}
-          </label>
-          <div style={{ display: "flex", gap: 6 }}>
-            <button
-              onClick={() => onSetLanguage("pl")}
+            {/* Role */}
+            <div>
+              <label
+                style={{
+                  display: "block",
+                  fontSize: 11,
+                  fontWeight: 700,
+                  color: "var(--color-text-secondary)",
+                  textTransform: "uppercase",
+                  marginBottom: 6,
+                }}
+              >
+                {labels.roleLabel}
+              </label>
+              <input
+                type="text"
+                value={userConfig.role}
+                onChange={(e) => onUpdateConfig({ role: e.target.value })}
+                style={{
+                  width: "100%",
+                  padding: "10px 12px",
+                  borderRadius: 8,
+                  border: "1px solid var(--color-border)",
+                  backgroundColor: "var(--color-surface-secondary)",
+                  fontSize: 14,
+                  color: "var(--color-text-primary)",
+                  outline: "none",
+                }}
+              />
+            </div>
+
+            {/* Author Name */}
+            <div>
+              <label
+                style={{
+                  display: "block",
+                  fontSize: 11,
+                  fontWeight: 700,
+                  color: "var(--color-text-secondary)",
+                  textTransform: "uppercase",
+                  marginBottom: 6,
+                }}
+              >
+                {labels.authorNameLabel}
+              </label>
+              <input
+                type="text"
+                value={userConfig.authorName}
+                onChange={(e) => onUpdateConfig({ authorName: e.target.value })}
+                style={{
+                  width: "100%",
+                  padding: "10px 12px",
+                  borderRadius: 8,
+                  border: "1px solid var(--color-border)",
+                  backgroundColor: "var(--color-surface-secondary)",
+                  fontSize: 14,
+                  color: "var(--color-text-primary)",
+                  outline: "none",
+                }}
+              />
+            </div>
+          </div>
+
+          <div style={{ height: 1, backgroundColor: "var(--color-border)" }} />
+
+          {/* Active Directory / LDAP Integrations (MOCKS) */}
+          <div>
+            <label
               style={{
-                flex: 1,
-                padding: "8px 12px",
-                borderRadius: 6,
-                fontSize: 12,
-                fontWeight: 600,
-                cursor: "pointer",
-                transition: "all 0.15s",
-                border:
-                  language === "pl"
-                    ? "1.5px solid var(--color-orlen)"
-                    : "1px solid var(--color-border)",
-                backgroundColor:
-                  language === "pl"
-                    ? "rgba(227,0,15,0.06)"
-                    : "var(--color-surface-secondary)",
-                color:
-                  language === "pl"
-                    ? "var(--color-orlen)"
-                    : "var(--color-text-secondary)",
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+                fontSize: 11,
+                fontWeight: 700,
+                color: "var(--color-text-secondary)",
+                textTransform: "uppercase",
+                marginBottom: 12,
               }}
             >
-              🇵🇱 {labels.polish}
-            </button>
-            <button
-              onClick={() => onSetLanguage("en")}
+              <Server size={13} />{" "}
+              {t("Katalog LDAP (Mock)", "LDAP Directory (Mock)")}
+            </label>
+            <div
               style={{
-                flex: 1,
-                padding: "8px 12px",
-                borderRadius: 6,
-                fontSize: 12,
-                fontWeight: 600,
-                cursor: "pointer",
-                transition: "all 0.15s",
-                border:
-                  language === "en"
-                    ? "1.5px solid var(--color-orlen)"
-                    : "1px solid var(--color-border)",
-                backgroundColor:
-                  language === "en"
-                    ? "rgba(227,0,15,0.06)"
-                    : "var(--color-surface-secondary)",
-                color:
-                  language === "en"
-                    ? "var(--color-orlen)"
-                    : "var(--color-text-secondary)",
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr",
+                gap: 16,
               }}
             >
-              🇬🇧 {labels.english}
-            </button>
+              <div>
+                <span
+                  style={{
+                    fontSize: 12,
+                    color: "var(--color-text-muted)",
+                    marginBottom: 4,
+                    display: "block",
+                  }}
+                >
+                  {t("Nazwa użytkownika LDAP", "LDAP Username")}
+                </span>
+                <input
+                  disabled
+                  value="jdeveloper_adm"
+                  style={{
+                    width: "100%",
+                    padding: "10px 12px",
+                    borderRadius: 8,
+                    border: "1px dashed var(--color-border-strong)",
+                    backgroundColor: "var(--color-bg)",
+                    fontSize: 13,
+                    color: "var(--color-text-tertiary)",
+                    outline: "none",
+                    cursor: "not-allowed",
+                  }}
+                />
+              </div>
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  justifyContent: "flex-end",
+                }}
+              >
+                <button
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: 8,
+                    padding: "10px",
+                    borderRadius: 8,
+                    border: "1px solid var(--color-border)",
+                    backgroundColor: "var(--color-surface)",
+                    fontSize: 13,
+                    fontWeight: 600,
+                    color: "var(--color-text-secondary)",
+                    cursor: "not-allowed",
+                    opacity: 0.7,
+                  }}
+                  disabled
+                >
+                  <ShieldAlert size={15} />{" "}
+                  {t("Zsynchronizuj z AD", "Sync with AD")}
+                </button>
+              </div>
+            </div>
+
+            <div style={{ marginTop: 16 }}>
+              <button
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 8,
+                  padding: "10px",
+                  width: "100%",
+                  borderRadius: 8,
+                  border: "1px solid #fecaca",
+                  backgroundColor: "#fef2f2",
+                  fontSize: 13,
+                  fontWeight: 600,
+                  color: "#dc2626",
+                  cursor: "pointer",
+                  transition: "all 0.15s",
+                }}
+                onClick={() =>
+                  alert(
+                    t(
+                      "Opcja dostępna tylko dla administratorów domeny.",
+                      "Option available only for domain administrators.",
+                    ),
+                  )
+                }
+              >
+                <KeyRound size={15} />{" "}
+                {t(
+                  "Wymuś zmianę hasła przy następnym logowaniu",
+                  "Force password reset on next login",
+                )}
+              </button>
+            </div>
+          </div>
+
+          <div style={{ height: 1, backgroundColor: "var(--color-border)" }} />
+
+          {/* Language Selection */}
+          <div>
+            <label
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+                fontSize: 11,
+                fontWeight: 700,
+                color: "var(--color-text-secondary)",
+                textTransform: "uppercase",
+                marginBottom: 8,
+              }}
+            >
+              <Globe size={13} /> {labels.languageLabel}
+            </label>
+            <div style={{ display: "flex", gap: 8 }}>
+              <button
+                onClick={() => onSetLanguage("pl")}
+                style={{
+                  flex: 1,
+                  padding: "10px",
+                  borderRadius: 8,
+                  fontSize: 13,
+                  fontWeight: 600,
+                  cursor: "pointer",
+                  border:
+                    language === "pl"
+                      ? "1.5px solid var(--color-orlen)"
+                      : "1px solid var(--color-border)",
+                  backgroundColor:
+                    language === "pl"
+                      ? "rgba(227,0,15,0.06)"
+                      : "var(--color-surface-secondary)",
+                  color:
+                    language === "pl"
+                      ? "var(--color-orlen)"
+                      : "var(--color-text-secondary)",
+                  transition: "all 0.15s",
+                }}
+              >
+                🇵🇱 {labels.polish}
+              </button>
+              <button
+                onClick={() => onSetLanguage("en")}
+                style={{
+                  flex: 1,
+                  padding: "10px",
+                  borderRadius: 8,
+                  fontSize: 13,
+                  fontWeight: 600,
+                  cursor: "pointer",
+                  border:
+                    language === "en"
+                      ? "1.5px solid var(--color-orlen)"
+                      : "1px solid var(--color-border)",
+                  backgroundColor:
+                    language === "en"
+                      ? "rgba(227,0,15,0.06)"
+                      : "var(--color-surface-secondary)",
+                  color:
+                    language === "en"
+                      ? "var(--color-orlen)"
+                      : "var(--color-text-secondary)",
+                  transition: "all 0.15s",
+                }}
+              >
+                🇬🇧 {labels.english}
+              </button>
+            </div>
           </div>
         </div>
       </div>
