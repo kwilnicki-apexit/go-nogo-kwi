@@ -80,6 +80,65 @@ class ExportRequest(BaseModel):
 
 MAX_FILE_SIZE = 5 * 1024 * 1024
 
+# =============================================
+# INTENT ROUTER (Auto-switch mode by keywords)
+# =============================================
+
+GONOGO_KEYWORDS = [
+    "raport wdrożeniowy",
+    "raport z testów",
+    "go/no-go",
+    "gonogo",
+    "raport decyzyjny",
+    "deployment report",
+    "release report",
+    "wygeneruj raport",
+    "generate report",
+    "ocena wdrożenia",
+]
+TRANSLATOR_KEYWORDS = [
+    "przetłumacz",
+    "tłumacz",
+    "translate",
+    "na polski",
+    "na angielski",
+    "to english",
+    "to polish",
+]
+ANALYSIS_KEYWORDS = [
+    "przeanalizuj",
+    "analiza",
+    "analyze",
+    "analysis",
+    "zbadaj dane",
+    "examine data",
+]
+
+
+def detect_intent(message: str, current_mode: str) -> str:
+    """
+    Detects user intent from message keywords and overrides mode if needed.
+    Works from ANY mode — if user types 'przetłumacz' while in gonogo,
+    they get rerouted to translator.
+    """
+    msg_lower = message.lower().strip()
+
+    # Check each keyword list; skip if already in that mode
+    if current_mode != "gonogo":
+        if any(kw in msg_lower for kw in GONOGO_KEYWORDS):
+            return "gonogo"
+
+    if current_mode != "translator":
+        if any(kw in msg_lower for kw in TRANSLATOR_KEYWORDS):
+            return "translator"
+
+    if current_mode != "analysis":
+        if any(kw in msg_lower for kw in ANALYSIS_KEYWORDS):
+            return "analysis"
+
+    return current_mode
+
+
 # ==========================================
 # PROJECT ENDPOINTS (p-xxxxx)
 # ==========================================
@@ -169,6 +228,20 @@ async def chat_endpoint(request: Request, user: dict = Depends(get_current_user)
                 status_code=400, detail="No chat_id provided in the request"
             )
 
+        # ==========================================
+        # INTENT ROUTER — works from ANY mode
+        # ==========================================
+        original_mode = mode
+        mode = detect_intent(message, mode)
+
+        if mode != original_mode:
+            logger.info(
+                f"Intent Router: '{original_mode}' -> '{mode}' "
+                f"(keyword detected in: '{message[:80]}')"
+            )
+
+        # ==========================================
+
         chat_created_dir = storage.get_chat_created_dir(chat_id)
         chart_generator.output_dir = chat_created_dir
         report_generator.final_output_path = chat_created_dir
@@ -180,7 +253,6 @@ async def chat_endpoint(request: Request, user: dict = Depends(get_current_user)
             chat_uploads_dir = storage.get_chat_uploads_dir(chat_id)
             contents = {}
 
-            # REEVALUATION
             if not files:
                 if os.path.exists(chat_uploads_dir):
                     for filename in os.listdir(chat_uploads_dir):
@@ -196,13 +268,12 @@ async def chat_endpoint(request: Request, user: dict = Depends(get_current_user)
                         if language == "pl"
                         else "Please attach files with test results."
                     )
-                    return {"message": msg}
+                    return {"message": msg, "detected_mode": mode}
 
                 logger.info(
                     f"Re-evaluating based on {len(contents)} existing files in chat {chat_id}."
                 )
-
-            # STANDARD UPLOAD
+                
             else:
                 for file in files:
                     content = await file.read()
@@ -234,17 +305,16 @@ async def chat_endpoint(request: Request, user: dict = Depends(get_current_user)
 
             if not contents:
                 return {
-                    "message": "Nie załączono żadnych prawidłowych plików tabelarycznych."
+                    "message": "Nie załączono żadnych prawidłowych plików tabelarycznych.",
+                    "detected_mode": mode,
                 }
 
             parsed_test_data = file_parser.extract_test_data_from_bytes(contents)
 
-            # global data - project instructions + RAG context
             project_instructions = ""
             if project_id:
                 project_instructions = storage.load_project_instructions(project_id)
 
-            # RAG
             rag_context = rag.search_context(
                 query=message, project_id=project_id, chat_id=chat_id
             )
@@ -265,7 +335,6 @@ async def chat_endpoint(request: Request, user: dict = Depends(get_current_user)
                 rag_context=rag_context,
                 parsed_test_data=parsed_test_data,
                 user_risks=user_risks,
-                
                 project_name=chat_id,
                 lang=language,
             )
@@ -273,7 +342,7 @@ async def chat_endpoint(request: Request, user: dict = Depends(get_current_user)
             storage.save_to_cache(chat_id=chat_id, structured_data=draft_json)
 
             msg_response = (
-                ("Zaktualizowałem raport uwzględniając Twoje nowe wytyczne.")
+                "Zaktualizowałem raport uwzględniając Twoje nowe wytyczne."
                 if language == "pl"
                 else "Report updated with your instructions."
             )
@@ -282,6 +351,7 @@ async def chat_endpoint(request: Request, user: dict = Depends(get_current_user)
                 "message": msg_response,
                 "draft_data": draft_json,
                 "chart_paths": chart_paths,
+                "detected_mode": mode,
             }
 
         # ---------------------------------------------------------
@@ -291,7 +361,6 @@ async def chat_endpoint(request: Request, user: dict = Depends(get_current_user)
             chat_uploads_dir = storage.get_chat_uploads_dir(chat_id)
             contents = {}
 
-            # REEVALUATION
             if not files:
                 if os.path.exists(chat_uploads_dir):
                     for filename in os.listdir(chat_uploads_dir):
@@ -315,8 +384,6 @@ async def chat_endpoint(request: Request, user: dict = Depends(get_current_user)
                                 contents[filename] = text_content
                         except Exception as e:
                             logger.warning(f"Chatbot failed to re-read {filename}: {e}")
-
-            # STANDARD
             else:
                 for file in files:
                     content = await file.read()
@@ -341,7 +408,6 @@ async def chat_endpoint(request: Request, user: dict = Depends(get_current_user)
 
                         if text_content:
                             contents[file.filename] = text_content
-
                             rag.ingest_document(
                                 text_content, file.filename, entity_id=chat_id
                             )
@@ -395,7 +461,7 @@ async def chat_endpoint(request: Request, user: dict = Depends(get_current_user)
 
             user_prompt = f"{context_block}\n[ZAPYTANIE UŻYTKOWNIKA]\n{message}"
             reply = llm.generate_response(sys_prompt, user_prompt, temperature=0.3)
-            return {"message": reply}
+            return {"message": reply, "detected_mode": mode}
 
         # ---------------------------------------------------------
         # MODE 3: TRANSLATOR
@@ -404,7 +470,6 @@ async def chat_endpoint(request: Request, user: dict = Depends(get_current_user)
             chat_uploads_dir = storage.get_chat_uploads_dir(chat_id)
             contents = {}
 
-            # REEVALUATION
             if not files:
                 if os.path.exists(chat_uploads_dir):
                     for filename in os.listdir(chat_uploads_dir):
@@ -415,8 +480,6 @@ async def chat_endpoint(request: Request, user: dict = Depends(get_current_user)
                             text_content = file_parser.extract_history_text(file_path)
                             if text_content:
                                 contents[filename] = text_content
-
-            # STANDARD
             else:
                 for file in files:
                     content = await file.read()
@@ -456,7 +519,7 @@ async def chat_endpoint(request: Request, user: dict = Depends(get_current_user)
                     if language == "pl"
                     else "Please enter text to translate or attach files (TXT, PDF, DOCX)."
                 )
-                return {"message": msg}
+                return {"message": msg, "detected_mode": mode}
 
             project_instructions = ""
             if project_id:
@@ -503,13 +566,19 @@ async def chat_endpoint(request: Request, user: dict = Depends(get_current_user)
             logger.info(f"Executing translator mode for chat {chat_id}")
             reply = llm.generate_response(sys_prompt, user_prompt, temperature=0.2)
 
-            return {"message": reply}
+            return {"message": reply, "detected_mode": mode}
 
         elif mode == "analysis":
-            return {"message": f"Analysis module. Files received: {len(files)}"}
+            return {
+                "message": f"Analysis module. Files received: {len(files)}",
+                "detected_mode": mode,
+            }
 
         else:
-            return {"message": "Unknown mode of operation."}
+            return {
+                "message": "Unknown mode of operation.",
+                "detected_mode": mode,
+            }
 
     except LLMConnectionError as e:
         logger.error(f"LLM connection failed: {e}")

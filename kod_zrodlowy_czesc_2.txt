@@ -1,0 +1,3788 @@
+
+
+============================================================
+--- PLIK: .\frontend\src\components\ChatFeed.tsx ---
+============================================================
+
+// ============================================================
+// FILE: .\frontend\src\components\ChatFeed.tsx
+// ============================================================
+
+import { useEffect, useRef, useState } from "react";
+import ReactMarkdown from "react-markdown";
+import { Bot, Check, Copy, FileText } from "lucide-react";
+import type { ChatMessage, Labels } from "../types";
+import { formatTime } from "../lib/utils";
+
+interface ChatFeedProps {
+  messages: ChatMessage[];
+  isLoading: boolean;
+  onOpenCanvas: () => void;
+  labels: Labels;
+}
+
+interface CodeBlockProps extends React.HTMLAttributes<HTMLElement> {
+  inline?: boolean;
+  className?: string;
+  children?: React.ReactNode;
+}
+
+const CodeBlock = ({
+  inline,
+  className,
+  children,
+  ...props
+}: CodeBlockProps) => {
+  const match = /language-(\w+)/.exec(className || "");
+  const lang = match ? match[1] : "";
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(String(children).replace(/\n$/, ""));
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  if (!inline && match) {
+    return (
+      <div
+        style={{
+          margin: "16px 0",
+          borderRadius: "8px",
+          overflow: "hidden",
+          border: "1px solid var(--color-border)",
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            backgroundColor: "var(--color-surface-tertiary)",
+            padding: "6px 16px",
+          }}
+        >
+          <span
+            style={{
+              fontSize: "11px",
+              fontWeight: 700,
+              textTransform: "uppercase",
+              color: "var(--color-text-tertiary)",
+            }}
+          >
+            {lang}
+          </span>
+          <button
+            onClick={handleCopy}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "6px",
+              fontSize: "11px",
+              fontWeight: 600,
+              color: "var(--color-text-secondary)",
+              cursor: "pointer",
+              border: "none",
+              background: "none",
+            }}
+          >
+            {copied ? <Check size={14} color="#10b981" /> : <Copy size={14} />}
+            {copied ? "Skopiowano" : "Kopiuj"}
+          </button>
+        </div>
+        <pre
+          style={{
+            margin: 0,
+            padding: "16px",
+            backgroundColor: "var(--color-surface-secondary)",
+            overflowX: "auto",
+            fontSize: "13px",
+            color: "var(--color-text-primary)",
+          }}
+        >
+          <code className={className} {...props}>
+            {children}
+          </code>
+        </pre>
+      </div>
+    );
+  }
+  return (
+    <code
+      style={{
+        backgroundColor: "var(--color-surface-tertiary)",
+        padding: "2px 6px",
+        borderRadius: "4px",
+        fontSize: "13px",
+        fontFamily: "monospace",
+        color: "var(--color-orlen)",
+      }}
+      {...props}
+    >
+      {children}
+    </code>
+  );
+};
+
+export const ChatFeed = ({
+  messages,
+  isLoading,
+  onOpenCanvas,
+  labels,
+}: ChatFeedProps) => {
+  const bottomRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages, isLoading]);
+
+  if (messages.length === 0 && !isLoading) {
+    return (
+      <div
+        style={{
+          flex: 1,
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          padding: "40px 24px",
+          textAlign: "center",
+        }}
+      >
+        <div
+          style={{
+            marginBottom: 32,
+            width: 88,
+            height: 88,
+            borderRadius: 16,
+            background:
+              "linear-gradient(135deg, rgba(227,0,15,0.1), rgba(227,0,15,0.04))",
+            border: "1px solid rgba(227,0,15,0.15)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <Bot size={44} color="#e3000f" />
+        </div>
+        <h2
+          style={{
+            fontSize: 26,
+            fontWeight: 700,
+            marginBottom: 8,
+            color: "var(--color-text-primary)",
+          }}
+        >
+          {labels.welcome}
+        </h2>
+        <p
+          style={{
+            fontSize: 15,
+            color: "var(--color-text-tertiary)",
+            maxWidth: 480,
+            lineHeight: 1.7,
+          }}
+        >
+          {labels.welcomeSub}
+        </p>
+        <div
+          style={{
+            marginTop: 40,
+            display: "grid",
+            gridTemplateColumns: "1fr 1fr",
+            gap: 16,
+            maxWidth: 420,
+            width: "100%",
+          }}
+        >
+          {[
+            { icon: "💬", label: labels.modeChatbot, desc: labels.chatbotDesc },
+            { icon: "✅", label: labels.modeGoNogo, desc: labels.gonogoDesc },
+            {
+              icon: "🌐",
+              label: labels.modeTranslator,
+              desc: labels.translatorDesc,
+            },
+            {
+              icon: "📊",
+              label: labels.modeRemedy,
+              desc: labels.analysisDesc,
+            },
+          ].map((item) => (
+            <div
+              key={item.label}
+              style={{
+                padding: 20,
+                borderRadius: 10,
+                border: "1px solid var(--color-border)",
+                backgroundColor: "var(--color-surface)",
+                textAlign: "left",
+                transition: "box-shadow 0.2s, border-color 0.2s",
+                cursor: "default",
+              }}
+            >
+              <div style={{ fontSize: 28, marginBottom: 10 }}>{item.icon}</div>
+              <div
+                style={{
+                  fontSize: 14,
+                  fontWeight: 600,
+                  color: "var(--color-text-primary)",
+                }}
+              >
+                {item.label}
+              </div>
+              <div
+                style={{
+                  fontSize: 12,
+                  color: "var(--color-text-tertiary)",
+                  marginTop: 4,
+                }}
+              >
+                {item.desc}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      style={{ flex: 1, overflowY: "auto", padding: "32px 24px" }}
+      className="custom-scrollbar"
+    >
+      <div style={{ maxWidth: 720, margin: "0 auto" }}>
+        {messages.map((msg) => (
+          <div key={msg.id} className="animate-fade-in-up">
+            {msg.role === "user" ? (
+              <UserBubble message={msg} labels={labels} />
+            ) : (
+              <AssistantBubble
+                message={msg}
+                onOpenCanvas={onOpenCanvas}
+                labels={labels}
+              />
+            )}
+          </div>
+        ))}
+
+        {isLoading && (
+          <div
+            style={{
+              display: "flex",
+              alignItems: "flex-start",
+              gap: 16,
+              padding: "20px 0",
+            }}
+            className="animate-fade-in-up"
+          >
+            <div
+              style={{
+                width: 36,
+                height: 36,
+                borderRadius: "50%",
+                flexShrink: 0,
+                backgroundColor: "var(--color-surface-tertiary)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <Bot size={18} color="var(--color-text-tertiary)" />
+            </div>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+                borderRadius: 16,
+                backgroundColor: "var(--color-surface-tertiary)",
+                padding: "16px 24px",
+              }}
+            >
+              <div className="typing-dot" />
+              <div className="typing-dot" />
+              <div className="typing-dot" />
+            </div>
+          </div>
+        )}
+
+        <div ref={bottomRef} />
+      </div>
+    </div>
+  );
+};
+
+const UserBubble = ({
+  message,
+  labels,
+}: {
+  message: ChatMessage;
+  labels: Labels;
+}) => (
+  <div
+    style={{ display: "flex", justifyContent: "flex-end", padding: "12px 0" }}
+  >
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "flex-end",
+        maxWidth: "80%",
+      }}
+    >
+      <div
+        style={{
+          borderRadius: "var(--radius-lg)",
+          backgroundColor: "var(--color-surface-secondary)",
+          border: "1px solid var(--color-border)",
+          padding: "12px 16px",
+          color: "var(--color-text-primary)",
+          boxShadow: "0 1px 2px rgba(0,0,0,0.02)",
+        }}
+      >
+        <p
+          style={{
+            fontSize: 15,
+            lineHeight: 1.65,
+            whiteSpace: "pre-wrap",
+            margin: 0,
+          }}
+        >
+          {message.content}
+        </p>
+      </div>
+      <span
+        style={{
+          marginTop: 6,
+          fontSize: 11,
+          color: "var(--color-text-muted)",
+          fontWeight: 500,
+        }}
+      >
+        {formatTime(message.timestamp)} · {labels.userLabel}
+      </span>
+    </div>
+  </div>
+);
+
+const AssistantBubble = ({
+  message,
+  onOpenCanvas,
+  labels,
+}: {
+  message: ChatMessage;
+  onOpenCanvas: () => void;
+  labels: Labels;
+}) => (
+  <div
+    style={{
+      display: "flex",
+      alignItems: "flex-start",
+      gap: 16,
+      padding: "16px 0",
+    }}
+  >
+    <div
+      style={{
+        width: 32,
+        height: 32,
+        flexShrink: 0,
+        borderRadius: "var(--radius-md)",
+        backgroundColor: "var(--color-orlen)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        marginTop: 2,
+      }}
+    >
+      <Bot size={18} color="#ffffff" />
+    </div>
+    <div style={{ display: "flex", flexDirection: "column", maxWidth: "85%" }}>
+      <div
+        style={{
+          borderRadius: "var(--radius-md)",
+          backgroundColor: "var(--color-surface)",
+          border: "1px solid var(--color-border)",
+          borderLeft: "3px solid var(--color-orlen)",
+          padding: "16px 20px",
+          boxShadow: "0 2px 6px rgba(0,0,0,0.03)",
+        }}
+      >
+        <div
+          className="chat-markdown"
+          style={{ fontSize: 15, color: "var(--color-text-primary)" }}
+        >
+          <ReactMarkdown components={{ code: CodeBlock }}>
+            {message.content}
+          </ReactMarkdown>
+        </div>
+      </div>
+
+      {message.draftData && (
+        <button
+          onClick={onOpenCanvas}
+          style={{
+            marginTop: 12,
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 8,
+            alignSelf: "flex-start",
+            borderRadius: "var(--radius-md)",
+            border: "1px solid var(--color-orlen)",
+            backgroundColor: "var(--color-surface)",
+            padding: "8px 16px",
+            fontSize: 13,
+            fontWeight: 600,
+            color: "var(--color-orlen)",
+            transition: "all 0.15s",
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.backgroundColor = "var(--color-orlen)";
+            e.currentTarget.style.color = "#ffffff";
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.backgroundColor = "var(--color-surface)";
+            e.currentTarget.style.color = "var(--color-orlen)";
+          }}
+        >
+          <FileText size={15} />
+          {labels.openCanvas}
+        </button>
+      )}
+
+      <span
+        style={{
+          marginTop: 8,
+          fontSize: 11,
+          color: "var(--color-text-muted)",
+          fontWeight: 500,
+        }}
+      >
+        {formatTime(message.timestamp)} · {labels.systemQaLabel}
+      </span>
+    </div>
+  </div>
+);
+
+
+============================================================
+--- PLIK: .\frontend\src\components\InputArea.tsx ---
+============================================================
+
+// ============================================================
+// FILE: .\frontend\src\components\InputArea.tsx
+// ============================================================
+
+import { useState, useRef, useCallback, useEffect } from "react";
+import {
+  Send,
+  Paperclip,
+  X,
+  MessageSquare,
+  FileCheck,
+  Languages,
+  FileSpreadsheet,
+  FileIcon,
+  ExternalLink,
+} from "lucide-react";
+import type { AppMode, AttachedFile, Labels } from "../types";
+import { generateId, formatFileSize } from "../lib/utils";
+
+interface InputAreaProps {
+  mode: AppMode;
+  onModeChange: (mode: AppMode) => void;
+  onSend: (message: string, files: File[]) => void;
+  isLoading: boolean;
+  labels: Labels;
+}
+
+const MAX_FILES = 20;
+
+const modes: {
+  key: AppMode;
+  icon: React.ReactNode;
+  labelKey: keyof Labels;
+  color: string;
+  activeBg: string;
+  activeRing: string;
+}[] = [
+  {
+    key: "chatbot",
+    icon: <MessageSquare size={15} />,
+    labelKey: "modeChatbot",
+    color: "#3b82f6",
+    activeBg: "rgba(59,130,246,0.08)",
+    activeRing: "rgba(59,130,246,0.35)",
+  },
+  {
+    key: "gonogo",
+    icon: <FileCheck size={15} />,
+    labelKey: "modeGoNogo",
+    color: "#e3000f",
+    activeBg: "rgba(227,0,15,0.06)",
+    activeRing: "rgba(227,0,15,0.35)",
+  },
+  {
+    key: "translator",
+    icon: <Languages size={15} />,
+    labelKey: "modeTranslator",
+    color: "#16a34a",
+    activeBg: "rgba(22,163,74,0.06)",
+    activeRing: "rgba(22,163,74,0.35)",
+  },
+];
+
+const getFileIcon = (name: string) => {
+  const ext = name.split(".").pop()?.toLowerCase();
+  if (ext === "csv" || ext === "xls" || ext === "xlsx")
+    return <FileSpreadsheet size={14} color="#16a34a" />;
+  if (ext === "pdf") return <FileIcon size={14} color="#e3000f" />;
+  return <FileIcon size={14} color="var(--color-text-tertiary)" />;
+};
+
+export const InputArea = ({
+  mode,
+  onModeChange,
+  onSend,
+  isLoading,
+  labels,
+}: InputAreaProps) => {
+  const [text, setText] = useState("");
+  const [attachedFiles, setAttachedFiles] = useState<AttachedFile[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const adjustHeight = useCallback(() => {
+    const ta = textareaRef.current;
+    if (!ta) return;
+    ta.style.height = "auto";
+    ta.style.height = `${Math.min(ta.scrollHeight, 200)}px`;
+  }, []);
+
+  useEffect(() => {
+    adjustHeight();
+  }, [text, adjustHeight]);
+
+  const handleSend = () => {
+    const trimmed = text.trim();
+    if (!trimmed && attachedFiles.length === 0) return;
+    onSend(
+      trimmed,
+      attachedFiles.map((af) => af.file),
+    );
+    setText("");
+    setAttachedFiles([]);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+    setTimeout(() => {
+      if (textareaRef.current) textareaRef.current.style.height = "auto";
+    }, 0);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleSend();
+    }
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files) return;
+    const newFiles: AttachedFile[] = Array.from(e.target.files).map((f) => ({
+      file: f,
+      id: generateId("f"),
+    }));
+    setAttachedFiles((prev) => [...prev, ...newFiles].slice(0, MAX_FILES));
+  };
+
+  const removeFile = (id: string) =>
+    setAttachedFiles((prev) => prev.filter((f) => f.id !== id));
+
+  const canSend = text.trim() || attachedFiles.length > 0;
+  const activeModeDetails = modes.find((m) => m.key === mode) || modes[0];
+
+  return (
+    <div
+      style={{
+        borderTop: "1px solid var(--color-border)",
+        backgroundColor: "var(--color-surface)",
+        padding: "20px 24px 24px",
+        flexShrink: 0,
+      }}
+    >
+      <div style={{ maxWidth: 720, margin: "0 auto" }}>
+        {/* File chips */}
+        {attachedFiles.length > 0 && (
+          <div
+            style={{
+              display: "flex",
+              flexWrap: "wrap",
+              gap: 8,
+              marginBottom: 14,
+            }}
+          >
+            {attachedFiles.map((af) => (
+              <div
+                key={af.id}
+                className="animate-fade-in-up"
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 8,
+                  borderRadius: 8,
+                  border: "1px solid var(--color-border)",
+                  backgroundColor: "var(--color-surface-secondary)",
+                  padding: "8px 12px",
+                  fontSize: 13,
+                }}
+              >
+                {getFileIcon(af.file.name)}
+                <span
+                  style={{
+                    maxWidth: 150,
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap",
+                    fontWeight: 500,
+                    color: "var(--color-text-primary)",
+                  }}
+                >
+                  {af.file.name}
+                </span>
+                <span
+                  style={{ color: "var(--color-text-muted)", fontSize: 12 }}
+                >
+                  {formatFileSize(af.file.size)}
+                </span>
+                <button
+                  onClick={() => removeFile(af.id)}
+                  style={{
+                    padding: 4,
+                    borderRadius: "50%",
+                    color: "var(--color-text-tertiary)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <X size={12} />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Input box */}
+        <div
+          className="input-box-wrapper"
+          style={
+            {
+              display: "flex",
+              alignItems: "flex-end",
+              gap: 12,
+              padding: "12px 16px",
+              "--input-focus-border": activeModeDetails.color,
+              "--input-focus-shadow": `0 0 0 2px ${activeModeDetails.activeRing}, 0 4px 16px rgba(0, 0, 0, 0.08)`,
+            } as React.CSSProperties
+          }
+        >
+          {/* Attach button */}
+          <button
+            className="input-attach-btn"
+            onClick={() => fileInputRef.current?.click()}
+            title={labels.attachFiles}
+            style={{ flexShrink: 0 }}
+          >
+            <Paperclip size={20} />
+          </button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            multiple
+            accept=".csv,.xls,.xlsx,.pdf,.json,.xml,.txt"
+            onChange={handleFileChange}
+            style={{ display: "none" }}
+          />
+
+          {/* Textarea */}
+          <textarea
+            ref={textareaRef}
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder={labels.chatPlaceholder}
+            rows={1}
+            disabled={isLoading}
+            style={{
+              flex: 1,
+              resize: "none",
+              border: "none",
+              outline: "none",
+              backgroundColor: "transparent",
+              padding: "10px 4px",
+              fontSize: 15,
+              lineHeight: 1.6,
+              color: "var(--color-text-primary)",
+              fontFamily: "inherit",
+              maxHeight: 200,
+              opacity: isLoading ? 0.5 : 1,
+            }}
+            data-gramm="false"
+            data-gramm_editor="false"
+            data-enable-grammarly="false"
+          />
+
+          {/* Send button */}
+          <button
+            className={`input-send-btn ${canSend && !isLoading ? "enabled" : "disabled"}`}
+            onClick={handleSend}
+            disabled={isLoading || !canSend}
+            style={{ flexShrink: 0 }}
+          >
+            <Send size={18} />
+          </button>
+        </div>
+
+        {/* Mode buttons */}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            marginTop: 14,
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            {modes.map((m) => {
+              const isActive = mode === m.key;
+              return (
+                <button
+                  key={m.key}
+                  onClick={() => onModeChange(m.key)}
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: 8,
+                    padding: "9px 18px",
+                    borderRadius: 8,
+                    fontSize: 13,
+                    fontWeight: 600,
+                    border: "none",
+                    cursor: "pointer",
+                    transition: "all 0.15s",
+                    backgroundColor: isActive ? m.activeBg : "transparent",
+                    color: isActive ? m.color : "var(--color-text-secondary)",
+                    boxShadow: isActive
+                      ? `inset 0 0 0 1.5px ${m.activeRing}`
+                      : "none",
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!isActive) {
+                      e.currentTarget.style.backgroundColor =
+                        "var(--color-surface-tertiary)";
+                      e.currentTarget.style.color = m.color;
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!isActive) {
+                      e.currentTarget.style.backgroundColor = "transparent";
+                      e.currentTarget.style.color =
+                        "var(--color-text-secondary)";
+                    }
+                  }}
+                >
+                  {m.icon}
+                  <span>{labels[m.labelKey]}</span>
+                </button>
+              );
+            })}
+            <button
+              onClick={() =>
+                window.open("https://bmc-remedy-agent.local", "_blank")
+              }
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 8,
+                padding: "9px 18px",
+                borderRadius: 8,
+                fontSize: 13,
+                fontWeight: 600,
+                border: "none",
+                cursor: "pointer",
+                transition: "all 0.15s",
+                backgroundColor: "transparent",
+                color: "var(--color-text-secondary)",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor =
+                  "var(--color-surface-tertiary)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = "transparent";
+              }}
+              title={labels.modeRemedy}
+            >
+              <ExternalLink size={15} />
+              <span>{labels.modeRemedy}</span>
+            </button>
+          </div>
+          <span style={{ fontSize: 11, color: "var(--color-text-muted)" }}>
+            Enter ↵ {labels.sendMessage} · Shift+Enter {labels.newLine}
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+
+============================================================
+--- PLIK: .\frontend\src\components\ProjectView.tsx ---
+============================================================
+
+// ============================================================
+// FILE: .\frontend\src\components\ProjectView.tsx
+// ============================================================
+
+import { useState, useRef } from "react";
+import {
+  Copy,
+  CheckCircle,
+  Save,
+  UploadCloud,
+  FileText,
+  Send,
+  Bot,
+  Trash2,
+  MessageSquare,
+  FileCheck,
+  Languages,
+  BarChart3,
+  FolderOpen,
+} from "lucide-react";
+import type { Project, Chat, Labels, AppMode } from "../types";
+import { formatTime } from "../lib/utils";
+
+interface ProjectViewProps {
+  project: Project;
+  projectChats: Chat[];
+  instructions: string;
+  onInstructionsChange: (val: string) => void;
+  onSaveInstructions: () => void;
+  saveSuccess: boolean;
+  onNameChange: (name: string) => void;
+  onUploadFiles: (files: FileList | File[]) => void;
+  onQuickChat: (message: string, mode: AppMode) => void;
+  onSelectChat: (id: string) => void;
+  onDeleteChat: (id: string) => void;
+  isLoading: boolean;
+  labels: Labels;
+}
+
+const MODE_OPTIONS: {
+  key: AppMode;
+  icon: React.ReactNode;
+  color: string;
+  activeBg: string;
+  activeRing: string;
+  labelKey: keyof Labels;
+}[] = [
+  {
+    key: "chatbot",
+    icon: <MessageSquare size={14} />,
+    color: "#3b82f6",
+    activeBg: "rgba(59,130,246,0.08)",
+    activeRing: "rgba(59,130,246,0.35)",
+    labelKey: "modeChatbot",
+  },
+  {
+    key: "gonogo",
+    icon: <FileCheck size={14} />,
+    color: "#e3000f",
+    activeBg: "rgba(227,0,15,0.06)",
+    activeRing: "rgba(227,0,15,0.35)",
+    labelKey: "modeGoNogo",
+  },
+  {
+    key: "translator",
+    icon: <Languages size={14} />,
+    color: "#16a34a",
+    activeBg: "rgba(22,163,74,0.06)",
+    activeRing: "rgba(22,163,74,0.35)",
+    labelKey: "modeTranslator",
+  },
+  {
+    key: "remedy",
+    icon: <BarChart3 size={14} />,
+    color: "#d97706",
+    activeBg: "rgba(217,119,6,0.06)",
+    activeRing: "rgba(217,119,6,0.35)",
+    labelKey: "modeRemedy",
+  },
+];
+
+export const ProjectView = ({
+  project,
+  projectChats,
+  instructions,
+  onInstructionsChange,
+  onSaveInstructions,
+  saveSuccess,
+  onNameChange,
+  onUploadFiles,
+  onQuickChat,
+  onSelectChat,
+  onDeleteChat,
+  isLoading,
+  labels,
+}: ProjectViewProps) => {
+  const [copiedId, setCopiedId] = useState(false);
+  const [quickInput, setQuickInput] = useState("");
+  const [selectedMode, setSelectedMode] = useState<AppMode>("chatbot");
+  const [isDragging, setIsDragging] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleCopyId = () => {
+    navigator.clipboard.writeText(project.id);
+    setCopiedId(true);
+    setTimeout(() => setCopiedId(false), 2000);
+  };
+
+  const handleQuickSubmit = () => {
+    if (!quickInput.trim()) return;
+    onQuickChat(quickInput.trim(), selectedMode);
+    setQuickInput("");
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleQuickSubmit();
+    }
+  };
+
+  const onDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+  const onDragLeave = () => setIsDragging(false);
+  const onDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    if (e.dataTransfer.files?.length) onUploadFiles(e.dataTransfer.files);
+  };
+
+  return (
+    <div
+      className="flex-1 overflow-y-auto custom-scrollbar"
+      style={{ backgroundColor: "var(--color-bg)" }}
+    >
+      <div style={{ maxWidth: 1200, margin: "0 auto", padding: "48px 32px" }}>
+        {/* ── Title row ── */}
+        <div style={{ marginBottom: 32 }}>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 12,
+              marginBottom: 4,
+            }}
+          >
+            <div
+              style={{
+                width: 36,
+                height: 36,
+                borderRadius: 10,
+                background:
+                  "linear-gradient(135deg, rgba(227,0,15,0.1), rgba(227,0,15,0.04))",
+                border: "1px solid rgba(227,0,15,0.15)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                flexShrink: 0,
+              }}
+            >
+              <FolderOpen size={18} color="#e3000f" />
+            </div>
+            <h1
+              style={{
+                fontSize: 22,
+                fontWeight: 700,
+                color: "var(--color-text-primary)",
+                margin: 0,
+              }}
+            >
+              {labels.projectSettings}
+            </h1>
+          </div>
+          <p
+            style={{
+              fontSize: 14,
+              color: "var(--color-text-tertiary)",
+              margin: 0,
+              paddingLeft: 48,
+            }}
+          >
+            {labels.projectSettingsSub}
+          </p>
+        </div>
+
+        {/* ── Two-column grid ── */}
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "1fr 1fr",
+            gap: 24,
+            alignItems: "start",
+          }}
+        >
+          {/* ════════════════════════════════════════════
+              LEFT COLUMN
+              ════════════════════════════════════════════ */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
+            {/* Project ID */}
+            <div style={{ marginBottom: 16 }}>
+              <label style={fieldLabelStyle}>{labels.projectId}</label>
+              <div style={{ display: "flex", gap: 8 }}>
+                <div
+                  style={{
+                    flex: 1,
+                    padding: "9px 12px",
+                    borderRadius: 8,
+                    border: "1px solid var(--color-border)",
+                    backgroundColor: "var(--color-surface-secondary)",
+                    fontSize: 13,
+                    fontFamily: "monospace",
+                    color: "var(--color-text-tertiary)",
+                    userSelect: "all",
+                  }}
+                >
+                  {project.id}
+                </div>
+                <button
+                  onClick={handleCopyId}
+                  style={iconBtnStyle}
+                  title="Copy ID"
+                >
+                  {copiedId ? (
+                    <CheckCircle size={15} color="#22c55e" />
+                  ) : (
+                    <Copy size={15} />
+                  )}
+                </button>
+              </div>
+            </div>
+
+            {/* Project Name */}
+            <div style={{ marginBottom: 24 }}>
+              <label style={fieldLabelStyle}>{labels.projectName}</label>
+              <input
+                value={project.name}
+                onChange={(e) => onNameChange(e.target.value)}
+                style={textInputStyle}
+                onFocus={focusHandler}
+                onBlur={blurHandler}
+              />
+            </div>
+
+            {/* ── Chat input area ── */}
+            <div
+              style={{
+                borderRadius: 12,
+                border: "1px solid var(--color-border)",
+                backgroundColor: "var(--color-surface)",
+                overflow: "hidden",
+                marginBottom: 24,
+              }}
+            >
+              {/* Textarea */}
+              <div style={{ padding: "14px 16px 10px" }}>
+                <textarea
+                  value={quickInput}
+                  onChange={(e) => setQuickInput(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  placeholder={labels.writeFirstMessage}
+                  rows={3}
+                  style={{
+                    width: "100%",
+                    resize: "none",
+                    border: "none",
+                    outline: "none",
+                    backgroundColor: "transparent",
+                    fontSize: 14,
+                    lineHeight: 1.6,
+                    color: "var(--color-text-primary)",
+                    fontFamily: "inherit",
+                  }}
+                />
+              </div>
+
+              {/* Bottom bar: modes + send */}
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  padding: "8px 12px",
+                  borderTop: "1px solid var(--color-border)",
+                  backgroundColor: "var(--color-surface-secondary)",
+                }}
+              >
+                <div style={{ display: "flex", gap: 4 }}>
+                  {MODE_OPTIONS.map((m) => {
+                    const isActive = selectedMode === m.key;
+                    return (
+                      <button
+                        key={m.key}
+                        onClick={() => setSelectedMode(m.key)}
+                        style={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: 6,
+                          padding: "6px 12px",
+                          borderRadius: 6,
+                          fontSize: 12,
+                          fontWeight: 600,
+                          border: "none",
+                          cursor: "pointer",
+                          transition: "all 0.15s",
+                          backgroundColor: isActive
+                            ? m.activeBg
+                            : "transparent",
+                          color: isActive
+                            ? m.color
+                            : "var(--color-text-tertiary)",
+                          boxShadow: isActive
+                            ? `inset 0 0 0 1.5px ${m.activeRing}`
+                            : "none",
+                        }}
+                      >
+                        {m.icon}
+                        <span>{labels[m.labelKey]}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <button
+                  onClick={handleQuickSubmit}
+                  disabled={!quickInput.trim()}
+                  style={{
+                    width: 34,
+                    height: 34,
+                    borderRadius: 8,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    border: "none",
+                    cursor: quickInput.trim() ? "pointer" : "not-allowed",
+                    transition: "all 0.15s",
+                    backgroundColor: quickInput.trim()
+                      ? "var(--color-orlen)"
+                      : "var(--color-surface-tertiary)",
+                    color: quickInput.trim()
+                      ? "#fff"
+                      : "var(--color-text-muted)",
+                  }}
+                >
+                  <Send size={16} />
+                </button>
+              </div>
+            </div>
+
+            {/* ── Project chats list ── */}
+            <div>
+              <label style={{ ...fieldLabelStyle, marginBottom: 10 }}>
+                {labels.recentChatsSection}
+                {projectChats.length > 0 && (
+                  <span
+                    style={{
+                      marginLeft: 8,
+                      fontSize: 10,
+                      fontWeight: 700,
+                      backgroundColor: "var(--color-surface-tertiary)",
+                      color: "var(--color-text-tertiary)",
+                      padding: "2px 7px",
+                      borderRadius: 10,
+                    }}
+                  >
+                    {projectChats.length}
+                  </span>
+                )}
+              </label>
+
+              <div
+                style={{
+                  borderRadius: 10,
+                  border: "1px solid var(--color-border)",
+                  backgroundColor: "var(--color-surface)",
+                  overflow: "hidden",
+                }}
+              >
+                {projectChats.length === 0 ? (
+                  <div
+                    style={{
+                      padding: "28px 16px",
+                      textAlign: "center",
+                      color: "var(--color-text-muted)",
+                      fontSize: 13,
+                    }}
+                  >
+                    {labels.noProjects}
+                  </div>
+                ) : (
+                  <div
+                    style={{ maxHeight: 260, overflowY: "auto" }}
+                    className="custom-scrollbar"
+                  >
+                    {projectChats.map((chat, idx) => (
+                      <div
+                        key={chat.id}
+                        onClick={() => onSelectChat(chat.id)}
+                        className="group"
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "space-between",
+                          padding: "10px 14px",
+                          cursor: "pointer",
+                          borderTop:
+                            idx > 0 ? "1px solid var(--color-border)" : "none",
+                          transition: "background-color 0.12s",
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.backgroundColor =
+                            "var(--color-surface-secondary)";
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.backgroundColor = "transparent";
+                        }}
+                      >
+                        <div
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 10,
+                            minWidth: 0,
+                            flex: 1,
+                          }}
+                        >
+                          <Bot
+                            size={14}
+                            color="#3b82f6"
+                            style={{ flexShrink: 0 }}
+                          />
+                          <div style={{ minWidth: 0, flex: 1 }}>
+                            <div
+                              style={{
+                                fontSize: 13,
+                                fontWeight: 500,
+                                color: "var(--color-text-primary)",
+                                overflow: "hidden",
+                                textOverflow: "ellipsis",
+                                whiteSpace: "nowrap",
+                              }}
+                            >
+                              {chat.name}
+                            </div>
+                            <div
+                              style={{
+                                fontSize: 11,
+                                color: "var(--color-text-muted)",
+                                marginTop: 1,
+                              }}
+                            >
+                              {chat.messages.length} msg ·{" "}
+                              {formatTime(chat.updatedAt)}
+                            </div>
+                          </div>
+                        </div>
+
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onDeleteChat(chat.id);
+                          }}
+                          className="opacity-0 group-hover:opacity-100"
+                          style={{
+                            padding: 4,
+                            borderRadius: 4,
+                            flexShrink: 0,
+                            color: "var(--color-text-muted)",
+                            transition: "all 0.12s",
+                            border: "none",
+                            background: "none",
+                            cursor: "pointer",
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.color = "#ef4444";
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.color =
+                              "var(--color-text-muted)";
+                          }}
+                        >
+                          <Trash2 size={13} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* ════════════════════════════════════════════
+              RIGHT COLUMN
+              ════════════════════════════════════════════ */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+            {/* ── Instructions editor ── */}
+            <div
+              style={{
+                borderRadius: 12,
+                border: "1px solid var(--color-border)",
+                backgroundColor: "var(--color-surface)",
+                overflow: "hidden",
+                display: "flex",
+                flexDirection: "column",
+              }}
+            >
+              {/* Header bar */}
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  padding: "10px 16px",
+                  borderBottom: "1px solid var(--color-border)",
+                  backgroundColor: "var(--color-surface-secondary)",
+                }}
+              >
+                <span
+                  style={{
+                    fontSize: 11,
+                    fontWeight: 700,
+                    textTransform: "uppercase",
+                    letterSpacing: "0.04em",
+                    color: "var(--color-text-secondary)",
+                  }}
+                >
+                  {labels.systemPromptLabel}
+                </span>
+                <button
+                  onClick={onSaveInstructions}
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 5,
+                    fontSize: 12,
+                    fontWeight: 700,
+                    color: "var(--color-orlen)",
+                    border: "none",
+                    background: "none",
+                    cursor: "pointer",
+                    transition: "opacity 0.15s",
+                  }}
+                >
+                  {saveSuccess ? <CheckCircle size={13} /> : <Save size={13} />}
+                  {saveSuccess ? labels.saved : labels.saveBtn}
+                </button>
+              </div>
+
+              {/* Editor area */}
+              <textarea
+                value={instructions}
+                onChange={(e) => onInstructionsChange(e.target.value)}
+                placeholder={labels.chatPlaceholder}
+                style={{
+                  width: "100%",
+                  minHeight: 200,
+                  resize: "vertical",
+                  border: "none",
+                  outline: "none",
+                  backgroundColor: "transparent",
+                  padding: 16,
+                  fontSize: 13,
+                  lineHeight: 1.7,
+                  color: "var(--color-text-primary)",
+                  fontFamily: "'Roboto Mono', monospace",
+                }}
+              />
+            </div>
+
+            {/* ── File upload (drag & drop) ── */}
+            <div
+              onDragOver={onDragOver}
+              onDragLeave={onDragLeave}
+              onDrop={onDrop}
+              style={{
+                position: "relative",
+                borderRadius: 12,
+                border: `2px dashed ${isDragging ? "var(--color-orlen)" : "var(--color-border)"}`,
+                backgroundColor: isDragging
+                  ? "rgba(227,0,15,0.03)"
+                  : "var(--color-surface)",
+                padding: 20,
+                transition: "all 0.2s",
+                display: "flex",
+                flexDirection: "column",
+              }}
+            >
+              {/* Loading overlay */}
+              {isLoading && (
+                <div
+                  style={{
+                    position: "absolute",
+                    inset: 0,
+                    backgroundColor: "rgba(var(--color-surface), 0.6)",
+                    backdropFilter: "blur(4px)",
+                    zIndex: 10,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    borderRadius: 10,
+                  }}
+                >
+                  <span
+                    style={{
+                      fontSize: 13,
+                      fontWeight: 700,
+                      color: "var(--color-orlen)",
+                    }}
+                    className="animate-pulse"
+                  >
+                    {labels.uploadingAndVectorizing}
+                  </span>
+                </div>
+              )}
+
+              {/* Header */}
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  marginBottom: 14,
+                }}
+              >
+                <div>
+                  <div
+                    style={{
+                      fontSize: 13,
+                      fontWeight: 600,
+                      color: "var(--color-text-primary)",
+                    }}
+                  >
+                    {labels.projectKnowledgeBase}
+                  </div>
+                  <div
+                    style={{
+                      fontSize: 12,
+                      color: "var(--color-text-tertiary)",
+                      marginTop: 2,
+                    }}
+                  >
+                    {labels.projectKnowledgeBaseSub}
+                  </div>
+                </div>
+                <label
+                  style={{
+                    cursor: "pointer",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 6,
+                    padding: "7px 14px",
+                    borderRadius: 8,
+                    border: "1px solid var(--color-border)",
+                    backgroundColor: "var(--color-surface-secondary)",
+                    fontSize: 12,
+                    fontWeight: 600,
+                    color: "var(--color-text-secondary)",
+                    transition: "all 0.15s",
+                  }}
+                >
+                  <UploadCloud size={14} /> {labels.uploadBtn}
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    multiple
+                    accept=".pdf,.docx,.txt"
+                    style={{ display: "none" }}
+                    onChange={(e) =>
+                      e.target.files && onUploadFiles(e.target.files)
+                    }
+                  />
+                </label>
+              </div>
+
+              {/* File list */}
+              <div
+                style={{ maxHeight: 200, overflowY: "auto" }}
+                className="custom-scrollbar"
+              >
+                {!project.uploadedFiles ||
+                project.uploadedFiles.length === 0 ? (
+                  <div
+                    style={{
+                      textAlign: "center",
+                      padding: "24px 0",
+                      color: "var(--color-text-muted)",
+                      fontSize: 13,
+                    }}
+                  >
+                    {labels.noUploadedFiles}
+                  </div>
+                ) : (
+                  <div
+                    style={{ display: "flex", flexDirection: "column", gap: 6 }}
+                  >
+                    {project.uploadedFiles.map((file, i) => (
+                      <div
+                        key={i}
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 8,
+                          padding: "8px 12px",
+                          borderRadius: 8,
+                          border: "1px solid var(--color-border)",
+                          backgroundColor: "var(--color-surface-secondary)",
+                          fontSize: 12,
+                          color: "var(--color-text-secondary)",
+                        }}
+                      >
+                        <FileText
+                          size={14}
+                          color="#3b82f6"
+                          style={{ flexShrink: 0 }}
+                        />
+                        <span
+                          style={{
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          {file}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ── Shared inline styles ──
+
+const fieldLabelStyle: React.CSSProperties = {
+  display: "block",
+  fontSize: 11,
+  fontWeight: 700,
+  textTransform: "uppercase",
+  letterSpacing: "0.04em",
+  color: "var(--color-text-secondary)",
+  marginBottom: 6,
+};
+
+const textInputStyle: React.CSSProperties = {
+  width: "100%",
+  padding: "9px 12px",
+  borderRadius: 8,
+  border: "1px solid var(--color-border)",
+  backgroundColor: "var(--color-surface)",
+  fontSize: 14,
+  color: "var(--color-text-primary)",
+  outline: "none",
+  transition: "border-color 0.15s",
+};
+
+const iconBtnStyle: React.CSSProperties = {
+  width: 38,
+  height: 38,
+  borderRadius: 8,
+  border: "1px solid var(--color-border)",
+  backgroundColor: "var(--color-surface)",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  cursor: "pointer",
+  color: "var(--color-text-tertiary)",
+  transition: "all 0.15s",
+  flexShrink: 0,
+};
+
+const focusHandler = (
+  e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>,
+) => {
+  e.currentTarget.style.borderColor = "var(--color-orlen)";
+};
+
+const blurHandler = (
+  e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>,
+) => {
+  e.currentTarget.style.borderColor = "var(--color-border)";
+};
+
+
+============================================================
+--- PLIK: .\frontend\src\components\SettingsPanel.tsx ---
+============================================================
+
+// ============================================================
+// FILE: .\frontend\src\components\SettingsPanel.tsx
+// ============================================================
+
+import { useEffect } from "react";
+import { X, Globe, Server, ShieldAlert, KeyRound } from "lucide-react";
+import type { Labels, UserConfig, LangCode } from "../types";
+import { getInitials } from "../lib/utils";
+
+interface SettingsPanelProps {
+  isOpen: boolean;
+  onClose: () => void;
+  userConfig: UserConfig;
+  onUpdateConfig: (updates: Partial<UserConfig>) => void;
+  language: LangCode;
+  onSetLanguage: (lang: LangCode) => void;
+  labels: Labels;
+}
+
+export const SettingsPanel = ({
+  isOpen,
+  onClose,
+  userConfig,
+  onUpdateConfig,
+  language,
+  onSetLanguage,
+  labels,
+}: SettingsPanelProps) => {
+  // Close on Escape key
+  useEffect(() => {
+    if (!isOpen) return;
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  }, [isOpen, onClose]);
+
+  if (!isOpen) return null;
+
+  const initials = getInitials(userConfig.displayName);
+  const t = (pl: string, en: string) => (language === "pl" ? pl : en);
+
+  return (
+    <div
+      style={{
+        position: "fixed",
+        inset: 0,
+        zIndex: 9999,
+        backgroundColor: "rgba(0,0,0,0.6)",
+        backdropFilter: "blur(4px)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: 24,
+      }}
+      onClick={onClose}
+    >
+      <div
+        className="animate-fade-in-up"
+        style={{
+          width: "100%",
+          maxWidth: 580,
+          backgroundColor: "var(--color-surface)",
+          borderRadius: 16,
+          border: "1px solid var(--color-border)",
+          boxShadow: "0 20px 40px rgba(0,0,0,0.3)",
+          display: "flex",
+          flexDirection: "column",
+          overflow: "hidden",
+        }}
+        onClick={(e) => e.stopPropagation()} // Zapobiega zamknięciu przy kliknięciu w okno
+      >
+        {/* Header */}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            padding: "16px 24px",
+            borderBottom: "1px solid var(--color-border)",
+            backgroundColor: "var(--color-surface-secondary)",
+          }}
+        >
+          <span
+            style={{
+              fontSize: 15,
+              fontWeight: 700,
+              color: "var(--color-text-primary)",
+            }}
+          >
+            {labels.userSettings}
+          </span>
+          <button
+            onClick={onClose}
+            style={{
+              padding: 6,
+              borderRadius: 8,
+              color: "var(--color-text-tertiary)",
+              cursor: "pointer",
+              transition: "all 0.15s",
+              border: "none",
+              background: "transparent",
+            }}
+          >
+            <X size={18} />
+          </button>
+        </div>
+
+        {/* Content */}
+        <div
+          className="custom-scrollbar"
+          style={{
+            padding: "24px",
+            display: "flex",
+            flexDirection: "column",
+            gap: 24,
+            maxHeight: "75vh",
+            overflowY: "auto",
+          }}
+        >
+          {/* Avatar & Display Name */}
+          <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+            <div
+              style={{
+                width: 64,
+                height: 64,
+                borderRadius: "50%",
+                background: "linear-gradient(135deg, #dbeafe, #bfdbfe)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontSize: 24,
+                fontWeight: 700,
+                color: "#1d4ed8",
+                flexShrink: 0,
+              }}
+            >
+              {initials}
+            </div>
+            <div style={{ flex: 1 }}>
+              <label
+                style={{
+                  display: "block",
+                  fontSize: 11,
+                  fontWeight: 700,
+                  color: "var(--color-text-secondary)",
+                  textTransform: "uppercase",
+                  marginBottom: 6,
+                }}
+              >
+                {labels.displayNameLabel}
+              </label>
+              <input
+                type="text"
+                value={userConfig.displayName}
+                onChange={(e) =>
+                  onUpdateConfig({ displayName: e.target.value })
+                }
+                style={{
+                  width: "100%",
+                  padding: "10px 12px",
+                  borderRadius: 8,
+                  border: "1px solid var(--color-border)",
+                  backgroundColor: "var(--color-surface-secondary)",
+                  fontSize: 14,
+                  color: "var(--color-text-primary)",
+                  outline: "none",
+                }}
+              />
+            </div>
+          </div>
+
+          <div
+            style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}
+          >
+            {/* Role */}
+            <div>
+              <label
+                style={{
+                  display: "block",
+                  fontSize: 11,
+                  fontWeight: 700,
+                  color: "var(--color-text-secondary)",
+                  textTransform: "uppercase",
+                  marginBottom: 6,
+                }}
+              >
+                {labels.roleLabel}
+              </label>
+              <input
+                type="text"
+                value={userConfig.role}
+                onChange={(e) => onUpdateConfig({ role: e.target.value })}
+                style={{
+                  width: "100%",
+                  padding: "10px 12px",
+                  borderRadius: 8,
+                  border: "1px solid var(--color-border)",
+                  backgroundColor: "var(--color-surface-secondary)",
+                  fontSize: 14,
+                  color: "var(--color-text-primary)",
+                  outline: "none",
+                }}
+              />
+            </div>
+
+            {/* Author Name */}
+            <div>
+              <label
+                style={{
+                  display: "block",
+                  fontSize: 11,
+                  fontWeight: 700,
+                  color: "var(--color-text-secondary)",
+                  textTransform: "uppercase",
+                  marginBottom: 6,
+                }}
+              >
+                {labels.authorNameLabel}
+              </label>
+              <input
+                type="text"
+                value={userConfig.authorName}
+                onChange={(e) => onUpdateConfig({ authorName: e.target.value })}
+                style={{
+                  width: "100%",
+                  padding: "10px 12px",
+                  borderRadius: 8,
+                  border: "1px solid var(--color-border)",
+                  backgroundColor: "var(--color-surface-secondary)",
+                  fontSize: 14,
+                  color: "var(--color-text-primary)",
+                  outline: "none",
+                }}
+              />
+            </div>
+          </div>
+
+          <div style={{ height: 1, backgroundColor: "var(--color-border)" }} />
+
+          {/* Active Directory / LDAP Integrations (MOCKS) */}
+          <div>
+            <label
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+                fontSize: 11,
+                fontWeight: 700,
+                color: "var(--color-text-secondary)",
+                textTransform: "uppercase",
+                marginBottom: 12,
+              }}
+            >
+              <Server size={13} />{" "}
+              {t("Katalog LDAP (Mock)", "LDAP Directory (Mock)")}
+            </label>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr",
+                gap: 16,
+              }}
+            >
+              <div>
+                <span
+                  style={{
+                    fontSize: 12,
+                    color: "var(--color-text-muted)",
+                    marginBottom: 4,
+                    display: "block",
+                  }}
+                >
+                  {t("Nazwa użytkownika LDAP", "LDAP Username")}
+                </span>
+                <input
+                  disabled
+                  value="jdeveloper_adm"
+                  style={{
+                    width: "100%",
+                    padding: "10px 12px",
+                    borderRadius: 8,
+                    border: "1px dashed var(--color-border-strong)",
+                    backgroundColor: "var(--color-bg)",
+                    fontSize: 13,
+                    color: "var(--color-text-tertiary)",
+                    outline: "none",
+                    cursor: "not-allowed",
+                  }}
+                />
+              </div>
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  justifyContent: "flex-end",
+                }}
+              >
+                <button
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: 8,
+                    padding: "10px",
+                    borderRadius: 8,
+                    border: "1px solid var(--color-border)",
+                    backgroundColor: "var(--color-surface)",
+                    fontSize: 13,
+                    fontWeight: 600,
+                    color: "var(--color-text-secondary)",
+                    cursor: "not-allowed",
+                    opacity: 0.7,
+                  }}
+                  disabled
+                >
+                  <ShieldAlert size={15} />{" "}
+                  {t("Zsynchronizuj z AD", "Sync with AD")}
+                </button>
+              </div>
+            </div>
+
+            <div style={{ marginTop: 16 }}>
+              <button
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 8,
+                  padding: "10px",
+                  width: "100%",
+                  borderRadius: 8,
+                  border: "1px solid #fecaca",
+                  backgroundColor: "#fef2f2",
+                  fontSize: 13,
+                  fontWeight: 600,
+                  color: "#dc2626",
+                  cursor: "pointer",
+                  transition: "all 0.15s",
+                }}
+                onClick={() =>
+                  alert(
+                    t(
+                      "Opcja dostępna tylko dla administratorów domeny.",
+                      "Option available only for domain administrators.",
+                    ),
+                  )
+                }
+              >
+                <KeyRound size={15} />{" "}
+                {t(
+                  "Wymuś zmianę hasła przy następnym logowaniu",
+                  "Force password reset on next login",
+                )}
+              </button>
+            </div>
+          </div>
+
+          <div style={{ height: 1, backgroundColor: "var(--color-border)" }} />
+
+          {/* Language Selection */}
+          <div>
+            <label
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+                fontSize: 11,
+                fontWeight: 700,
+                color: "var(--color-text-secondary)",
+                textTransform: "uppercase",
+                marginBottom: 8,
+              }}
+            >
+              <Globe size={13} /> {labels.languageLabel}
+            </label>
+            <div style={{ display: "flex", gap: 8 }}>
+              <button
+                onClick={() => onSetLanguage("pl")}
+                style={{
+                  flex: 1,
+                  padding: "10px",
+                  borderRadius: 8,
+                  fontSize: 13,
+                  fontWeight: 600,
+                  cursor: "pointer",
+                  border:
+                    language === "pl"
+                      ? "1.5px solid var(--color-orlen)"
+                      : "1px solid var(--color-border)",
+                  backgroundColor:
+                    language === "pl"
+                      ? "rgba(227,0,15,0.06)"
+                      : "var(--color-surface-secondary)",
+                  color:
+                    language === "pl"
+                      ? "var(--color-orlen)"
+                      : "var(--color-text-secondary)",
+                  transition: "all 0.15s",
+                }}
+              >
+                🇵🇱 {labels.polish}
+              </button>
+              <button
+                onClick={() => onSetLanguage("en")}
+                style={{
+                  flex: 1,
+                  padding: "10px",
+                  borderRadius: 8,
+                  fontSize: 13,
+                  fontWeight: 600,
+                  cursor: "pointer",
+                  border:
+                    language === "en"
+                      ? "1.5px solid var(--color-orlen)"
+                      : "1px solid var(--color-border)",
+                  backgroundColor:
+                    language === "en"
+                      ? "rgba(227,0,15,0.06)"
+                      : "var(--color-surface-secondary)",
+                  color:
+                    language === "en"
+                      ? "var(--color-orlen)"
+                      : "var(--color-text-secondary)",
+                  transition: "all 0.15s",
+                }}
+              >
+                🇬🇧 {labels.english}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+
+============================================================
+--- PLIK: .\frontend\src\components\Sidebar.tsx ---
+============================================================
+
+// ============================================================
+// FILE: .\frontend\src\components\Sidebar.tsx
+// ============================================================
+
+import { useState, useRef, useEffect, useCallback } from "react";
+import {
+  MessageSquare,
+  Search,
+  FolderClosed,
+  Bot,
+  Settings,
+  Sun,
+  Moon,
+  MoreHorizontal,
+  Trash2,
+} from "lucide-react";
+import type {
+  Project,
+  Chat,
+  Labels,
+  ThemeMode,
+  UserConfig,
+  LangCode,
+} from "../types";
+import { cn, getInitials } from "../lib/utils";
+import { ProjectContextMenu } from "./ProjectContextMenu";
+
+interface SidebarProps {
+  projects: Project[];
+  chats: Chat[];
+  activeId: string | null;
+  onSelect: (id: string) => void;
+  onNewProject: () => void;
+  onNewChat: () => void;
+  onDeleteProject: (id: string) => void;
+  onDeleteChat: (id: string) => void;
+  onRenameProject: (id: string, name: string) => void;
+  onToggleArchiveProject: (id: string) => void;
+  labels: Labels;
+  theme: ThemeMode;
+  onToggleTheme: () => void;
+  userConfig: UserConfig;
+  onUpdateUserConfig: (updates: Partial<UserConfig>) => void;
+  language: LangCode;
+  onSetLanguage: (lang: LangCode) => void;
+  onToggleLanguage: () => void;
+  onOpenSettings: () => void;
+}
+
+export const Sidebar = ({
+  projects,
+  chats,
+  activeId,
+  onSelect,
+  onNewProject,
+  onNewChat,
+  onDeleteProject,
+  onDeleteChat,
+  onRenameProject,
+  onToggleArchiveProject,
+  labels,
+  theme,
+  onToggleTheme,
+  userConfig,
+  onToggleLanguage,
+  onOpenSettings,
+}: SidebarProps) => {
+  const [search, setSearch] = useState("");
+
+  // Context menu state
+  const [ctxMenu, setCtxMenu] = useState<{
+    id: string;
+    x: number;
+    y: number;
+  } | null>(null);
+
+  // Inline rename state
+  const [renamingId, setRenamingId] = useState<string | null>(null);
+  const [renameValue, setRenameValue] = useState("");
+  const renameInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (renamingId && renameInputRef.current) {
+      renameInputRef.current.focus();
+      renameInputRef.current.select();
+    }
+  }, [renamingId]);
+
+  const handleContextMenu = useCallback(
+    (e: React.MouseEvent, projectId: string) => {
+      e.preventDefault();
+      e.stopPropagation();
+      setCtxMenu({ id: projectId, x: e.clientX, y: e.clientY });
+    },
+    [],
+  );
+
+  const startRename = useCallback(
+    (id: string) => {
+      const project = projects.find((p) => p.id === id);
+      if (project) {
+        setRenamingId(id);
+        setRenameValue(project.name);
+      }
+    },
+    [projects],
+  );
+
+  const commitRename = useCallback(() => {
+    if (renamingId && renameValue.trim()) {
+      onRenameProject(renamingId, renameValue.trim());
+    }
+    setRenamingId(null);
+    setRenameValue("");
+  }, [renamingId, renameValue, onRenameProject]);
+
+  const cancelRename = useCallback(() => {
+    setRenamingId(null);
+    setRenameValue("");
+  }, []);
+
+  const filteredProjects = projects.filter((p) =>
+    p.name.toLowerCase().includes(search.toLowerCase()),
+  );
+  const filteredChats = chats.filter((c) =>
+    c.name.toLowerCase().includes(search.toLowerCase()),
+  );
+
+  // Separate active and archived projects
+  const activeProjects = filteredProjects.filter((p) => !p.archived);
+  const archivedProjects = filteredProjects.filter((p) => p.archived);
+
+  const initials = getInitials(userConfig.displayName);
+
+  return (
+    <div
+      className="sidebar-root flex h-full w-full flex-col transition-colors duration-200"
+      style={{ position: "relative" }}
+    >
+      {/* Header */}
+      <div className="sidebar-header flex items-center gap-3 px-5 py-5 border-b border-border">
+        <div className="sidebar-logo-icon flex h-8 w-8 items-center justify-center rounded-md shadow-sm">
+          <MessageSquare size={16} className="text-white" />
+        </div>
+        <span className="text-sm font-bold text-text-primary tracking-wide">
+          QA Assistant
+        </span>
+      </div>
+
+      {/* Action buttons */}
+      <div className="p-4 flex gap-2">
+        <button
+          onClick={onNewChat}
+          className="sidebar-new-btn flex-1 flex items-center justify-center gap-2 rounded-md bg-surface px-2 py-2 text-xs font-semibold text-text-primary border border-border shadow-sm hover:bg-surface-tertiary"
+        >
+          <MessageSquare size={14} /> {labels.newChat}
+        </button>
+        <button
+          onClick={onNewProject}
+          className="sidebar-new-btn flex-1 flex items-center justify-center gap-2 rounded-md bg-surface px-2 py-2 text-xs font-semibold text-text-primary border border-border shadow-sm hover:bg-surface-tertiary"
+        >
+          <FolderClosed size={14} /> {labels.newProject}
+        </button>
+      </div>
+
+      {/* Search */}
+      <div className="px-4 pb-2">
+        <div className="sidebar-search relative rounded-md border border-border bg-surface">
+          <Search
+            size={14}
+            className="absolute left-3 top-1/2 -translate-y-1/2 text-text-tertiary"
+          />
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder={labels.searchProjects}
+            className="w-full rounded-md bg-transparent py-1.5 pl-9 pr-3 text-xs text-text-primary outline-none"
+          />
+        </div>
+      </div>
+
+      {/* Lists */}
+      <div className="flex-1 overflow-y-auto custom-scrollbar py-2">
+        {/* Active Projects */}
+        <div className="mb-4">
+          <div className="px-5 py-1.5 text-[0.65rem] font-bold uppercase tracking-wider text-text-tertiary">
+            {labels.projectsSection}
+          </div>
+          {activeProjects.map((p) => (
+            <div
+              key={p.id}
+              className={cn(
+                "group flex items-center justify-between mx-2 mb-1 px-3 py-2 rounded-md cursor-pointer transition-colors",
+                activeId === p.id
+                  ? "bg-surface-tertiary text-text-primary"
+                  : "text-text-secondary hover:bg-surface-tertiary hover:text-text-primary",
+              )}
+              onClick={() => onSelect(p.id)}
+              onContextMenu={(e) => handleContextMenu(e, p.id)}
+            >
+              <div className="flex items-center gap-2 truncate flex-1 min-w-0">
+                <FolderClosed size={14} className="text-orlen shrink-0" />
+                {renamingId === p.id ? (
+                  <input
+                    ref={renameInputRef}
+                    value={renameValue}
+                    onChange={(e) => setRenameValue(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") commitRename();
+                      if (e.key === "Escape") cancelRename();
+                    }}
+                    onBlur={commitRename}
+                    onClick={(e) => e.stopPropagation()}
+                    className="flex-1 min-w-0 bg-surface border border-orlen rounded px-1.5 py-0.5 text-sm text-text-primary outline-none"
+                  />
+                ) : (
+                  <span className="truncate text-sm">{p.name}</span>
+                )}
+              </div>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setCtxMenu({ id: p.id, x: e.clientX, y: e.clientY });
+                }}
+                className="opacity-0 group-hover:opacity-100 text-text-tertiary hover:text-text-primary p-0.5 rounded transition-opacity"
+              >
+                <MoreHorizontal size={14} />
+              </button>
+            </div>
+          ))}
+        </div>
+
+        {/* Archived Projects */}
+        {archivedProjects.length > 0 && (
+          <div className="mb-4">
+            <div className="px-5 py-1.5 text-[0.65rem] font-bold uppercase tracking-wider text-text-muted">
+              {labels.archived}
+            </div>
+            {archivedProjects.map((p) => (
+              <div
+                key={p.id}
+                className={cn(
+                  "group flex items-center justify-between mx-2 mb-1 px-3 py-2 rounded-md cursor-pointer transition-colors opacity-60",
+                  activeId === p.id
+                    ? "bg-surface-tertiary text-text-primary"
+                    : "text-text-secondary hover:bg-surface-tertiary hover:text-text-primary",
+                )}
+                onClick={() => onSelect(p.id)}
+                onContextMenu={(e) => handleContextMenu(e, p.id)}
+              >
+                <div className="flex items-center gap-2 truncate flex-1 min-w-0">
+                  <FolderClosed
+                    size={14}
+                    className="text-text-muted shrink-0"
+                  />
+                  {renamingId === p.id ? (
+                    <input
+                      ref={renameInputRef}
+                      value={renameValue}
+                      onChange={(e) => setRenameValue(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") commitRename();
+                        if (e.key === "Escape") cancelRename();
+                      }}
+                      onBlur={commitRename}
+                      onClick={(e) => e.stopPropagation()}
+                      className="flex-1 min-w-0 bg-surface border border-orlen rounded px-1.5 py-0.5 text-sm text-text-primary outline-none"
+                    />
+                  ) : (
+                    <span className="truncate text-sm">{p.name}</span>
+                  )}
+                  <span className="text-[9px] font-bold uppercase text-text-muted bg-surface-tertiary px-1.5 py-0.5 rounded shrink-0">
+                    {labels.archivedBadge}
+                  </span>
+                </div>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setCtxMenu({ id: p.id, x: e.clientX, y: e.clientY });
+                  }}
+                  className="opacity-0 group-hover:opacity-100 text-text-tertiary hover:text-text-primary p-0.5 rounded transition-opacity"
+                >
+                  <MoreHorizontal size={14} />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Chats */}
+        <div className="mb-4">
+          <div className="px-5 py-1.5 text-[0.65rem] font-bold uppercase tracking-wider text-text-tertiary">
+            {labels.recentChatsSection}
+          </div>
+          {filteredChats.map((c) => (
+            <div
+              key={c.id}
+              className={cn(
+                "flex items-center justify-between mx-2 mb-1 px-3 py-2 rounded-md cursor-pointer transition-colors group",
+                activeId === c.id
+                  ? "bg-surface-tertiary text-text-primary"
+                  : "text-text-secondary hover:bg-surface-tertiary hover:text-text-primary",
+              )}
+              onClick={() => onSelect(c.id)}
+            >
+              <div className="flex items-center gap-2 truncate">
+                <Bot size={14} className="text-blue-500" />
+                <span className="truncate text-sm">{c.name}</span>
+              </div>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDeleteChat(c.id);
+                }}
+                className="opacity-0 group-hover:opacity-100 text-text-tertiary hover:text-red-500"
+              >
+                <Trash2 size={13} />
+              </button>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Footer - User & Controls */}
+      <div
+        className="border-t border-border p-3 flex items-center justify-between bg-surface-secondary"
+        style={{ position: "relative" }}
+      >
+        <div className="flex items-center gap-3 cursor-pointer p-1.5 hover:bg-surface-tertiary rounded-md transition-colors flex-1 min-w-0">
+          <div
+            className="h-8 w-8 rounded-full flex items-center justify-center font-bold text-xs shrink-0"
+            style={{
+              background: "linear-gradient(135deg, #dbeafe, #bfdbfe)",
+              color: "#1d4ed8",
+            }}
+          >
+            {initials}
+          </div>
+          <div className="flex flex-col min-w-0">
+            <span className="text-xs font-semibold text-text-primary truncate">
+              {userConfig.displayName}
+            </span>
+            <span className="text-[10px] text-text-tertiary truncate">
+              {userConfig.role}
+            </span>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-1 shrink-0">
+          {/* Quick language toggle */}
+          <button
+            onClick={onToggleLanguage}
+            className="p-2 text-text-tertiary hover:text-text-primary hover:bg-surface-tertiary rounded-md transition-colors"
+            title={labels.languageLabel}
+          >
+            {/* <Globe size={15} /> */}
+          </button>
+          {/* Theme toggle */}
+          <button
+            onClick={onToggleTheme}
+            className="p-2 text-text-tertiary hover:text-text-primary hover:bg-surface-tertiary rounded-md transition-colors"
+            title={labels.changeTheme}
+          >
+            {theme === "dark" ? <Sun size={15} /> : <Moon size={15} />}
+          </button>
+          {/* Settings */}
+          <button
+            onClick={onOpenSettings}
+            className="p-2 text-text-tertiary hover:text-text-primary hover:bg-surface-tertiary rounded-md transition-colors"
+            title={labels.settings}
+          >
+            <Settings size={15} />
+          </button>
+        </div>
+      </div>
+
+      {/* Project Context Menu */}
+      {ctxMenu && (
+        <ProjectContextMenu
+          x={ctxMenu.x}
+          y={ctxMenu.y}
+          isArchived={
+            projects.find((p) => p.id === ctxMenu.id)?.archived ?? false
+          }
+          onClose={() => setCtxMenu(null)}
+          onRename={() => startRename(ctxMenu.id)}
+          onToggleArchive={() => onToggleArchiveProject(ctxMenu.id)}
+          onDelete={() => onDeleteProject(ctxMenu.id)}
+          labels={labels}
+        />
+      )}
+    </div>
+  );
+};
+
+
+============================================================
+--- PLIK: .\frontend\src\i18n\labels.ts ---
+============================================================
+
+// ============================================================
+// FILE: .\frontend\src\i18n\labels.ts
+// ============================================================
+
+import type { Labels } from "../types";
+
+export const labelsPl: Labels = {
+  headerTitle: "QA Asystent AI",
+  chatPlaceholder: "Napisz wiadomość...",
+  newProject: "Nowy projekt",
+  newChat: "Nowy czat",
+  searchProjects: "Szukaj projektów...",
+  canvasTitle: "Edytor raportu",
+  downloadPdf: "PDF",
+  downloadDocx: "DOCX",
+  downloadMd: "MD",
+  sendMessage: "Wyślij",
+  attachFiles: "Załącz pliki",
+  modeChatbot: "Chatbot",
+  modeGoNogo: "Go/No-Go",
+  modeTranslator: "Tłumacz",
+  modeRemedy: "BMC Remedy",
+  openCanvas: "Otwórz edytor",
+  closeCanvas: "Zamknij edytor",
+  noProjects: "Brak projektów",
+  today: "Dzisiaj",
+  yesterday: "Wczoraj",
+  older: "Starsze",
+  welcome: "Witaj w asystencie QA",
+  welcomeSub: "Wybierz tryb i rozpocznij rozmowę lub wgraj pliki testowe.",
+  generatingFile: "Generowanie pliku...",
+  successFile: "Sukces! Pobieranie pliku rozpoczęte.",
+  errorExport: "Błąd podczas eksportu pliku.",
+  errorAi: "Wystąpił błąd podczas łączenia z AI.",
+  maxFiles: "Maks. 20 plików, do 5 MB każdy.",
+  newLine: "nowa linia",
+  editName: "Zmień nazwę",
+  archive: "Archiwizuj",
+  unarchive: "Przywróć",
+  deleteProject: "Usuń",
+  archived: "Archiwum",
+  active: "Aktywne",
+  confirmDelete: "Czy na pewno chcesz usunąć ten projekt?",
+  ragConnect: "Połącz RAG",
+  ragDisconnect: "Odłącz RAG",
+  ragConnected: "RAG aktywny",
+  ragIndexing: "Indeksowanie...",
+  ragTooltip: "Połącz z ChromaDB/S3 aby utrzymać kontekst RAG",
+  darkMode: "Tryb ciemny",
+  lightMode: "Tryb jasny",
+  cancel: "Anuluj",
+  save: "Zapisz",
+  rename: "Zmień nazwę",
+  projectSettings: "Ustawienia projektu",
+  projectSettingsSub:
+    "Zarządzaj kontekstem i rozpocznij analizę w ramach tego projektu.",
+  projectId: "ID projektu",
+  projectName: "Nazwa projektu",
+  startNewRagChat: "Rozpocznij nowy czat z RAG",
+  startNewRagChatSub:
+    "Ten czat automatycznie otrzyma dostęp do instrukcji i plików z prawej kolumny.",
+  writeFirstMessage: "Napisz pierwszą wiadomość...",
+  systemPromptLabel: "System Prompt (Instrukcje JSON/TXT)",
+  saved: "Zapisano",
+  saveBtn: "Zapisz",
+  uploadingAndVectorizing: "Wgrywanie i wektoryzacja...",
+  projectKnowledgeBase: "Baza wiedzy projektu",
+  projectKnowledgeBaseSub: "Przeciągnij i upuść pliki (PDF, DOCX, TXT)",
+  uploadBtn: "Wgraj",
+  noUploadedFiles: "Brak wgranych plików wiedzy.",
+  projectContextActive: "Kontekst projektu aktywny",
+  newConversation: "Nowa konwersacja",
+  uploadedNFiles: "Wgrano plików:",
+  uploadError: "Błąd podczas wgrywania plików.",
+  userLabel: "Użytkownik",
+  systemQaLabel: "System QA",
+  chatbotDesc: "Pytania i odpowiedzi",
+  gonogoDesc: "Raporty Go/No-Go",
+  translatorDesc: "Tłumaczenia techniczne",
+  analysisDesc: "Analiza danych",
+  projectsSection: "Projekty",
+  recentChatsSection: "Ostatnie Czaty",
+  changeTheme: "Zmień motyw",
+  settings: "Ustawienia",
+  userSettings: "Ustawienia użytkownika",
+  displayNameLabel: "Nazwa wyświetlana",
+  roleLabel: "Rola",
+  authorNameLabel: "Autor raportów",
+  authorNameHint: "Imię i nazwisko używane w eksportowanych raportach",
+  languageLabel: "Język interfejsu",
+  polish: "Polski",
+  english: "English",
+  closeSettings: "Zamknij ustawienia",
+  confirmDeleteMessage: "Tej operacji nie można cofnąć.",
+  yes: "Tak",
+  no: "Nie",
+  archivedBadge: "Arch.",
+};
+
+export const labelsEn: Labels = {
+  headerTitle: "QA AI Assistant",
+  chatPlaceholder: "Type a message...",
+  newProject: "New Project",
+  newChat: "New Chat",
+  searchProjects: "Search projects...",
+  canvasTitle: "Report editor",
+  downloadPdf: "PDF",
+  downloadDocx: "DOCX",
+  downloadMd: "MD",
+  sendMessage: "Send",
+  attachFiles: "Attach files",
+  modeChatbot: "Chatbot",
+  modeGoNogo: "Go/No-Go",
+  modeTranslator: "Translator",
+  modeRemedy: "BMC Remedy",
+  openCanvas: "Open editor",
+  closeCanvas: "Close editor",
+  noProjects: "No projects",
+  today: "Today",
+  yesterday: "Yesterday",
+  older: "Older",
+  welcome: "Welcome to QA Assistant",
+  welcomeSub: "Select a mode and start a conversation or upload test files.",
+  generatingFile: "Generating file...",
+  successFile: "Success! File download started.",
+  errorExport: "Error during file export.",
+  errorAi: "An error occurred connecting to AI.",
+  maxFiles: "Max 20 files, each up to 5 MB.",
+  newLine: "new line",
+  editName: "Rename",
+  archive: "Archive",
+  unarchive: "Unarchive",
+  deleteProject: "Delete",
+  archived: "Archived",
+  active: "Active",
+  confirmDelete: "Are you sure you want to delete this project?",
+  ragConnect: "Connect RAG",
+  ragDisconnect: "Disconnect RAG",
+  ragConnected: "RAG active",
+  ragIndexing: "Indexing...",
+  ragTooltip: "Connect to ChromaDB/S3 to maintain RAG context",
+  darkMode: "Dark mode",
+  lightMode: "Light mode",
+  cancel: "Cancel",
+  save: "Save",
+  rename: "Rename",
+  projectSettings: "Project Settings",
+  projectSettingsSub: "Manage context and start analysis within this project.",
+  projectId: "Project ID",
+  projectName: "Project Name",
+  startNewRagChat: "Start a new RAG chat",
+  startNewRagChatSub:
+    "This chat will automatically have access to the instructions and files from the right column.",
+  writeFirstMessage: "Write your first message...",
+  systemPromptLabel: "System Prompt (Instructions JSON/TXT)",
+  saved: "Saved",
+  saveBtn: "Save",
+  uploadingAndVectorizing: "Uploading and vectorizing...",
+  projectKnowledgeBase: "Project Knowledge Base",
+  projectKnowledgeBaseSub: "Drag and drop files (PDF, DOCX, TXT)",
+  uploadBtn: "Upload",
+  noUploadedFiles: "No knowledge files uploaded.",
+  projectContextActive: "Project context active",
+  newConversation: "New Conversation",
+  uploadedNFiles: "Files uploaded:",
+  uploadError: "Error uploading files.",
+  userLabel: "User",
+  systemQaLabel: "QA System",
+  chatbotDesc: "Questions & answers",
+  gonogoDesc: "Go/No-Go reports",
+  translatorDesc: "Technical translations",
+  analysisDesc: "Data analysis",
+  projectsSection: "Projects",
+  recentChatsSection: "Recent Chats",
+  changeTheme: "Change theme",
+  settings: "Settings",
+  userSettings: "User Settings",
+  displayNameLabel: "Display name",
+  roleLabel: "Role",
+  authorNameLabel: "Report author",
+  authorNameHint: "Full name used in exported reports",
+  languageLabel: "Interface language",
+  polish: "Polski",
+  english: "English",
+  closeSettings: "Close settings",
+  confirmDeleteMessage: "This action cannot be undone.",
+  yes: "Yes",
+  no: "No",
+  archivedBadge: "Arch.",
+};
+
+export const getLabels = (lang: string): Labels => {
+  return lang === "pl" ? labelsPl : labelsEn;
+};
+
+
+============================================================
+--- PLIK: .\frontend\src\styles\main.css ---
+============================================================
+
+/* ============================================================
+   FILE: .\frontend\src\styles\main.css
+   ============================================================ */
+
+@import url("https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,300;0,400;0,500;0,700;1,400;1,700&display=swap");
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --font-family-sans: "Roboto", system-ui, -apple-system, sans-serif;
+}
+
+/* Light theme declarations */
+:root {
+  --color-orlen: #e3000f;
+  --color-orlen-dark: #b8000c;
+
+  --color-bg: #f3f4f6;
+  --color-surface: #ffffff;
+  --color-surface-secondary: #f8fafc;
+  --color-surface-tertiary: #e2e8f0;
+
+  --color-border: #e2e8f0;
+  --color-border-strong: #cbd5e1;
+
+  --color-text-primary: #0f172a;
+  --color-text-secondary: #475569;
+  --color-text-tertiary: #64748b;
+  --color-text-muted: #94a3b8;
+
+  /* Sidebar */
+  --sidebar-bg: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+  --sidebar-header-bg: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+  --sidebar-item-hover: rgba(0, 0, 0, 0.04);
+  --sidebar-item-active: rgba(227, 0, 15, 0.04);
+  --sidebar-item-active-border: rgba(227, 0, 15, 0.5);
+  --sidebar-new-btn-bg: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+  --sidebar-new-btn-hover: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+  --sidebar-search-bg: #ffffff;
+  --sidebar-search-focus-ring: rgba(227, 0, 15, 0.2);
+  --sidebar-toggle-bg: linear-gradient(135deg, #f1f5f9 0%, #e8edf2 100%);
+  --sidebar-toggle-hover: linear-gradient(135deg, #e2e8f0 0%, #dde3ea 100%);
+  --sidebar-footer-bg: linear-gradient(0deg, #f1f5f9 0%, #f8fafc 100%);
+  --sidebar-divider: linear-gradient(90deg, transparent, #cbd5e1, transparent);
+
+  /* Context menu */
+  --ctx-menu-bg: #ffffff;
+  --ctx-menu-shadow:
+    0 8px 30px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.06);
+  --ctx-menu-border: #e2e8f0;
+  --ctx-delete-confirm-bg: #fef2f2;
+  --ctx-delete-confirm-border: #fecaca;
+  --ctx-delete-confirm-text: #991b1b;
+  --ctx-delete-yes-bg: #dc2626;
+  --ctx-delete-yes-hover: #b91c1c;
+  --ctx-delete-no-bg: transparent;
+  --ctx-delete-no-hover: rgba(0, 0, 0, 0.04);
+  --ctx-delete-no-text: #64748b;
+
+  /* Input */
+  --input-box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  --input-focus-shadow:
+    0 0 0 2px rgba(227, 0, 15, 0.12), 0 4px 16px rgba(0, 0, 0, 0.08);
+  --input-focus-border: rgba(227, 0, 15, 0.35);
+
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 12px;
+}
+
+/* Dark theme declarations */
+.dark {
+  --color-bg: #0a0a0a;
+  --color-surface: #171717;
+  --color-surface-secondary: #262626;
+  --color-surface-tertiary: #404040;
+
+  --color-border: #262626;
+  --color-border-strong: #404040;
+
+  --color-text-primary: #f5f5f5;
+  --color-text-secondary: #d4d4d4;
+  --color-text-tertiary: #a3a3a3;
+  --color-text-muted: #737373;
+
+  /* Sidebar dark */
+  --sidebar-bg: #121212;
+  --sidebar-header-bg: #121212;
+  --sidebar-item-hover: rgba(255, 255, 255, 0.05);
+  --sidebar-item-active: rgba(227, 0, 15, 0.1);
+  --sidebar-item-active-border: rgba(227, 0, 15, 0.8);
+  --sidebar-new-btn-bg: #1f1f1f;
+  --sidebar-new-btn-hover: #262626;
+  --sidebar-search-bg: #1f1f1f;
+  --sidebar-search-focus-ring: rgba(227, 0, 15, 0.25);
+  --sidebar-toggle-bg: #1f1f1f;
+  --sidebar-toggle-hover: #262626;
+  --sidebar-footer-bg: #0f0f0f;
+  --sidebar-divider: linear-gradient(90deg, transparent, #404040, transparent);
+
+  /* Context menu dark */
+  --ctx-menu-bg: #171717;
+  --ctx-menu-shadow:
+    0 8px 30px rgba(0, 0, 0, 0.6), 0 2px 8px rgba(0, 0, 0, 0.5);
+  --ctx-menu-border: #262626;
+  --ctx-delete-confirm-bg: rgba(227, 0, 15, 0.1);
+  --ctx-delete-confirm-border: rgba(227, 0, 15, 0.3);
+  --ctx-delete-confirm-text: #fca5a5;
+  --ctx-delete-yes-bg: #dc2626;
+  --ctx-delete-yes-hover: #ef4444;
+  --ctx-delete-no-bg: transparent;
+  --ctx-delete-no-hover: rgba(255, 255, 255, 0.06);
+  --ctx-delete-no-text: #a3a3a3;
+
+  /* Input dark */
+  --input-box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+  --input-focus-shadow:
+    0 0 0 2px rgba(227, 0, 15, 0.2), 0 4px 16px rgba(0, 0, 0, 0.5);
+  --input-focus-border: rgba(227, 0, 15, 0.45);
+}
+
+/* ── Base ── */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+}
+html,
+body,
+#root {
+  height: 100%;
+  overflow: hidden;
+}
+
+body {
+  font-family: var(--font-family-sans);
+  font-size: 15px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  background-color: var(--color-bg);
+  color: var(--color-text-primary);
+  transition:
+    background-color 0.2s,
+    color 0.2s;
+}
+
+/* ── Scrollbars ── */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background-color: var(--color-border-strong);
+  border-radius: 3px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background-color: var(--color-text-tertiary);
+}
+
+button {
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
+  border: none;
+  background: none;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease-in-out;
+}
+
+/* ── Sidebar Styles ── */
+.sidebar-root {
+  background: var(--sidebar-bg);
+  border-right: 1px solid var(--color-border);
+}
+
+.sidebar-header {
+  background: var(--sidebar-header-bg);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.sidebar-logo-icon {
+  background: linear-gradient(135deg, #e3000f 0%, #b8000c 100%);
+  box-shadow: 0 2px 8px rgba(227, 0, 15, 0.3);
+}
+
+.sidebar-new-btn {
+  background: var(--sidebar-new-btn-bg);
+  border: 1px solid var(--color-border);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  transition: all 0.2s ease;
+}
+.sidebar-new-btn:hover {
+  background: var(--sidebar-new-btn-hover);
+  border-color: var(--color-border-strong);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+  transform: translateY(-1px);
+}
+.sidebar-new-btn:active {
+  transform: translateY(0);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.sidebar-search {
+  background: var(--sidebar-search-bg);
+  border: 1px solid var(--color-border);
+  transition: all 0.2s ease;
+}
+.sidebar-search:focus-within {
+  border-color: var(--color-orlen);
+  box-shadow: 0 0 0 3px var(--sidebar-search-focus-ring);
+}
+
+.sidebar-tab-group {
+  background: var(--sidebar-search-bg);
+  border: 1px solid var(--color-border);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+.sidebar-tab-active {
+  background: var(--color-surface-tertiary);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+}
+
+.sidebar-group-label {
+  background: linear-gradient(
+    90deg,
+    transparent,
+    var(--color-border),
+    transparent
+  );
+  height: 1px;
+  margin: 0;
+}
+
+.sidebar-project-item {
+  transition: all 0.15s ease;
+  border-left: 3px solid transparent;
+  margin: 2px 8px;
+  border-radius: 8px;
+}
+.sidebar-project-item:hover {
+  background: var(--sidebar-item-hover);
+  border-left-color: var(--color-border-strong);
+}
+.sidebar-project-item.active {
+  background: var(--sidebar-item-active);
+  border-left-color: var(--sidebar-item-active-border);
+  box-shadow: 0 1px 4px rgba(227, 0, 15, 0.06);
+}
+
+.sidebar-more-btn {
+  opacity: 0;
+  transition: all 0.15s ease;
+  border-radius: 6px;
+}
+.sidebar-project-item:hover .sidebar-more-btn,
+.sidebar-more-btn.visible {
+  opacity: 1;
+}
+.sidebar-more-btn:hover {
+  background: var(--color-surface-tertiary);
+  color: var(--color-text-primary);
+}
+
+.sidebar-footer {
+  background: var(--sidebar-footer-bg);
+  border-top: 1px solid var(--color-border);
+}
+
+.sidebar-theme-btn {
+  transition: all 0.2s ease;
+  border-radius: 8px;
+  border: 1px solid transparent;
+}
+.sidebar-theme-btn:hover {
+  background: var(--sidebar-item-hover);
+  border-color: var(--color-border);
+}
+
+/* ── Context Menu ── */
+.ctx-menu {
+  background: var(--ctx-menu-bg);
+  border: 1px solid var(--ctx-menu-border);
+  box-shadow: var(--ctx-menu-shadow);
+  border-radius: 10px;
+  padding: 4px;
+  min-width: 160px;
+  backdrop-filter: blur(12px);
+}
+
+.ctx-menu-item {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: flex-start;
+  text-align: left;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  transition: all 0.12s ease;
+  white-space: nowrap;
+}
+.ctx-menu-item:hover {
+  background: var(--sidebar-item-hover);
+  color: var(--color-text-primary);
+}
+.ctx-menu-item.danger {
+  color: var(--color-orlen);
+}
+.ctx-menu-item.danger:hover {
+  background: rgba(227, 0, 15, 0.06);
+}
+
+.ctx-menu-divider {
+  height: 1px;
+  background: var(--sidebar-divider);
+  margin: 3px 6px;
+  border: none;
+}
+
+/* Delete confirmation inline block */
+.ctx-menu-delete-confirm {
+  padding: 6px 8px;
+  border-radius: 6px;
+  background: var(--ctx-delete-confirm-bg);
+  border: 1px solid var(--ctx-delete-confirm-border);
+}
+.ctx-menu-delete-confirm-text {
+  display: block;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--ctx-delete-confirm-text);
+  line-height: 1.35;
+  text-align: left;
+  margin-bottom: 6px;
+}
+.ctx-menu-delete-confirm-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.ctx-menu-delete-yes {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  color: #ffffff;
+  background: var(--ctx-delete-yes-bg);
+  border: none;
+  cursor: pointer;
+  transition: background 0.12s ease;
+  white-space: nowrap;
+}
+.ctx-menu-delete-yes:hover {
+  background: var(--ctx-delete-yes-hover);
+}
+.ctx-menu-delete-no {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3px 10px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--ctx-delete-no-text);
+  background: var(--ctx-delete-no-bg);
+  border: none;
+  cursor: pointer;
+  transition: all 0.12s ease;
+  white-space: nowrap;
+}
+.ctx-menu-delete-no:hover {
+  background: var(--ctx-delete-no-hover);
+  color: var(--color-text-primary);
+}
+
+/* ── Input Area ── */
+.input-box-wrapper {
+  border-radius: var(--radius-lg);
+  border: 1.5px solid var(--color-border);
+  background: var(--color-surface);
+  box-shadow: var(--input-box-shadow);
+  transition: all 0.2s ease;
+}
+.input-box-wrapper:focus-within {
+  border-color: var(--input-focus-border);
+  box-shadow: var(--input-focus-shadow);
+}
+.input-box-wrapper:hover:not(:focus-within) {
+  border-color: var(--color-border-strong);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+}
+
+.input-attach-btn {
+  transition: all 0.15s ease;
+  border-radius: 8px;
+  padding: 10px;
+  color: var(--color-text-tertiary);
+}
+.input-attach-btn:hover {
+  background: var(--color-surface-tertiary);
+  color: var(--color-orlen);
+}
+
+.input-send-btn {
+  transition: all 0.2s ease;
+  border-radius: 10px;
+  padding: 12px;
+}
+.input-send-btn.enabled {
+  background: linear-gradient(135deg, #e3000f 0%, #c5000d 100%);
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(227, 0, 15, 0.3);
+}
+.input-send-btn.enabled:hover {
+  background: linear-gradient(135deg, #c5000d 0%, #a3000a 100%);
+  box-shadow: 0 4px 12px rgba(227, 0, 15, 0.4);
+  transform: translateY(-1px);
+}
+.input-send-btn.enabled:active {
+  transform: translateY(0);
+  box-shadow: 0 1px 4px rgba(227, 0, 15, 0.2);
+}
+.input-send-btn.disabled {
+  background: var(--color-surface-tertiary);
+  color: var(--color-text-muted);
+  cursor: not-allowed;
+}
+
+/* ── Quill & Markdown Overrides ── */
+.canvas-editor .ql-toolbar.ql-snow {
+  border: none !important;
+  border-bottom: 1px solid var(--color-border) !important;
+  background-color: var(--color-surface) !important;
+  padding: 10px 16px !important;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+.canvas-editor .ql-toolbar .ql-stroke {
+  stroke: var(--color-text-secondary) !important;
+}
+.canvas-editor .ql-toolbar .ql-fill {
+  fill: var(--color-text-secondary) !important;
+}
+.canvas-editor .ql-toolbar .ql-picker-label {
+  color: var(--color-text-secondary) !important;
+}
+.canvas-editor .ql-toolbar .ql-picker-options {
+  background-color: var(--color-surface) !important;
+  border-color: var(--color-border) !important;
+  color: var(--color-text-primary) !important;
+}
+.canvas-editor .ql-container.ql-snow {
+  border: none !important;
+  font-family: var(--font-family-sans) !important;
+  font-size: 15px !important;
+}
+.canvas-editor .ql-editor {
+  min-height: 400px;
+  padding: 32px !important;
+  color: var(--color-text-primary);
+  line-height: 1.8;
+}
+.dark .canvas-editor .ql-editor blockquote {
+  background-color: rgba(227, 0, 15, 0.05);
+}
+
+/* Animations */
+@keyframes slideInRight {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes pulseDot {
+  0%,
+  80%,
+  100% {
+    transform: scale(0.6);
+    opacity: 0.4;
+  }
+  40% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+@keyframes ctxMenuIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+.animate-slide-in-right {
+  animation: slideInRight 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+.animate-fade-in-up {
+  animation: fadeInUp 0.25s ease-out forwards;
+}
+.animate-ctx-menu {
+  animation: ctxMenuIn 0.15s ease-out forwards;
+}
+
+.typing-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: var(--color-orlen);
+  display: inline-block;
+  animation: pulseDot 1.4s infinite ease-in-out both;
+}
+.typing-dot:nth-child(1) {
+  animation-delay: -0.32s;
+}
+.typing-dot:nth-child(2) {
+  animation-delay: -0.16s;
+}
+.typing-dot:nth-child(3) {
+  animation-delay: 0s;
+}
+
+
+============================================================
+--- PLIK: .\frontend\src\types\index.ts ---
+============================================================
+
+// ============================================================
+// FILE: .\frontend\src\types\index.ts
+// ============================================================
+
+export type AppMode = "chatbot" | "gonogo" | "translator" | "remedy";
+export type ThemeMode = "light" | "dark";
+export type LangCode = "pl" | "en";
+
+export interface ChatMessage {
+  id: string;
+  role: "user" | "assistant" | "system";
+  content: string;
+  timestamp: Date;
+  mode: AppMode;
+  draftData?: StructuredDraft;
+  chartPaths?: string[];
+}
+
+export interface Project {
+  id: string;
+  name: string;
+  createdAt: Date;
+  updatedAt: Date;
+  archived: boolean;
+  instructions?: string;
+  uploadedFiles?: string[];
+}
+
+export interface Chat {
+  id: string;
+  projectId: string | null;
+  name: string;
+  mode: AppMode;
+  messages: ChatMessage[];
+  createdAt: Date;
+  updatedAt: Date;
+  archived: boolean;
+  canvasContent?: string;
+  draft?: StructuredDraft;
+  chartPaths?: string[];
+  uploadedFiles?: string[];
+}
+
+export interface StructuredDraft {
+  summary: string;
+  test_analysis: string;
+  risks_eval: string;
+  decision: string;
+  justification: string;
+}
+
+export interface ExportRequest {
+  project_name: string;
+  edited_text: string;
+  format: "pdf" | "docx" | "md";
+  language: string;
+  author: string;
+  chart_paths: string[];
+}
+
+export interface ChatRequest {
+  chat_id: string;
+  project_id?: string | null;
+  mode: AppMode;
+  message: string;
+  language: string;
+  canvas_content?: string;
+  files?: File[];
+}
+
+export interface ChatResponse {
+  message: string;
+  draft_data?: StructuredDraft;
+  chart_paths?: string[];
+  canvas_html?: string;
+}
+
+export interface AttachedFile {
+  file: File;
+  id: string;
+}
+
+export interface UserConfig {
+  displayName: string;
+  role: string;
+  authorName: string;
+}
+
+export interface Labels {
+  headerTitle: string;
+  chatPlaceholder: string;
+  newProject: string;
+  newChat: string;
+  searchProjects: string;
+  canvasTitle: string;
+  downloadPdf: string;
+  downloadDocx: string;
+  downloadMd: string;
+  sendMessage: string;
+  attachFiles: string;
+  modeChatbot: string;
+  modeGoNogo: string;
+  modeTranslator: string;
+  modeRemedy: string;
+  openCanvas: string;
+  closeCanvas: string;
+  noProjects: string;
+  today: string;
+  yesterday: string;
+  older: string;
+  welcome: string;
+  welcomeSub: string;
+  generatingFile: string;
+  successFile: string;
+  errorExport: string;
+  errorAi: string;
+  maxFiles: string;
+  newLine: string;
+  editName: string;
+  archive: string;
+  unarchive: string;
+  deleteProject: string;
+  archived: string;
+  active: string;
+  confirmDelete: string;
+  ragConnect: string;
+  ragDisconnect: string;
+  ragConnected: string;
+  ragIndexing: string;
+  ragTooltip: string;
+  darkMode: string;
+  lightMode: string;
+  cancel: string;
+  save: string;
+  rename: string;
+  projectSettings: string;
+  projectSettingsSub: string;
+  projectId: string;
+  projectName: string;
+  startNewRagChat: string;
+  startNewRagChatSub: string;
+  writeFirstMessage: string;
+  systemPromptLabel: string;
+  saved: string;
+  saveBtn: string;
+  uploadingAndVectorizing: string;
+  projectKnowledgeBase: string;
+  projectKnowledgeBaseSub: string;
+  uploadBtn: string;
+  noUploadedFiles: string;
+  projectContextActive: string;
+  newConversation: string;
+  uploadedNFiles: string;
+  uploadError: string;
+  userLabel: string;
+  systemQaLabel: string;
+  chatbotDesc: string;
+  gonogoDesc: string;
+  translatorDesc: string;
+  analysisDesc: string;
+  projectsSection: string;
+  recentChatsSection: string;
+  changeTheme: string;
+  settings: string;
+  userSettings: string;
+  displayNameLabel: string;
+  roleLabel: string;
+  authorNameLabel: string;
+  authorNameHint: string;
+  languageLabel: string;
+  polish: string;
+  english: string;
+  closeSettings: string;
+  confirmDeleteMessage: string;
+  yes: string;
+  no: string;
+  archivedBadge: string;
+}
+
+
+============================================================
+--- PLIK: .\frontend\src\lib\utils.ts ---
+============================================================
+
+// ============================================================
+// FILE: .\frontend\src\lib\utils.ts
+// ============================================================
+
+import { clsx, type ClassValue } from "clsx";
+import { twMerge } from "tailwind-merge";
+
+/** Merges Tailwind CSS class names with clsx for conditional logic. */
+export function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs));
+}
+
+/** Generates a short random ID with a prefix. */
+export function generateId(prefix: "c" | "p" | "m" | "f" = "c"): string {
+  return `${prefix}-${Math.random().toString(36).substring(2, 10)}`;
+}
+
+/** Formats byte count into a human-readable file size string. */
+export function formatFileSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+/** Formats a Date into HH:MM time string. */
+export function formatTime(date: Date): string {
+  return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+}
+
+/** Extracts initials (up to 2 chars) from a display name. */
+export function getInitials(name: string): string {
+  const parts = name.trim().split(/\s+/);
+  if (parts.length >= 2) {
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  }
+  return name.slice(0, 2).toUpperCase();
+}
+
+/** Strips HTML tags and converts common entities to plain text. */
+export function stripHtml(html: string): string {
+  let text = html;
+  text = text.replace(/<br\s*\/?>/gi, "\n");
+  text = text.replace(/<\/p><p>/gi, "\n\n");
+  text = text.replace(/<\/li><li>/gi, "\n- ");
+  text = text.replace(/<li>/gi, "- ");
+  text = text.replace(/<[^>]+>/g, "");
+  text = text.replace(/&nbsp;/g, " ");
+  text = text.replace(/&amp;/g, "&");
+  text = text.replace(/&lt;/g, "<");
+  text = text.replace(/&gt;/g, ">");
+  text = text.replace(/\n{3,}/g, "\n\n");
+  return text.trim();
+}
+
+/** Converts a structured draft object into HTML for the Quill editor. */
+export function draftToHtml(
+  draft: {
+    summary: string;
+    test_analysis: string;
+    risks_eval: string;
+    decision: string;
+    justification: string;
+  },
+  isPl: boolean,
+): string {
+  const sections = [
+    { heading: isPl ? "Podsumowanie" : "Summary", content: draft.summary },
+    {
+      heading: isPl ? "Analiza testów" : "Test Analysis",
+      content: draft.test_analysis,
+    },
+    {
+      heading: isPl ? "Ocena ryzyk" : "Risk Evaluation",
+      content: draft.risks_eval,
+    },
+    {
+      heading: isPl ? "Decyzja" : "Decision",
+      content: `<strong style="font-size:1.3em;color:${draft.decision === "GO" ? "#10b981" : "#ef4444"}">${draft.decision}</strong>`,
+    },
+    {
+      heading: isPl ? "Uzasadnienie" : "Justification",
+      content: draft.justification,
+    },
+  ];
+
+  return sections
+    .filter((s) => s.content)
+    .map((s) => `<h2>${s.heading}</h2>\n${s.content}`)
+    .join("\n\n");
+}
+
+/** Converts basic HTML to Markdown for export. */
+export function htmlToMarkdown(html: string): string {
+  let md = html;
+  md = md.replace(/<h1[^>]*>(.*?)<\/h1>/gi, "# $1\n");
+  md = md.replace(/<h2[^>]*>(.*?)<\/h2>/gi, "## $1\n");
+  md = md.replace(/<h3[^>]*>(.*?)<\/h3>/gi, "### $1\n");
+  md = md.replace(/<strong[^>]*>(.*?)<\/strong>/gi, "**$1**");
+  md = md.replace(/<em[^>]*>(.*?)<\/em>/gi, "*$1*");
+  md = md.replace(/<br\s*\/?>/gi, "\n");
+  md = md.replace(/<\/p>\s*<p>/gi, "\n\n");
+  md = md.replace(/<li[^>]*>(.*?)<\/li>/gi, "- $1\n");
+  md = md.replace(/<[^>]+>/g, "");
+  md = md.replace(/&nbsp;/g, " ");
+  md = md.replace(/&amp;/g, "&");
+  md = md.replace(/&lt;/g, "<");
+  md = md.replace(/&gt;/g, ">");
+  md = md.replace(/\n{3,}/g, "\n\n");
+  return md.trim();
+}
+
+
+============================================================
+--- PLIK: .\frontend\src\hooks\useTheme.ts ---
+============================================================
+
+// ============================================================
+// FILE: .\frontend\src\hooks\useTheme.ts
+// ============================================================
+
+import { useState, useEffect, useCallback } from "react";
+import type { ThemeMode } from "../types";
+
+/**
+ * Custom hook for managing light/dark theme with localStorage persistence
+ * and system preference detection.
+ */
+export function useTheme() {
+  const [theme, setTheme] = useState<ThemeMode>(() => {
+    const stored = localStorage.getItem("qa-theme");
+    if (stored === "dark" || stored === "light") return stored;
+    return window.matchMedia("(prefers-color-scheme: dark)").matches
+      ? "dark"
+      : "light";
+  });
+
+  useEffect(() => {
+    const root = document.documentElement;
+    if (theme === "dark") {
+      root.classList.add("dark");
+    } else {
+      root.classList.remove("dark");
+    }
+    localStorage.setItem("qa-theme", theme);
+  }, [theme]);
+
+  const toggleTheme = useCallback(() => {
+    setTheme((prev) => (prev === "dark" ? "light" : "dark"));
+  }, []);
+
+  return { theme, toggleTheme };
+}
+
+
+============================================================
+--- PLIK: .\frontend\src\hooks\useUserConfig.ts ---
+============================================================
+
+// ============================================================
+// FILE: .\frontend\src\hooks\useUserConfig.ts
+// ============================================================
+
+import { useState, useCallback } from "react";
+import type { UserConfig } from "../types";
+
+const STORAGE_KEY = "qa-user-config";
+
+const DEFAULT_CONFIG: UserConfig = {
+  displayName: "Jan Developer",
+  role: "QA Engineer",
+  authorName: "Jan Developer",
+};
+
+/**
+ * Custom hook for managing user configuration with localStorage persistence.
+ */
+export function useUserConfig() {
+  const [userConfig, setUserConfig] = useState<UserConfig>(() => {
+    try {
+      const stored = localStorage.getItem(STORAGE_KEY);
+      if (stored) {
+        return { ...DEFAULT_CONFIG, ...JSON.parse(stored) };
+      }
+    } catch {
+      // Fall through to default
+    }
+    return DEFAULT_CONFIG;
+  });
+
+  const updateUserConfig = useCallback((updates: Partial<UserConfig>) => {
+    setUserConfig((prev) => {
+      const next = { ...prev, ...updates };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+      return next;
+    });
+  }, []);
+
+  return { userConfig, updateUserConfig };
+}
+
+
+============================================================
+--- PLIK: .\frontend\src\hooks\useLanguage.ts ---
+============================================================
+
+// ============================================================
+// FILE: .\frontend\src\hooks\useLanguage.ts
+// ============================================================
+
+import { useState, useCallback } from 'react';
+import type { LangCode } from '../types';
+
+const STORAGE_KEY = 'qa-language';
+
+/**
+ * Custom hook for managing interface language with localStorage persistence.
+ */
+export function useLanguage() {
+  const [language, setLanguage] = useState<LangCode>(() => {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (stored === 'en' || stored === 'pl') return stored;
+    return 'pl';
+  });
+
+  const toggleLanguage = useCallback(() => {
+    setLanguage(prev => {
+      const next = prev === 'pl' ? 'en' : 'pl';
+      localStorage.setItem(STORAGE_KEY, next);
+      return next;
+    });
+  }, []);
+
+  const setLang = useCallback((lang: LangCode) => {
+    setLanguage(lang);
+    localStorage.setItem(STORAGE_KEY, lang);
+  }, []);
+
+  return { language, toggleLanguage, setLang };
+}
+
+============================================================
+--- PLIK: .\gonogo_test_suite\atp-tennis-player-ranking-dataset\matches_data_dictionary.txt ---
+============================================================
+
+* Many of the columns in the 'matches' files are self-explanatory, or are very similar to previous columns.
+
+tourney_id
+- a unique identifier for each tournament, such as 2020-888. The exact formats are borrowed from several different sources, so while the first four characters are always the year, the rest of the ID doesn't follow a predictable structure.
+
+tourney_name
+surface
+draw_size
+- number of players in the draw, often rounded up to the nearest power of 2. (For instance, a tournament with 28 players may be shown as 32.)
+
+tourney_level
+- For men: 'G' = Grand Slams, 'M' = Masters 1000s, 'A' = other tour-level events, 'C' = Challengers, 'S' = Satellites/ITFs, 'F' = Tour finals and other season-ending events, and 'D' = Davis Cup 
+- For women, there are several additional tourney_level codes, including 'P' = Premier, 'PM' = Premier Mandatory, and 'I' = International. The various levels of ITFs are given by the prize money (in thousands), such as '15' = ITF $15,000. Other codes, such as 'T1' for Tier I (and so on) are used for older WTA tournament designations. 'D' is used for Federation/Fed/Billie Jean King Cup, and also for Wightman Cup and Bonne Bell Cup.
+
+- Others, eventually for both genders: 'E' = exhibition (events not sanctioned by the tour, though the definitions can be ambiguous), 'J' = juniors, and 'T' = team tennis, which does yet appear anywhere in the dataset but will at some point.
+
+tourney_date
+- eight digits, YYYYMMDD, usually the Monday of the tournament week.
+
+match_num
+- a match-specific identifier. Often starting from 1, sometimes counting down from 300, and sometimes arbitrary. 
+
+winner_id
+- the player_id used in this repo for the winner of the match
+
+winner_seed
+winner_entry
+- 'WC' = wild card, 'Q' = qualifier, 'LL' = lucky loser, 'PR' = protected ranking, 'ITF' = ITF entry, and there are a few others that are occasionally used.
+
+winner_name
+winner_hand
+- R = right, L = left, U = unknown. For ambidextrous players, this is their serving hand.
+winner_ht
+- height in centimeters, where available
+
+winner_ioc
+- three-character country code
+
+winner_age
+- age, in years, as of the tourney_date
+
+loser_id
+loser_seed
+loser_entry
+loser_name
+loser_hand
+loser_ht
+loser_ioc
+loser_age
+score
+best_of
+- '3' or '5', indicating the the number of sets for this match
+
+round
+minutes
+- match length, where available
+
+w_ace
+- winner's number of aces
+w_df
+- winner's number of doubles faults
+w_svpt
+- winner's number of serve points
+w_1stIn
+- winner's number of first serves made
+w_1stWon
+- winner's number of first-serve points won
+w_2ndWon
+- winner's number of second-serve points won
+w_SvGms
+- winner's number of serve games
+w_bpSaved
+- winner's number of break points saved
+w_bpFaced
+- winner's number of break points faced
+
+l_ace
+l_df
+l_svpt
+l_1stIn
+l_1stWon
+l_2ndWon
+l_SvGms
+l_bpSaved
+l_bpFaced
+
+winner_rank
+- winner's ATP or WTA rank, as of the tourney_date, or the most recent ranking date before the tourney_date
+winner_rank_points
+- number of ranking points, where available
+loser_rank
+loser_rank_points
+
+* _doubles_ files notes
+
+The matches_doubles files have similar columns, though not all in the same order.
+
+The identifying information for each player refers to 'winner1', 'winner2', 'loser1', and 'loser2'. The labels 1 and 2 are not assigned for any particular reason.
+
+In general, the tournament IDs for doubles results are the same as for singles results (so, for instance, you can see which players entered both draws at the same event), though this is not guaranteed for every single tournament, since some of the data came from different sources.
+
+The stats columns ('w_ace' etc) are per *team*, not per player. That's a function of how tennis stats are typically recorded, not a decision on my part.
+
+============================================================
+--- PLIK: .\gonogo_test_suite\comprehensive-formula-1-dataset-2020-2025\dataset-metadata.json ---
+============================================================
+
+{
+    "title": "Comprehensive Formula 1 Dataset (2020-2024)",
+    "id": "user/f1-dataset-2020-2024",
+    "licenses": [
+        {
+            "name": "CC0-1.0"
+        }
+    ]
+}

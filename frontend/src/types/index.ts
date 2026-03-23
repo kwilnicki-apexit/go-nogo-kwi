@@ -66,6 +66,7 @@ export interface ChatRequest {
   language: string;
   canvas_content?: string;
   files?: File[];
+  chat_history?: { role: string; content: string }[];
 }
 
 export interface ChatResponse {
@@ -73,6 +74,7 @@ export interface ChatResponse {
   draft_data?: StructuredDraft;
   chart_paths?: string[];
   canvas_html?: string;
+  detected_mode?: AppMode;
 }
 
 export interface AttachedFile {

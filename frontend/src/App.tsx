@@ -105,6 +105,15 @@ function App() {
       const projIdToUse =
         forcedProjId !== undefined ? forcedProjId : currentChat?.projectId;
 
+      /*
+        Only 6 previous messages will be sent to the new context to limit the token count
+        TODO: ideally this would need more intelligent pruning (e.g. keep all system and assistant messages, and only trim user messages)
+      */
+      const recentHistory =
+        currentChat?.messages
+          .slice(-6)
+          .map((m) => ({ role: m.role, content: m.content })) || [];
+
       if (!currentChat && !forcedChatId) {
         chatId = generateId("c");
         const newChat: Chat = {
@@ -148,6 +157,7 @@ function App() {
           return c;
         }),
       );
+
       setIsLoading(true);
 
       try {
@@ -159,14 +169,17 @@ function App() {
           language,
           canvas_content: isCanvasOpen ? canvasContent : undefined,
           files: files.length > 0 ? files : undefined,
+          chat_history: recentHistory,
         });
+
+        const detectedMode = response.detected_mode || modeToUse;
 
         const assistantMsg: ChatMessage = {
           id: generateId("m"),
           role: "assistant",
           content: response.message,
           timestamp: new Date(),
-          mode: modeToUse,
+          mode: detectedMode,
           draftData: response.draft_data,
           chartPaths: response.chart_paths,
         };
@@ -174,10 +187,13 @@ function App() {
         setChats((prev) =>
           prev.map((c) => {
             if (c.id !== chatId) return c;
+
             const upd: Partial<Chat> = {
               messages: [...c.messages, assistantMsg],
               updatedAt: new Date(),
+              mode: detectedMode,
             };
+
             if (response.draft_data) {
               const html = draftToHtml(response.draft_data, language === "pl");
               upd.canvasContent = html;

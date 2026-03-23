@@ -27,7 +27,7 @@ class LLMClient:
         if not self.api_token or not self.endpoint_url:
             self.logger.warning("Missing LLM configuration in .env file")
 
-    def generate_response(self, system_prompt, user_prompt, temperature=0.1, max_tokens=2000, force_json=False):
+    def generate_response(self, system_prompt, user_prompt, temperature=0.1, max_tokens=2000, force_json=False, chat_history=None):
         """
         Sends a prompt to the LLM and returns the generated text response.
 
@@ -49,12 +49,19 @@ class LLMClient:
             "Content-Type": "application/json"
         }
 
+        messages = [{"role": "system", "content": system_prompt}]
+
+        if chat_history:
+            for msg in chat_history:
+                if msg.get("role") in ["user", "assistant"]:
+                    safe_content = str(msg.get("content", ""))[:800]
+                    messages.append({"role": msg["role"], "content": safe_content})
+
+        messages.append({"role": "user", "content": user_prompt})
+        
         payload = {
             "model": self.model_name,
-            "messages": [
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_prompt}
-            ],
+            "messages": messages,
             "temperature": temperature,
             "max_tokens": max_tokens
         }

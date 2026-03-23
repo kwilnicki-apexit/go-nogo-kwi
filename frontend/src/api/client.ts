@@ -54,20 +54,19 @@ export const api = {
   async sendMessage(req: ChatRequest): Promise<ChatResponse> {
     if (req.files && req.files.length > 0) {
       const formData = new FormData();
-
       formData.append("chat_id", req.chat_id);
-
       if (req.project_id) formData.append("project_id", req.project_id);
-
       formData.append("mode", req.mode);
       formData.append("message", req.message);
       formData.append("language", req.language);
-
       if (req.canvas_content)
         formData.append("canvas_content", req.canvas_content);
 
-      req.files.forEach((f) => formData.append("files", f));
+      if (req.chat_history) {
+        formData.append("chat_history", JSON.stringify(req.chat_history));
+      }
 
+      req.files.forEach((f) => formData.append("files", f));
       return request<ChatResponse>("chat", { method: "POST", body: formData });
     }
 
@@ -80,6 +79,7 @@ export const api = {
         message: req.message,
         language: req.language,
         canvas_content: req.canvas_content,
+        chat_history: req.chat_history,
       }),
     });
   },
