@@ -265,6 +265,7 @@ async def chat_endpoint(request: Request, user: dict = Depends(get_current_user)
                 rag_context=rag_context,
                 parsed_test_data=parsed_test_data,
                 user_risks=user_risks,
+                
                 project_name=chat_id,
                 lang=language,
             )
