@@ -81,3 +81,5 @@ output/reports/*
 !backend/datasources/.gitkeep
 !backend/output/charts/.gitkeep
 !backend/output/reports/.gitkeep
+
+gonogo_test_suite/
