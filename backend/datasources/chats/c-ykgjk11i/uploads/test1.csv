@@ -1,9 +1,0 @@
-Test_ID,Komponent,Opis_Testu,Status,Priorytet,Czas_Wykonania_s
-TC-001,Autoryzacja,Logowanie poprawnymi danymi,PASS,Critical,1.2
-TC-002,Autoryzacja,Blokada konta po 3 blednych probach,PASS,High,3.5
-TC-003,Koszyk,Dodanie produktu do koszyka,PASS,Critical,2.1
-TC-004,Koszyk,Usuniecie produktu z koszyka,PASS,High,1.8
-TC-005,Platnosci,Wyswietlenie metod platnosci,PASS,Critical,0.9
-TC-006,Platnosci,Brak obslugi starych kart Maestro,FAIL,Medium,1.1
-TC-007,Profil,Edycja danych uzytkownika,PASS,Medium,2.4
-TC-008,Profil,Wgranie awatara w formacie PNG,PASS,Low,4.0

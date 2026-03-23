@@ -70,12 +70,12 @@ const MODE_OPTIONS: {
     labelKey: "modeTranslator",
   },
   {
-    key: "analysis",
+    key: "remedy",
     icon: <BarChart3 size={14} />,
     color: "#d97706",
     activeBg: "rgba(217,119,6,0.06)",
     activeRing: "rgba(217,119,6,0.35)",
-    labelKey: "modeAnalysis",
+    labelKey: "modeRemedy",
   },
 ];
 
@@ -135,7 +135,7 @@ export const ProjectView = ({
       className="flex-1 overflow-y-auto custom-scrollbar"
       style={{ backgroundColor: "var(--color-bg)" }}
     >
-      <div style={{ maxWidth: 960, margin: "0 auto", padding: "48px 32px" }}>
+      <div style={{ maxWidth: 1200, margin: "0 auto", padding: "48px 32px" }}>
         {/* ── Title row ── */}
         <div style={{ marginBottom: 32 }}>
           <div

@@ -2,7 +2,7 @@
 // FILE: .\frontend\src\types\index.ts
 // ============================================================
 
-export type AppMode = "chatbot" | "gonogo" | "translator" | "analysis";
+export type AppMode = "chatbot" | "gonogo" | "translator" | "remedy";
 export type ThemeMode = "light" | "dark";
 export type LangCode = "pl" | "en";
 
@@ -101,7 +101,7 @@ export interface Labels {
   modeChatbot: string;
   modeGoNogo: string;
   modeTranslator: string;
-  modeAnalysis: string;
+  modeRemedy: string;
   openCanvas: string;
   closeCanvas: string;
   noProjects: string;

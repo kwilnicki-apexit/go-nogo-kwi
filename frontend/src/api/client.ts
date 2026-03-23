@@ -107,12 +107,73 @@ export const api = {
   },
 
   /**
-   * Exports a report to PDF, DOCX, or Markdown format.
+   * Exports a report to PDF, DOCX, or Markdown format and triggers a download.
    */
-  async exportReport(payload: ExportRequest): Promise<{ filepath: string }> {
-    return request<{ filepath: string }>("reports/export", {
+  async exportReport(payload: ExportRequest): Promise<void> {
+    const url = `${BASE_URL}/reports/export`;
+    const res = await fetch(url, {
       method: "POST",
       body: JSON.stringify(payload),
+      headers: { "Content-Type": "application/json" },
     });
+
+    if (!res.ok) {
+      const errorText = await res.text().catch(() => "Unknown error");
+      throw new Error(`API Error ${res.status}: ${errorText}`);
+    }
+
+    const contentDisposition = res.headers.get("Content-Disposition");
+    let filename = `Report.${payload.format}`;
+    if (contentDisposition) {
+      const match = contentDisposition.match(
+        /filename\*?=['"]?(?:UTF-\d['"]*)?([^;\r\n"']*)['"]?/i,
+      );
+      if (match && match[1]) {
+        filename = decodeURIComponent(match[1]);
+      }
+    }
+
+    const blob = await res.blob();
+    const blobUrl = window.URL.createObjectURL(blob);
+
+    const a = document.createElement("a");
+    a.href = blobUrl;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(blobUrl);
+  },
+
+  /**
+   * Deletes a file from a chat session.
+   */
+  async deleteChatFile(
+    chatId: string,
+    filename: string,
+  ): Promise<{ status: string; message: string }> {
+    return request(`chat/${chatId}/files/${encodeURIComponent(filename)}`, {
+      method: "DELETE",
+    });
+  },
+
+  /**
+   * Downloads a file from a chat session.
+   */
+  async downloadChatFile(chatId: string, filename: string): Promise<void> {
+    const url = `${BASE_URL}/chat/${chatId}/files/${encodeURIComponent(filename)}`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error("Failed to download file");
+
+    const blob = await res.blob();
+    const blobUrl = window.URL.createObjectURL(blob);
+
+    const a = document.createElement("a");
+    a.href = blobUrl;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(blobUrl);
   },
 };

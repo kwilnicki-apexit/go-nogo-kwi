@@ -6,12 +6,13 @@ from fastapi import FastAPI, HTTPException, Request, File, UploadFile, Depends
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from typing import List
 
 import uvicorn
 import uuid
 import os
-import re
+import urllib.parse
 
 from src.integration.llm_client import LLMClient
 from src.integration.auth import get_current_user
@@ -22,18 +23,6 @@ from src.services.report_generator import ReportGenerator
 from src.services.chart_generator import ChartGenerator
 from src.core.logger import get_logger, request_id_var
 from src.core.exceptions import LLMConnectionError, DataProcessingError, ExportError
-from src.utils.validators import (
-    validate_message,
-    validate_upload,
-    validate_mime,
-    assert_within_directory,
-    normalize_extracted_text,
-    security_logger,
-    GONOGO_ALLOWED_EXTENSIONS,
-    PROJECT_ALLOWED_EXTENSIONS,
-    MAX_FILE_SIZE,
-    MAX_FILES,
-)
 
 logger = get_logger("FastAPI")
 
@@ -62,16 +51,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-
-@app.middleware("http")
-async def set_utf8_content_type(request: Request, call_next):
-    """4.5.3 — jawna deklaracja charset=utf-8 na każdej odpowiedzi JSON."""
-    response = await call_next(request)
-    content_type = response.headers.get("content-type", "")
-    if "application/json" in content_type and "charset" not in content_type:
-        response.headers["content-type"] = "application/json; charset=utf-8"
-    return response
-
 # Service initialization
 try:
     llm = LLMClient()
@@ -99,6 +78,7 @@ class ExportRequest(BaseModel):
     chart_paths: List[str]
 
 
+MAX_FILE_SIZE = 5 * 1024 * 1024
 
 # ==========================================
 # PROJECT ENDPOINTS (p-xxxxx)
@@ -131,49 +111,19 @@ async def upload_project_files(
 ):
     """Uploads knowledge files (PDF, DOCX) to a project and indexes them in the ChromaDB vector store."""
     try:
-        # 4.6.4 — sanitizacja project_id z URL path parametru
-        project_id = re.sub(r"[^a-zA-Z0-9\-_]", "", project_id)[:64]
-        if not project_id:
-            raise HTTPException(status_code=400, detail="Nieprawidłowy project_id.")
-
         proj_uploads_dir = storage.get_project_uploads_dir(project_id)
         ingested_count = 0
-        
-        if len(files) > MAX_FILES:
-            security_logger.warning(
-                "Validation failed: too many files | count=%d | limit=%d | project_id=%s",
-                len(files), MAX_FILES, project_id,
-            )
-            raise HTTPException(
-                status_code=400,
-                detail=f"Zbyt wiele plików ({len(files)}). Maksymalna liczba to {MAX_FILES} na raz.",
-            )
 
         for file in files:
             content = await file.read()
-
-            # 4.5.5 / 4.5.6 — centralny walidator (wcześniej brak jakiejkolwiek walidacji)
-            safe_name, content = validate_upload(
-                file.filename, content, PROJECT_ALLOWED_EXTENSIONS
-            )
-            # 4.6.1 — MIME / magic bytes
-            validate_mime(safe_name, content)
-
-            file_path = os.path.join(proj_uploads_dir, safe_name)
-            # 4.6.4 — path confinement
-            assert_within_directory(file_path, proj_uploads_dir)
-
+            file_path = os.path.join(proj_uploads_dir, file.filename)
             with open(file_path, "wb") as f:
                 f.write(content)
 
             # Extract text from PDF/DOCX/TXT via FileParser and ingest into RAG
             text_content = file_parser.extract_history_text(file_path)
-
-            # 4.5.7 — normalizacja przed indeksowaniem w RAG
-            text_content = normalize_extracted_text(text_content)
-
             if text_content:
-                rag.ingest_document(text_content, safe_name, entity_id=project_id)
+                rag.ingest_document(text_content, file.filename, entity_id=project_id)
                 ingested_count += 1
 
         return {
@@ -213,14 +163,6 @@ async def chat_endpoint(request: Request, user: dict = Depends(get_current_user)
 
         if project_id in ["", "null", "undefined", "default"]:
             project_id = None
-        # ── NOWE — 4.5.1 / 4.5.2 ──────────────────────────────────────────
-        message = validate_message(message)
-        # ──────────────────────────────────────────────────────────────────
-
-        if chat_id:
-            chat_id = re.sub(r"[^a-zA-Z0-9\-_]", "", chat_id)[:64]
-        if project_id:
-            project_id = re.sub(r"[^a-zA-Z0-9\-_]", "", project_id)[:64]
 
         if not chat_id:
             raise HTTPException(
@@ -262,43 +204,34 @@ async def chat_endpoint(request: Request, user: dict = Depends(get_current_user)
 
             # STANDARD UPLOAD
             else:
-                if len(files) > MAX_FILES:
-                    security_logger.warning(
-                        "Validation failed: too many files | count=%d | limit=%d | chat_id=%s",
-                        len(files), MAX_FILES, chat_id,
-                    )
-                    raise HTTPException(
-                        status_code=400,
-                        detail=f"Zbyt wiele plików ({len(files)}). Maksymalna liczba to {MAX_FILES} na raz.",
-                    )
                 for file in files:
                     content = await file.read()
+                    if len(content) > MAX_FILE_SIZE:
+                        raise HTTPException(
+                            status_code=413,
+                            detail=f"Plik {file.filename} jest za duży.",
+                        )
 
-                    # 4.5.5 / 4.5.6 — centralny walidator plików
-                    safe_name, content = validate_upload(
-                        file.filename, content, GONOGO_ALLOWED_EXTENSIONS
-                    )
-                    # 4.6.1 — MIME / magic bytes
-                    validate_mime(safe_name, content)
+                    ext = os.path.splitext(file.filename)[1].lower()
+                    if ext not in {".csv", ".xls", ".xlsx"}:
+                        continue
 
-                    file_path = os.path.join(chat_uploads_dir, safe_name)
-                    # 4.6.4 — path confinement
-                    assert_within_directory(file_path, chat_uploads_dir)
-
+                    file_path = os.path.join(chat_uploads_dir, file.filename)
                     with open(file_path, "wb") as f:
                         f.write(content)
 
-                    contents[safe_name] = content
+                    contents[file.filename] = content
 
                     try:
                         text_content = file_parser.extract_test_data_from_bytes(
-                            {safe_name: content}
+                            {file.filename: content}
                         )
-                        # 4.5.7 — normalizacja tekstu wyodrębnionego z pliku
-                        text_content = normalize_extracted_text(text_content)
-                        rag.ingest_document(text_content, safe_name, entity_id=chat_id)
+                        rag.ingest_document(
+                            text_content, file.filename, entity_id=chat_id
+                        )
                     except Exception as e:
-                        logger.warning(f"Could not vectorize {safe_name}: {e}")
+                        logger.warning(f"Could not vectorize {file.filename}: {e}")
+
             if not contents:
                 return {
                     "message": "Nie załączono żadnych prawidłowych plików tabelarycznych."
@@ -441,25 +374,26 @@ async def chat_endpoint(request: Request, user: dict = Depends(get_current_user)
 
             if language == "pl":
                 sys_prompt = (
-                    "Jesteś wszechstronnym asystentem QA i inżynierem oprogramowania. "
-                    "Obecnie działasz w ogólnym trybie 'Chatbot' (Q&A).\n"
-                    "Jeśli użytkownik dostarczył pliki (w sekcji ZAŁĄCZONE PLIKI) lub kontekst RAG, odnoś się do nich w swoich odpowiedziach i analizuj je zgodnie z poleceniem.\n\n"
-                    "BĄDŹ ŚWIADOMY innych trybów: Jeśli użytkownik poprosi o formalny raport 'Go/No-Go' z testów lub profesjonalne, dokładne tłumaczenie dokumentu "
-                    "(a nie tylko streszczenie), wykonaj polecenie najlepiej jak umiesz, ale na końcu odpowiedzi przypomnij mu, że do takich zadań posiada dedykowane tryby "
-                    "dostępne pod polem wpisywania wiadomości (Tryb Go/No-Go generuje interaktywne wykresy i PDFy, a Tryb Tłumacza oferuje najwyższą jakość przekładu)."
+                    "Jesteś WYŁĄCZNIE asystentem konwersacyjnym (Chatbot). Twoim zadaniem jest prowadzenie ogólnej rozmowy i odpowiadanie na pytania.\n"
+                    "MASZ SUROWY ZAKAZ wykonywania zadań zarezerwowanych dla innych modułów:\n"
+                    "1) NIE WOLNO Ci tłumaczyć tekstów ani dokumentów.\n"
+                    "2) NIE WOLNO Ci generować ustrukturyzowanych raportów Go/No-Go ani decydować o wdrożeniach.\n"
+                    "3) NIE WOLNO Ci pełnić roli zaawansowanego analityka (Remedy).\n"
+                    "Jeśli użytkownik poprosi Cię o wykonanie któregoś z tych zadań, STANOWCZO ODMÓW i poinstruuj go, "
+                    "aby użył odpowiedniego modułu z menu poniżej (Tłumacz, Go/No-Go, Analiza). Nie próbuj nawet częściowo wykonywać tych zadań."
                 )
             else:
                 sys_prompt = (
-                    "You are a versatile QA assistant and software engineer. "
-                    "You are currently operating in the general 'Chatbot' (Q&A) mode.\n"
-                    "If the user provided files (in the ATTACHED FILES section) or RAG context, refer to them in your answers and analyze them according to the prompt.\n\n"
-                    "BE AWARE of other modes: If the user asks for a formal 'Go/No-Go' report from test data or a professional translation of a document, "
-                    "do your best to fulfill the request, but at the end of your message, politely remind them that they have dedicated modes for these tasks "
-                    "below the chat input (Go/No-Go mode generates interactive charts and PDFs, while Translator mode ensures top-quality translation)."
+                    "You are EXCLUSIVELY a conversational assistant (Chatbot). Your task is general conversation and answering questions.\n"
+                    "YOU ARE STRICTLY FORBIDDEN from performing tasks reserved for other modules:\n"
+                    "1) DO NOT translate texts or documents.\n"
+                    "2) DO NOT generate structured Go/No-Go reports or make deployment decisions.\n"
+                    "3) DO NOT act as an advanced data analyst (Remedy).\n"
+                    "If the user asks you to perform any of these tasks, FIRMLY REFUSE and instruct them "
+                    "to use the appropriate module from the menu below (Translator, Go/No-Go, Analysis). Do not even attempt to partially fulfill these requests."
                 )
 
             user_prompt = f"{context_block}\n[ZAPYTANIE UŻYTKOWNIKA]\n{message}"
-
             reply = llm.generate_response(sys_prompt, user_prompt, temperature=0.3)
             return {"message": reply}
 
@@ -535,15 +469,17 @@ async def chat_endpoint(request: Request, user: dict = Depends(get_current_user)
 
             if language == "pl":
                 sys_prompt = (
-                    "Jesteś profesjonalnym, zaawansowanym tłumaczem technicznym. "
-                    "Twoim zadaniem jest precyzyjne tłumaczenie tekstów (domyślnie z polskiego na angielski lub z angielskiego na polski), zachowując odpowiedni ton i słownictwo branżowe. "
-                    "Zwracaj WYŁĄCZNIE przetłumaczony tekst, bez żadnych wstępów, pozdrowień i uwag, chyba że użytkownik jawnie prosi o analizę lub korektę."
+                    "Jesteś WYŁĄCZNIE modułem tłumaczącym. Twoim jedynym zadaniem jest precyzyjny przekład tekstu (domyślnie PL ↔ EN).\n"
+                    "MASZ SUROWY ZAKAZ: 1) Prowadzenia konwersacji. 2) Odpowiadania na zadane pytania (jeśli użytkownik zadaje pytanie, po prostu je przetłumacz!). 3) Analizowania kodu czy danych.\n"
+                    "Cokolwiek użytkownik napisze w polu zapytania, potraktuj to JAKO TEKST DO PRZETŁUMACZENIA (chyba że to jawna instrukcja zmiany stylu tłumaczenia).\n"
+                    "Zwracaj WYŁĄCZNIE przetłumaczony tekst, bez żadnych wstępów, komentarzy i wyjaśnień."
                 )
             else:
                 sys_prompt = (
-                    "You are a professional, advanced technical translator. "
-                    "Your task is to accurately translate texts (default PL ↔ EN) while maintaining the correct tone and industry vocabulary. "
-                    "Return ONLY the translated text, without any introductions or notes, unless the user explicitly asks for analysis or proofreading."
+                    "You are EXCLUSIVELY a translation module. Your only task is precise text translation (default PL ↔ EN).\n"
+                    "YOU ARE STRICTLY FORBIDDEN from: 1) Engaging in conversation. 2) Answering questions (if the user asks a question, just translate the question itself!). 3) Analyzing code or data.\n"
+                    "Whatever the user writes, treat it AS TEXT TO TRANSLATE (unless it is a clear instruction on translation style).\n"
+                    "Return ONLY the translated text, with no introductions, comments, or explanations."
                 )
 
             context_block = ""
@@ -589,6 +525,63 @@ async def chat_endpoint(request: Request, user: dict = Depends(get_current_user)
 
 
 # ==========================================
+# CHAT FILES MANAGEMENT ENDPOINTS
+# ==========================================
+@app.get("/api/v2/chat/{chat_id}/files/{filename}")
+async def download_chat_file(
+    chat_id: str, filename: str, user: dict = Depends(get_current_user)
+):
+    """Download a file from the chat uploads directory."""
+    try:
+        chat_uploads_dir = storage.get_chat_uploads_dir(chat_id)
+        file_path = os.path.join(chat_uploads_dir, filename)
+
+        if not os.path.exists(file_path):
+            raise HTTPException(status_code=404, detail="File not found")
+
+        encoded_filename = urllib.parse.quote(filename)
+        return FileResponse(
+            path=file_path,
+            filename=filename,
+            headers={
+                "Content-Disposition": f"attachment; filename*=UTF-8''{encoded_filename}"
+            },
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error downloading file {filename}: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+
+@app.delete("/api/v2/chat/{chat_id}/files/{filename}")
+async def delete_chat_file(
+    chat_id: str, filename: str, user: dict = Depends(get_current_user)
+):
+    """Delete a file from the chat uploads directory."""
+    try:
+        chat_uploads_dir = storage.get_chat_uploads_dir(chat_id)
+        file_path = os.path.join(chat_uploads_dir, filename)
+
+        if os.path.exists(file_path):
+            os.remove(file_path)
+            logger.info(f"File {filename} deleted from disk for chat {chat_id}")
+
+        try:
+            rag.delete_document(filename=filename, entity_id=chat_id)
+        except Exception as e:
+            logger.warning(f"Failed to delete {filename} from RAG vector store: {e}")
+
+        return {
+            "status": "success",
+            "message": f"Plik {filename} został pomyślnie usunięty z dysku i bazy wektorowej.",
+        }
+    except Exception as e:
+        logger.error(f"Error deleting file {filename}: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+
+# ==========================================
 # EXPORT ENDPOINT & CACHE
 # ==========================================
 @app.post("/api/v2/reports/export")
@@ -596,7 +589,6 @@ def export_report(req: ExportRequest, user: dict = Depends(get_current_user)):
     try:
         fmt = req.format.lower()
 
-        # Set output folder to chat-specific directory
         chat_created_dir = storage.get_chat_created_dir(req.project_name)
         report_generator.final_output_path = chat_created_dir
 
@@ -627,7 +619,27 @@ def export_report(req: ExportRequest, user: dict = Depends(get_current_user)):
         else:
             raise HTTPException(status_code=400, detail="Unsupported format.")
 
-        return {"status": "success", "filepath": filepath}
+        # AUTO-VECTORIZATION OF EXPORTED REPORT (RAG)
+        try:
+            text_content = file_parser.extract_history_text(filepath)
+            if text_content:
+                filename = os.path.basename(filepath)
+                rag.ingest_document(text_content, filename, entity_id=req.project_name)
+                logger.info(
+                    f"Auto-vectorized exported report {filename} into chat {req.project_name}"
+                )
+        except Exception as e:
+            logger.warning(f"Failed to auto-vectorize exported report: {e}")
+
+        filename = os.path.basename(filepath)
+        encoded_filename = urllib.parse.quote(filename)
+        return FileResponse(
+            path=filepath,
+            filename=filename,
+            headers={
+                "Content-Disposition": f"attachment; filename*=UTF-8''{encoded_filename}"
+            },
+        )
 
     except ExportError as e:
         logger.error(f"Export failed: {e}")

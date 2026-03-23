@@ -10,9 +10,9 @@ import {
   MessageSquare,
   FileCheck,
   Languages,
-  BarChart3,
   FileSpreadsheet,
   FileIcon,
+  ExternalLink,
 } from "lucide-react";
 import type { AppMode, AttachedFile, Labels } from "../types";
 import { generateId, formatFileSize } from "../lib/utils";
@@ -58,14 +58,6 @@ const modes: {
     color: "#16a34a",
     activeBg: "rgba(22,163,74,0.06)",
     activeRing: "rgba(22,163,74,0.35)",
-  },
-  {
-    key: "analysis",
-    icon: <BarChart3 size={15} />,
-    labelKey: "modeAnalysis",
-    color: "#d97706",
-    activeBg: "rgba(217,119,6,0.06)",
-    activeRing: "rgba(217,119,6,0.35)",
   },
 ];
 
@@ -135,6 +127,7 @@ export const InputArea = ({
     setAttachedFiles((prev) => prev.filter((f) => f.id !== id));
 
   const canSend = text.trim() || attachedFiles.length > 0;
+  const activeModeDetails = modes.find((m) => m.key === mode) || modes[0];
 
   return (
     <div
@@ -210,12 +203,16 @@ export const InputArea = ({
         {/* Input box */}
         <div
           className="input-box-wrapper"
-          style={{
-            display: "flex",
-            alignItems: "flex-end",
-            gap: 12,
-            padding: "12px 16px",
-          }}
+          style={
+            {
+              display: "flex",
+              alignItems: "flex-end",
+              gap: 12,
+              padding: "12px 16px",
+              "--input-focus-border": activeModeDetails.color,
+              "--input-focus-shadow": `0 0 0 2px ${activeModeDetails.activeRing}, 0 4px 16px rgba(0, 0, 0, 0.08)`,
+            } as React.CSSProperties
+          }
         >
           {/* Attach button */}
           <button
@@ -328,6 +325,37 @@ export const InputArea = ({
                 </button>
               );
             })}
+            <button
+              onClick={() =>
+                window.open("https://bmc-remedy-agent.local", "_blank")
+              }
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 8,
+                padding: "9px 18px",
+                borderRadius: 8,
+                fontSize: 13,
+                fontWeight: 600,
+                border: "none",
+                cursor: "pointer",
+                transition: "all 0.15s",
+                backgroundColor: "transparent",
+                color: "var(--color-text-secondary)",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor =
+                  "var(--color-surface-tertiary)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = "transparent";
+              }}
+              title={labels.modeRemedy}
+            >
+              <ExternalLink size={15} />
+              <span>{labels.modeRemedy}</span>
+            </button>
           </div>
           <span style={{ fontSize: 11, color: "var(--color-text-muted)" }}>
             Enter ↵ {labels.sendMessage} · Shift+Enter {labels.newLine}
