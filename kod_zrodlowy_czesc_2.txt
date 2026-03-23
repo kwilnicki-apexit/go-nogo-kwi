@@ -159,6 +159,8 @@ import { useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import { Bot, Check, Copy, FileText } from "lucide-react";
 import type { ChatMessage, Labels } from "../types";
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
+import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { formatTime } from "../lib/utils";
 
 interface ChatFeedProps {
@@ -197,7 +199,7 @@ const CodeBlock = ({
           margin: "16px 0",
           borderRadius: "8px",
           overflow: "hidden",
-          border: "1px solid var(--color-border)",
+          border: "1px solid var(--color-border-strong)",
         }}
       >
         <div
@@ -205,8 +207,9 @@ const CodeBlock = ({
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
-            backgroundColor: "var(--color-surface-tertiary)",
+            backgroundColor: "#2d2d2d",
             padding: "6px 16px",
+            borderBottom: "1px solid #404040"
           }}
         >
           <span
@@ -214,7 +217,7 @@ const CodeBlock = ({
               fontSize: "11px",
               fontWeight: 700,
               textTransform: "uppercase",
-              color: "var(--color-text-tertiary)",
+              color: "#a3a3a3",
             }}
           >
             {lang}
@@ -227,33 +230,36 @@ const CodeBlock = ({
               gap: "6px",
               fontSize: "11px",
               fontWeight: 600,
-              color: "var(--color-text-secondary)",
+              color: "#d4d4d4",
               cursor: "pointer",
               border: "none",
               background: "none",
+              transition: "color 0.15s"
             }}
+            onMouseEnter={(e) => e.currentTarget.style.color = "#ffffff"}
+            onMouseLeave={(e) => e.currentTarget.style.color = "#d4d4d4"}
           >
             {copied ? <Check size={14} color="#10b981" /> : <Copy size={14} />}
             {copied ? "Skopiowano" : "Kopiuj"}
           </button>
         </div>
-        <pre
-          style={{
+        
+        <SyntaxHighlighter
+          children={String(children).replace(/\n$/, "")}
+          style={vscDarkPlus as Record<string, object>}
+          language={lang === "csv" ? "text" : lang}
+          PreTag="div"
+          customStyle={{
             margin: 0,
             padding: "16px",
-            backgroundColor: "var(--color-surface-secondary)",
-            overflowX: "auto",
             fontSize: "13px",
-            color: "var(--color-text-primary)",
+            backgroundColor: "#1e1e1e"
           }}
-        >
-          <code className={className} {...props}>
-            {children}
-          </code>
-        </pre>
+        />
       </div>
     );
   }
+  
   return (
     <code
       style={{
@@ -3447,6 +3453,7 @@ export interface ExportRequest {
   language: string;
   author: string;
   chart_paths: string[];
+  add_to_rag: boolean;
 }
 
 export interface ChatRequest {

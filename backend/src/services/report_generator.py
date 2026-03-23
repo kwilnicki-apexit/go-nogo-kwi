@@ -163,6 +163,7 @@ class ReportGenerator:
                             - "risks_eval": (string) analiza ryzyk (zaznacz tu, czy użytkownik zaakceptował usterki),
                             - "decision": (string) dokładnie "GO" lub "NO-GO",
                             - "justification": (string) ostateczne uzasadnienie (uwzględnij autorytet użytkownika!).
+                            - "assistant_reply": (string) krótka, merytoryczna odpowiedź do użytkownika na czacie, podsumowująca co dokładnie zmieniłeś w raporcie (np. "Zaakceptowałem ryzyko związane z wydajnością i zmieniłem status na GO.").
 
                             [GLOBALNE ZASADY BIZNESOWE (RAG)]
                             {rag_context}
@@ -199,7 +200,8 @@ class ReportGenerator:
                             - "test_analysis": conclusions from tests,
                             - "risks_eval": risk evaluation (highlight if the user accepted the flaws),
                             - "decision": exactly "GO" or "NO-GO",
-                            - "justification": final rationale (must respect the User's overriding authority).
+                            - "justification": final rationale (must respect the User's overriding authority),
+                            - "assistant_reply": (string) brief, substantive reply to the user in the chat, summarizing exactly what you changed in the report (e.g., "I accepted the performance-related risk and changed the status to GO.").
 
                             [GLOBAL BUSINESS RULES (RAG)]
                             {rag_context}

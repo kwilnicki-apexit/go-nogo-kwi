@@ -866,7 +866,7 @@ function App() {
             />
 
             <InputArea
-              mode={activeChat?.mode || "gonogo"}
+              mode={activeChat?.mode || "chatbot"}
               onModeChange={(m) => {
                 if (activeChat)
                   setChats((prev) =>

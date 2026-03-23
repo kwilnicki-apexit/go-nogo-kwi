@@ -369,11 +369,8 @@ async def _handle_gonogo(
     # Save to cache
     storage.save_to_cache(chat_id=chat_id, structured_data=draft_json)
 
-    msg_response = (
-        "Zaktualizowałem raport uwzględniając Twoje nowe wytyczne."
-        if language == "pl"
-        else "Report updated with your instructions."
-    )
+    fallback_msg = "Zaktualizowałem raport." if language == "pl" else "Report updated."
+    msg_response = draft_json.get("assistant_reply", fallback_msg)
 
     return {
         "message": msg_response,
@@ -665,7 +662,7 @@ async def chat_endpoint(request: Request, user: dict = Depends(get_current_user)
 
         # INTENT ROUTER — works from ANY mode
         original_mode = mode
-        mode = await detect_intent_llm(message, mode)
+        mode = await detect_intent_llm(message, mode, llm)
 
         if mode != original_mode:
             logger.info(
