@@ -78,6 +78,7 @@ class ExportRequest(BaseModel):
     language: str
     author: str
     chart_paths: List[str]
+    add_to_rag: bool = False
 
 
 MAX_FILE_SIZE = 5 * 1024 * 1024
@@ -147,6 +148,59 @@ def detect_intent(message: str, current_mode: str) -> str:
             return "translator"
 
     return current_mode
+
+
+async def detect_intent_llm(
+    message: str, current_mode: str, llm_client: LLMClient
+) -> str:
+    """Hybrydowy detektor intencji."""
+
+    msg_lower = message.lower().strip()
+    msg_no_diacritics = remove_diacritics(msg_lower)
+
+    if current_mode != "gonogo" and any(
+        kw in msg_lower or kw in msg_no_diacritics for kw in GONOGO_KEYWORDS
+    ):
+        return "gonogo"
+    if current_mode != "translator" and any(
+        kw in msg_lower or kw in msg_no_diacritics for kw in TRANSLATOR_KEYWORDS
+    ):
+        return "translator"
+
+    if len(message.strip()) < 5:
+        return current_mode
+
+    router_sys_prompt = (
+        "Jesteś szybkim klasyfikatorem intencji użytkownika w aplikacji QA. "
+        "Twoim zadaniem jest przypisanie zapytania użytkownika do jednego z trybów: "
+        "'chatbot', 'gonogo', 'translator'.\n"
+        "Reguły:\n"
+        "- 'gonogo': Jeśli użytkownik chce wygenerować raport, ocenić testy lub wdrożenie, przeanalizować CSV pod kątem decyzji.\n"
+        "- 'translator': Jeśli użytkownik wyraźnie prosi o tłumaczenie tekstu/pliku.\n"
+        "- 'chatbot': Domyślny tryb do zadawania pytań, analizy logów i ogólnej rozmowy.\n"
+        f"Obecny tryb to: '{current_mode}'. Jeśli zapytanie jest dwuznaczne lub to kontynuacja rozmowy, zwróć obecny tryb.\n"
+        'Zwróć WYŁĄCZNIE obiekt JSON w formacie: {"mode": "wybrany_tryb"}'
+    )
+
+    try:
+        reply = llm_client.generate_response(
+            system_prompt=router_sys_prompt,
+            user_prompt=message,
+            temperature=0.0,  # maximal determinism 
+            max_tokens=50,
+            force_json=True,
+        )
+        import json
+
+        mode_data = json.loads(reply)
+        detected_mode = mode_data.get("mode", current_mode)
+
+        if detected_mode in ["chatbot", "gonogo", "translator"]:
+            return detected_mode
+        return current_mode
+    except Exception as e:
+        logger.warning(f"LLM Intent Router failed, falling back to current mode: {e}")
+        return current_mode
 
 
 # ==========================================
@@ -416,26 +470,21 @@ async def _handle_chatbot(
         for fname, txt in contents.items():
             context_block += f"--- Plik: {fname} ---\n{txt}\n\n"
 
-    # Build system prompt
     if language == "pl":
         sys_prompt = (
-            "Jesteś WYŁĄCZNIE asystentem konwersacyjnym (Chatbot). Twoim zadaniem jest prowadzenie ogólnej rozmowy i odpowiadanie na pytania.\n"
-            "MASZ SUROWY ZAKAZ wykonywania zadań zarezerwowanych dla innych modułów:\n"
-            "1) NIE WOLNO Ci tłumaczyć tekstów ani dokumentów.\n"
-            "2) NIE WOLNO Ci generować ustrukturyzowanych raportów Go/No-Go ani decydować o wdrożeniach.\n"
-            "3) NIE WOLNO Ci pełnić roli zaawansowanego analityka (Remedy).\n"
-            "Jeśli użytkownik poprosi Cię o wykonanie któregoś z tych zadań, STANOWCZO ODMÓW i poinstruuj go, "
-            "aby użył odpowiedniego modułu z menu poniżej (Tłumacz, Go/No-Go, Analiza). Nie próbuj nawet częściowo wykonywać tych zadań."
+            "Jesteś konwersacyjnym asystentem QA (Chatbot). Twoim zadaniem jest merytoryczna rozmowa, odpowiadanie na pytania i analiza luźnych zagadnień.\n"
+            "Pamiętaj, że w tej aplikacji istnieją dedykowane moduły do innych zadań: 'Go/No-Go' do raportów decyzyjnych oraz 'Tłumacz' do translacji.\n"
+            "Nie masz uprawnień do generowania ustrukturyzowanych raportów wdrożeniowych ani bezpośredniego tłumaczenia całych dokumentów.\n"
+            "Jeśli użytkownik poprosi Cię o wykonanie takiego zadania, uprzejmie poinformuj go, że mechanizm automatycznego przełączania trybów "
+            "prawdopodobnie nie zadziałał. Poproś go o ręczne przełączenie trybu z menu poniżej lub sformułowanie polecenia inaczej."
         )
     else:
         sys_prompt = (
-            "You are EXCLUSIVELY a conversational assistant (Chatbot). Your task is general conversation and answering questions.\n"
-            "YOU ARE STRICTLY FORBIDDEN from performing tasks reserved for other modules:\n"
-            "1) DO NOT translate texts or documents.\n"
-            "2) DO NOT generate structured Go/No-Go reports or make deployment decisions.\n"
-            "3) DO NOT act as an advanced data analyst (Remedy).\n"
-            "If the user asks you to perform any of these tasks, FIRMLY REFUSE and instruct them "
-            "to use the appropriate module from the menu below (Translator, Go/No-Go, Analysis). Do not even attempt to partially fulfill these requests."
+            "You are a conversational QA assistant (Chatbot). Your task is to engage in meaningful conversation, answer questions, and analyze general topics.\n"
+            "Remember that this application has dedicated modules for specific tasks: 'Go/No-Go' for deployment reports and 'Translator' for text translation.\n"
+            "You do not have the capability to generate structured deployment reports or translate entire documents directly.\n"
+            "If the user asks you to perform such a task, politely inform them that the automatic mode-switching mechanism likely failed. "
+            "Ask them to manually select the correct mode from the menu below or rephrase their request."
         )
 
     user_prompt = f"{context_block}\n[ZAPYTANIE UŻYTKOWNIKA]\n{message}"
@@ -525,20 +574,21 @@ async def _handle_translator(
         query=search_query, project_id=project_id, chat_id=chat_id
     )
 
-    # Build system prompt
     if language == "pl":
         sys_prompt = (
-            "Jesteś WYŁĄCZNIE modułem tłumaczącym. Twoim jedynym zadaniem jest precyzyjny przekład tekstu (domyślnie PL ↔ EN).\n"
-            "MASZ SUROWY ZAKAZ: 1) Prowadzenia konwersacji. 2) Odpowiadania na zadane pytania (jeśli użytkownik zadaje pytanie, po prostu je przetłumacz!). 3) Analizowania kodu czy danych.\n"
-            "Cokolwiek użytkownik napisze w polu zapytania, potraktuj to JAKO TEKST DO PRZETŁUMACZENIA (chyba że to jawna instrukcja zmiany stylu tłumaczenia).\n"
-            "Zwracaj WYŁĄCZNIE przetłumaczony tekst, bez żadnych wstępów, komentarzy i wyjaśnień."
+            "Jesteś modułem tłumaczącym (Translator). Twoim jedynym zadaniem jest precyzyjny przekład tekstu (domyślnie PL ↔ EN).\n"
+            "Pamiętaj, że w tej aplikacji istnieją dedykowane moduły do innych zadań: 'Go/No-Go' do raportów decyzyjnych oraz 'Chatbot' do zwykłej merytorycznej rozmowy.\n"
+            "Nie masz uprawnień do generowania ustrukturyzowanych raportów wdrożeniowych ani bezpośredniego prowadzenia dłuższej konwersacji poza upewnieniem się poprawności tłumaczenia.\n"
+            "Jeśli użytkownik poprosi Cię o wykonanie takiego zadania, uprzejmie poinformuj go, że mechanizm automatycznego przełączania trybów "
+            "prawdopodobnie nie zadziałał. Poproś go o ręczne przełączenie trybu z menu poniżej lub sformułowanie polecenia inaczej."
         )
     else:
         sys_prompt = (
-            "You are EXCLUSIVELY a translation module. Your only task is precise text translation (default PL ↔ EN).\n"
-            "YOU ARE STRICTLY FORBIDDEN from: 1) Engaging in conversation. 2) Answering questions (if the user asks a question, just translate the question itself!). 3) Analyzing code or data.\n"
-            "Whatever the user writes, treat it AS TEXT TO TRANSLATE (unless it is a clear instruction on translation style).\n"
-            "Return ONLY the translated text, with no introductions, comments, or explanations."
+            "You are a translation module (Translator). Your only task is precise text translation (default PL ↔ EN).\n"
+            "Remember that this application has dedicated modules for other tasks: 'Go/No-Go' for deployment reports and 'Chatbot' for general substantive conversation.\n"
+            "You do not have the authority to generate structured deployment reports or conduct extended conversations beyond ensuring translation accuracy.\n"
+            "If the user asks you to perform such a task, politely inform them that the automatic mode-switching mechanism "
+            "has likely failed. Ask them to manually switch the mode from the menu below or rephrase their request differently."
         )
 
     # Build context block
@@ -607,7 +657,6 @@ async def chat_endpoint(request: Request, user: dict = Depends(get_current_user)
                 status_code=400, detail="No chat_id provided in the request"
             )
 
-
         # CACHE MEMORY (load history from cache if exists)
         chat_history = storage.load_chat_history(chat_id)
 
@@ -616,7 +665,7 @@ async def chat_endpoint(request: Request, user: dict = Depends(get_current_user)
 
         # INTENT ROUTER — works from ANY mode
         original_mode = mode
-        mode = detect_intent(message, mode)
+        mode = await detect_intent_llm(message, mode)
 
         if mode != original_mode:
             logger.info(
@@ -773,16 +822,19 @@ def export_report(req: ExportRequest, user: dict = Depends(get_current_user)):
             raise HTTPException(status_code=400, detail="Unsupported format.")
 
         # AUTO-VECTORIZATION OF EXPORTED REPORT (RAG)
-        try:
-            text_content = file_parser.extract_history_text(filepath)
-            if text_content:
-                filename = os.path.basename(filepath)
-                rag.ingest_document(text_content, filename, entity_id=req.project_name)
-                logger.info(
-                    f"Auto-vectorized exported report {filename} into chat {req.project_name}"
-                )
-        except Exception as e:
-            logger.warning(f"Failed to auto-vectorize exported report: {e}")
+        if req.add_to_rag:
+            try:
+                text_content = file_parser.extract_history_text(filepath)
+                if text_content:
+                    filename = os.path.basename(filepath)
+                    rag.ingest_document(
+                        text_content, filename, entity_id=req.project_name
+                    )
+                    logger.info(
+                        f"Auto-vectorized exported report {filename} into chat {req.project_name}"
+                    )
+            except Exception as e:
+                logger.warning(f"Failed to auto-vectorize exported report: {e}")
 
         filename = os.path.basename(filepath)
         encoded_filename = urllib.parse.quote(filename)

@@ -464,7 +464,7 @@ function App() {
   );
 
   const handleExport = useCallback(
-    async (format: "pdf" | "docx" | "md") => {
+    async (format: "pdf" | "docx" | "md", addToRag: boolean) => {
       if (!activeChat) return;
       setExportMessage(labels.generatingFile);
       try {
@@ -480,6 +480,7 @@ function App() {
           language,
           author: userConfig.authorName,
           chart_paths: chartPaths,
+          add_to_rag: addToRag,
         });
 
         setExportMessage(labels.successFile);

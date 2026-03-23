@@ -2,7 +2,7 @@
 // FILE: .\frontend\src\components\CanvasPanel.tsx
 // ============================================================
 
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import ReactQuill from "react-quill-new";
 import "react-quill-new/dist/quill.snow.css";
 import { X, Download, FileType2, FileCode } from "lucide-react";
@@ -13,7 +13,7 @@ interface CanvasPanelProps {
   content: string;
   onChange: (content: string) => void;
   onClose: () => void;
-  onExport: (format: "pdf" | "docx" | "md") => void;
+  onExport: (format: "pdf" | "docx" | "md", addToRag: boolean) => void;
   exportMessage: string;
   labels: Labels;
 }
@@ -77,7 +77,8 @@ export const CanvasPanel = ({
   labels,
 }: CanvasPanelProps) => {
   const quillRef = useRef<ReactQuill>(null);
-
+  const [addToRag, setAddToRag] = useState(true);
+  
   if (!isOpen) return null;
 
   const isError = isErrorMessage(exportMessage);
@@ -117,9 +118,19 @@ export const CanvasPanel = ({
           {labels.canvasTitle}
         </h3>
 
+        <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, fontWeight: 500, color: "var(--color-text-secondary)", cursor: "pointer" }}>
+            <input 
+              type="checkbox" 
+              checked={addToRag} 
+              onChange={(e) => setAddToRag(e.target.checked)} 
+              style={{ cursor: "pointer" }}
+            />
+            {labels.downloadPdf === "PDF" ? "Zapisz do bazy wiedzy (RAG)" : "Save to Knowledge Base (RAG)"}
+          </label>
+
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <button
-            onClick={() => onExport("pdf")}
+            onClick={() => onExport("pdf", addToRag)}
             style={exportBtnStyle()}
             onMouseEnter={(e) => {
               e.currentTarget.style.borderColor = "#fca5a5";
@@ -133,7 +144,7 @@ export const CanvasPanel = ({
             <Download size={14} /> {labels.downloadPdf}
           </button>
           <button
-            onClick={() => onExport("docx")}
+            onClick={() => onExport("docx", addToRag)}
             style={exportBtnStyle()}
             onMouseEnter={(e) => {
               e.currentTarget.style.borderColor = "#93c5fd";
@@ -147,7 +158,7 @@ export const CanvasPanel = ({
             <FileType2 size={14} /> {labels.downloadDocx}
           </button>
           <button
-            onClick={() => onExport("md")}
+            onClick={() => onExport("md", addToRag)}
             style={exportBtnStyle()}
             onMouseEnter={(e) => {
               e.currentTarget.style.borderColor = "#9ca3af";

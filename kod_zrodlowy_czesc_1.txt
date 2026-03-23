@@ -161,6 +161,7 @@ python-multipart
 requests
 pandas
 matplotlib
+unicodedata
 
 # for data validation and settings management
 pydantic
@@ -198,6 +199,8 @@ import uvicorn
 import uuid
 import os
 import urllib.parse
+import unicodedata
+import json
 
 from src.integration.llm_client import LLMClient
 from src.integration.auth import get_current_user
@@ -269,9 +272,18 @@ MAX_FILE_SIZE = 5 * 1024 * 1024
 # INTENT ROUTER (Auto-switch mode by keywords)
 # =============================================
 
+
+def remove_diacritics(text: str) -> str:
+    return "".join(
+        c for c in unicodedata.normalize("NFD", text) if unicodedata.category(c) != "Mn"
+    )
+
+
 GONOGO_KEYWORDS = [
     "raport wdrożeniowy",
+    "raport wdrozeniowy",
     "raport z testów",
+    "raport z testow",
     "go/no-go",
     "gonogo",
     "raport decyzyjny",
@@ -279,24 +291,24 @@ GONOGO_KEYWORDS = [
     "release report",
     "wygeneruj raport",
     "generate report",
+    "zrób raport",
+    "zrob raport",
+    "stwórz raport",
+    "stworz raport",
     "ocena wdrożenia",
+    "ocena wdrozenia",
 ]
+
 TRANSLATOR_KEYWORDS = [
     "przetłumacz",
+    "przetlumacz",
     "tłumacz",
+    "tlumacz",
     "translate",
     "na polski",
     "na angielski",
     "to english",
     "to polish",
-]
-ANALYSIS_KEYWORDS = [
-    "przeanalizuj",
-    "analiza",
-    "analyze",
-    "analysis",
-    "zbadaj dane",
-    "examine data",
 ]
 
 
@@ -307,19 +319,18 @@ def detect_intent(message: str, current_mode: str) -> str:
     they get rerouted to translator.
     """
     msg_lower = message.lower().strip()
+    msg_no_diacritics = remove_diacritics(msg_lower)
 
     # Check each keyword list; skip if already in that mode
     if current_mode != "gonogo":
-        if any(kw in msg_lower for kw in GONOGO_KEYWORDS):
+        if any(kw in msg_lower or kw in msg_no_diacritics for kw in GONOGO_KEYWORDS):
             return "gonogo"
 
     if current_mode != "translator":
-        if any(kw in msg_lower for kw in TRANSLATOR_KEYWORDS):
+        if any(
+            kw in msg_lower or kw in msg_no_diacritics for kw in TRANSLATOR_KEYWORDS
+        ):
             return "translator"
-
-    if current_mode != "analysis":
-        if any(kw in msg_lower for kw in ANALYSIS_KEYWORDS):
-            return "analysis"
 
     return current_mode
 
@@ -380,11 +391,379 @@ async def upload_project_files(
 
 
 # ==========================================
+# MODE HANDLERS
+# ==========================================
+async def _handle_gonogo(
+    chat_id: str,
+    project_id: str,
+    message: str,
+    language: str,
+    files: List[UploadFile],
+    chat_history: List[dict],
+) -> dict:
+    """Handle Go/No-Go report generation mode."""
+
+    chat_uploads_dir = storage.get_chat_uploads_dir(chat_id)
+    contents = {}
+
+    # If no files provided, try to load from existing chat uploads
+    if not files:
+        if os.path.exists(chat_uploads_dir):
+            for filename in os.listdir(chat_uploads_dir):
+                ext = os.path.splitext(filename)[1].lower()
+                if ext in {".csv", ".xls", ".xlsx"}:
+                    file_path = os.path.join(chat_uploads_dir, filename)
+                    with open(file_path, "rb") as f:
+                        contents[filename] = f.read()
+
+        if not contents:
+            msg = (
+                "Aby wygenerować raport Go/No-Go, proszę załącz pliki z wynikami testów (CSV/XLS)."
+                if language == "pl"
+                else "Please attach files with test results."
+            )
+            return {"message": msg, "detected_mode": "gonogo"}
+
+        logger.info(
+            f"Re-evaluating based on {len(contents)} existing files in chat {chat_id}."
+        )
+
+    # Process uploaded files
+    else:
+        for file in files:
+            content = await file.read()
+            if len(content) > MAX_FILE_SIZE:
+                raise HTTPException(
+                    status_code=413,
+                    detail=f"Plik {file.filename} jest za duży.",
+                )
+
+            ext = os.path.splitext(file.filename)[1].lower()
+            if ext not in {".csv", ".xls", ".xlsx"}:
+                continue
+
+            file_path = os.path.join(chat_uploads_dir, file.filename)
+            with open(file_path, "wb") as f:
+                f.write(content)
+
+            contents[file.filename] = content
+
+            try:
+                text_content = file_parser.extract_test_data_from_bytes(
+                    {file.filename: content}
+                )
+                rag.ingest_document(text_content, file.filename, entity_id=chat_id)
+            except Exception as e:
+                logger.warning(f"Could not vectorize {file.filename}: {e}")
+
+    if not contents:
+        return {
+            "message": "Nie załączono żadnych prawidłowych plików tabelarycznych.",
+            "detected_mode": "gonogo",
+        }
+
+    # Parse test data
+    parsed_test_data = file_parser.extract_test_data_from_bytes(contents)
+
+    # Load project instructions
+    project_instructions = ""
+    if project_id:
+        project_instructions = storage.load_project_instructions(project_id)
+
+    # Get RAG context
+    rag_context = rag.search_context(
+        query=message, project_id=project_id, chat_id=chat_id
+    )
+
+    if project_instructions:
+        rag_context = f"[GLOBALNE WYTYCZNE PROJEKTU]\n{project_instructions}\n\n[DOKUMENTY RAG]\n{rag_context}"
+
+    # Get historical cache
+    historical_cache = storage.get_latest_history(chat_id=chat_id)
+
+    # Generate charts
+    chart_paths = chart_generator.generate_all_charts(
+        file_contents=contents, project_name=chat_id, lang=language
+    )
+
+    # Generate report draft
+    user_risks = message if message else "Brak dodatkowych uwag."
+
+    draft_json = report_generator.generate_structured_draft(
+        historical_cache=historical_cache,
+        rag_context=rag_context,
+        parsed_test_data=parsed_test_data,
+        user_risks=user_risks,
+        project_name=chat_id,
+        lang=language,
+    )
+
+    # Save to cache
+    storage.save_to_cache(chat_id=chat_id, structured_data=draft_json)
+
+    msg_response = (
+        "Zaktualizowałem raport uwzględniając Twoje nowe wytyczne."
+        if language == "pl"
+        else "Report updated with your instructions."
+    )
+
+    return {
+        "message": msg_response,
+        "draft_data": draft_json,
+        "chart_paths": chart_paths,
+        "detected_mode": "gonogo",
+    }
+
+
+async def _handle_chatbot(
+    chat_id: str,
+    project_id: str,
+    message: str,
+    language: str,
+    files: List[UploadFile],
+    chat_history: List[dict],
+) -> dict:
+    """Handle chatbot conversational mode."""
+
+    chat_uploads_dir = storage.get_chat_uploads_dir(chat_id)
+    contents = {}
+
+    # If no files provided, try to load from existing chat uploads
+    if not files:
+        if os.path.exists(chat_uploads_dir):
+            for filename in os.listdir(chat_uploads_dir):
+                file_path = os.path.join(chat_uploads_dir, filename)
+                ext = os.path.splitext(filename)[1].lower()
+
+                try:
+                    if ext in {".csv", ".xls", ".xlsx"}:
+                        with open(file_path, "rb") as f:
+                            text_content = file_parser.extract_test_data_from_bytes(
+                                {filename: f.read()}
+                            )
+                    else:
+                        text_content = file_parser.extract_history_text(file_path)
+
+                    if text_content:
+                        contents[filename] = text_content
+                except Exception as e:
+                    logger.warning(f"Chatbot failed to re-read {filename}: {e}")
+    else:
+        # Process uploaded files
+        for file in files:
+            content = await file.read()
+            if len(content) > MAX_FILE_SIZE:
+                raise HTTPException(
+                    status_code=413,
+                    detail=f"Plik {file.filename} jest za duży.",
+                )
+
+            file_path = os.path.join(chat_uploads_dir, file.filename)
+            with open(file_path, "wb") as f:
+                f.write(content)
+
+            ext = os.path.splitext(file.filename)[1].lower()
+            try:
+                if ext in {".csv", ".xls", ".xlsx"}:
+                    text_content = file_parser.extract_test_data_from_bytes(
+                        {file.filename: content}
+                    )
+                else:
+                    text_content = file_parser.extract_history_text(file_path)
+
+                if text_content:
+                    contents[file.filename] = text_content
+                    rag.ingest_document(text_content, file.filename, entity_id=chat_id)
+            except Exception as e:
+                logger.warning(f"Chatbot failed to process {file.filename}: {e}")
+
+    # Load project instructions
+    project_instructions = ""
+    if project_id:
+        project_instructions = storage.load_project_instructions(project_id)
+
+    # Get RAG context
+    search_query = message if message else "Podsumowanie plików"
+    rag_context = rag.search_context(
+        query=search_query, project_id=project_id, chat_id=chat_id
+    )
+
+    # Build context block
+    context_block = ""
+    if project_instructions or rag_context:
+        context_block += "[BAZA WIEDZY PROJEKTU I RAG]\n"
+        if project_instructions:
+            context_block += f"Wytyczne projektu: {project_instructions}\n"
+        if rag_context:
+            context_block += f"Materiały referencyjne:\n{rag_context}\n"
+
+    if contents:
+        context_block += "\n[ZAŁĄCZONE PLIKI DO AKTUALNEJ ANALIZY]\n"
+        for fname, txt in contents.items():
+            context_block += f"--- Plik: {fname} ---\n{txt}\n\n"
+
+    # Build system prompt
+    if language == "pl":
+        sys_prompt = (
+            "Jesteś WYŁĄCZNIE asystentem konwersacyjnym (Chatbot). Twoim zadaniem jest prowadzenie ogólnej rozmowy i odpowiadanie na pytania.\n"
+            "MASZ SUROWY ZAKAZ wykonywania zadań zarezerwowanych dla innych modułów:\n"
+            "1) NIE WOLNO Ci tłumaczyć tekstów ani dokumentów.\n"
+            "2) NIE WOLNO Ci generować ustrukturyzowanych raportów Go/No-Go ani decydować o wdrożeniach.\n"
+            "3) NIE WOLNO Ci pełnić roli zaawansowanego analityka (Remedy).\n"
+            "Jeśli użytkownik poprosi Cię o wykonanie któregoś z tych zadań, STANOWCZO ODMÓW i poinstruuj go, "
+            "aby użył odpowiedniego modułu z menu poniżej (Tłumacz, Go/No-Go, Analiza). Nie próbuj nawet częściowo wykonywać tych zadań."
+        )
+    else:
+        sys_prompt = (
+            "You are EXCLUSIVELY a conversational assistant (Chatbot). Your task is general conversation and answering questions.\n"
+            "YOU ARE STRICTLY FORBIDDEN from performing tasks reserved for other modules:\n"
+            "1) DO NOT translate texts or documents.\n"
+            "2) DO NOT generate structured Go/No-Go reports or make deployment decisions.\n"
+            "3) DO NOT act as an advanced data analyst (Remedy).\n"
+            "If the user asks you to perform any of these tasks, FIRMLY REFUSE and instruct them "
+            "to use the appropriate module from the menu below (Translator, Go/No-Go, Analysis). Do not even attempt to partially fulfill these requests."
+        )
+
+    user_prompt = f"{context_block}\n[ZAPYTANIE UŻYTKOWNIKA]\n{message}"
+    reply = llm.generate_response(
+        sys_prompt, user_prompt, temperature=0.3, chat_history=chat_history[-8:]
+    )
+
+    chat_history.append({"role": "assistant", "content": reply})
+    storage.save_chat_history(chat_id, chat_history)
+
+    return {"message": reply, "detected_mode": "chatbot"}
+
+
+async def _handle_translator(
+    chat_id: str,
+    project_id: str,
+    message: str,
+    language: str,
+    files: List[UploadFile],
+    chat_history: List[dict],
+) -> dict:
+    """Handle translator mode."""
+
+    chat_uploads_dir = storage.get_chat_uploads_dir(chat_id)
+    contents = {}
+
+    # If no files provided, try to load from existing chat uploads
+    if not files:
+        if os.path.exists(chat_uploads_dir):
+            for filename in os.listdir(chat_uploads_dir):
+                ext = os.path.splitext(filename)[1].lower()
+
+                if ext in {".txt", ".md", ".docx", ".pdf"}:
+                    file_path = os.path.join(chat_uploads_dir, filename)
+                    text_content = file_parser.extract_history_text(file_path)
+                    if text_content:
+                        contents[filename] = text_content
+    else:
+        # Process uploaded files
+        for file in files:
+            content = await file.read()
+            if len(content) > MAX_FILE_SIZE:
+                raise HTTPException(
+                    status_code=413,
+                    detail=f"Plik {file.filename} jest za duży.",
+                )
+
+            ext = os.path.splitext(file.filename)[1].lower()
+            if ext not in {".txt", ".md", ".docx", ".pdf"}:
+                continue
+
+            file_path = os.path.join(chat_uploads_dir, file.filename)
+            with open(file_path, "wb") as f:
+                f.write(content)
+
+            text_content = file_parser.extract_history_text(file_path)
+            if text_content:
+                contents[file.filename] = text_content
+                try:
+                    rag.ingest_document(text_content, file.filename, entity_id=chat_id)
+                except Exception as e:
+                    logger.warning(f"Could not vectorize {file.filename}: {e}")
+
+    # Combine text from files
+    text_to_translate = ""
+    if contents:
+        text_to_translate = "\n\n".join(
+            [f"--- Plik: {fname} ---\n{txt}" for fname, txt in contents.items()]
+        )
+
+    if not text_to_translate and not message:
+        msg = (
+            "Proszę wpisać tekst do przetłumaczenia lub załączyć pliki (TXT, PDF, DOCX)."
+            if language == "pl"
+            else "Please enter text to translate or attach files (TXT, PDF, DOCX)."
+        )
+        return {"message": msg, "detected_mode": "translator"}
+
+    # Load project instructions
+    project_instructions = ""
+    if project_id:
+        project_instructions = storage.load_project_instructions(project_id)
+
+    # Get RAG context
+    search_query = message if message else text_to_translate[:500]
+    rag_context = rag.search_context(
+        query=search_query, project_id=project_id, chat_id=chat_id
+    )
+
+    # Build system prompt
+    if language == "pl":
+        sys_prompt = (
+            "Jesteś WYŁĄCZNIE modułem tłumaczącym. Twoim jedynym zadaniem jest precyzyjny przekład tekstu (domyślnie PL ↔ EN).\n"
+            "MASZ SUROWY ZAKAZ: 1) Prowadzenia konwersacji. 2) Odpowiadania na zadane pytania (jeśli użytkownik zadaje pytanie, po prostu je przetłumacz!). 3) Analizowania kodu czy danych.\n"
+            "Cokolwiek użytkownik napisze w polu zapytania, potraktuj to JAKO TEKST DO PRZETŁUMACZENIA (chyba że to jawna instrukcja zmiany stylu tłumaczenia).\n"
+            "Zwracaj WYŁĄCZNIE przetłumaczony tekst, bez żadnych wstępów, komentarzy i wyjaśnień."
+        )
+    else:
+        sys_prompt = (
+            "You are EXCLUSIVELY a translation module. Your only task is precise text translation (default PL ↔ EN).\n"
+            "YOU ARE STRICTLY FORBIDDEN from: 1) Engaging in conversation. 2) Answering questions (if the user asks a question, just translate the question itself!). 3) Analyzing code or data.\n"
+            "Whatever the user writes, treat it AS TEXT TO TRANSLATE (unless it is a clear instruction on translation style).\n"
+            "Return ONLY the translated text, with no introductions, comments, or explanations."
+        )
+
+    # Build context block
+    context_block = ""
+    if project_instructions or rag_context:
+        context_block = "[KONTEKST PROJEKTU I SŁOWNICZEK (RAG)]\n"
+        if project_instructions:
+            context_block += f"Reguły projektu: {project_instructions}\n"
+        if rag_context:
+            context_block += f"Materiały referencyjne (użyj do zachowania spójności słownictwa):\n{rag_context}\n"
+        context_block += "\nWykorzystaj powyższy kontekst, aby dostosować tłumaczenie do standardów i nomenklatury projektu.\n\n"
+
+    user_prompt = context_block
+
+    if text_to_translate and message:
+        user_prompt += f"Instrukcja od użytkownika: {message}\n\nTekst z dokumentów do przetłumaczenia:\n{text_to_translate}"
+    elif text_to_translate:
+        user_prompt += f"Przetłumacz poniższy tekst z dokumentów (wykryj język i przetłumacz na drugi - PL/EN):\n\n{text_to_translate}"
+    else:
+        user_prompt += f"Przetłumacz lub wykonaj polecenie:\n\n{message}"
+
+    logger.info(f"Executing translator mode for chat {chat_id}")
+    reply = llm.generate_response(
+        sys_prompt, user_prompt, temperature=0.2, chat_history=chat_history[-8:]
+    )
+
+    chat_history.append({"role": "assistant", "content": reply})
+    storage.save_chat_history(chat_id, chat_history)
+
+    return {"message": reply, "detected_mode": "translator"}
+
+
+# ==========================================
 # MAIN CHAT ENDPOINT (c-xxxxx)
 # ==========================================
 @app.post("/api/v2/chat")
 async def chat_endpoint(request: Request, user: dict = Depends(get_current_user)):
     try:
+
         content_type = request.headers.get("content-type", "")
 
         # Payload handling for both JSON and multipart/form-data (for file uploads)
@@ -396,6 +775,7 @@ async def chat_endpoint(request: Request, user: dict = Depends(get_current_user)
             chat_id = form.get("chat_id")
             project_id = form.get("project_id")
             files = form.getlist("files")
+
         else:
             data = await request.json()
             message = data.get("message", "")
@@ -413,9 +793,14 @@ async def chat_endpoint(request: Request, user: dict = Depends(get_current_user)
                 status_code=400, detail="No chat_id provided in the request"
             )
 
-        # ==========================================
+
+        # CACHE MEMORY (load history from cache if exists)
+        chat_history = storage.load_chat_history(chat_id)
+
+        if message.strip():
+            chat_history.append({"role": "user", "content": message})
+
         # INTENT ROUTER — works from ANY mode
-        # ==========================================
         original_mode = mode
         mode = detect_intent(message, mode)
 
@@ -425,339 +810,39 @@ async def chat_endpoint(request: Request, user: dict = Depends(get_current_user)
                 f"(keyword detected in: '{message[:80]}')"
             )
 
-        # ==========================================
-
         chat_created_dir = storage.get_chat_created_dir(chat_id)
         chart_generator.output_dir = chat_created_dir
         report_generator.final_output_path = chat_created_dir
 
-        # -------------------
-        # MODE: GO/NO-GO
-        # -------------------
         if mode == "gonogo":
-            chat_uploads_dir = storage.get_chat_uploads_dir(chat_id)
-            contents = {}
-
-            if not files:
-                if os.path.exists(chat_uploads_dir):
-                    for filename in os.listdir(chat_uploads_dir):
-                        ext = os.path.splitext(filename)[1].lower()
-                        if ext in {".csv", ".xls", ".xlsx"}:
-                            file_path = os.path.join(chat_uploads_dir, filename)
-                            with open(file_path, "rb") as f:
-                                contents[filename] = f.read()
-
-                if not contents:
-                    msg = (
-                        "Aby wygenerować raport Go/No-Go, proszę załącz pliki z wynikami testów (CSV/XLS)."
-                        if language == "pl"
-                        else "Please attach files with test results."
-                    )
-                    return {"message": msg, "detected_mode": mode}
-
-                logger.info(
-                    f"Re-evaluating based on {len(contents)} existing files in chat {chat_id}."
-                )
-                
-            else:
-                for file in files:
-                    content = await file.read()
-                    if len(content) > MAX_FILE_SIZE:
-                        raise HTTPException(
-                            status_code=413,
-                            detail=f"Plik {file.filename} jest za duży.",
-                        )
-
-                    ext = os.path.splitext(file.filename)[1].lower()
-                    if ext not in {".csv", ".xls", ".xlsx"}:
-                        continue
-
-                    file_path = os.path.join(chat_uploads_dir, file.filename)
-                    with open(file_path, "wb") as f:
-                        f.write(content)
-
-                    contents[file.filename] = content
-
-                    try:
-                        text_content = file_parser.extract_test_data_from_bytes(
-                            {file.filename: content}
-                        )
-                        rag.ingest_document(
-                            text_content, file.filename, entity_id=chat_id
-                        )
-                    except Exception as e:
-                        logger.warning(f"Could not vectorize {file.filename}: {e}")
-
-            if not contents:
-                return {
-                    "message": "Nie załączono żadnych prawidłowych plików tabelarycznych.",
-                    "detected_mode": mode,
-                }
-
-            parsed_test_data = file_parser.extract_test_data_from_bytes(contents)
-
-            project_instructions = ""
-            if project_id:
-                project_instructions = storage.load_project_instructions(project_id)
-
-            rag_context = rag.search_context(
-                query=message, project_id=project_id, chat_id=chat_id
+            return await _handle_gonogo(
+                chat_id=chat_id,
+                project_id=project_id,
+                message=message,
+                language=language,
+                files=files,
+                chat_history=chat_history,
             )
 
-            if project_instructions:
-                rag_context = f"[GLOBALNE WYTYCZNE PROJEKTU]\n{project_instructions}\n\n[DOKUMENTY RAG]\n{rag_context}"
-
-            historical_cache = storage.get_latest_history(chat_id=chat_id)
-
-            chart_paths = chart_generator.generate_all_charts(
-                file_contents=contents, project_name=chat_id, lang=language
-            )
-
-            user_risks = message if message else "Brak dodatkowych uwag."
-
-            draft_json = report_generator.generate_structured_draft(
-                historical_cache=historical_cache,
-                rag_context=rag_context,
-                parsed_test_data=parsed_test_data,
-                user_risks=user_risks,
-                project_name=chat_id,
-                lang=language,
-            )
-
-            storage.save_to_cache(chat_id=chat_id, structured_data=draft_json)
-
-            msg_response = (
-                "Zaktualizowałem raport uwzględniając Twoje nowe wytyczne."
-                if language == "pl"
-                else "Report updated with your instructions."
-            )
-
-            return {
-                "message": msg_response,
-                "draft_data": draft_json,
-                "chart_paths": chart_paths,
-                "detected_mode": mode,
-            }
-
-        # ---------------------------------------------------------
-        # MODE 2: CHATBOT
-        # ---------------------------------------------------------
         elif mode == "chatbot":
-            chat_uploads_dir = storage.get_chat_uploads_dir(chat_id)
-            contents = {}
-
-            if not files:
-                if os.path.exists(chat_uploads_dir):
-                    for filename in os.listdir(chat_uploads_dir):
-                        file_path = os.path.join(chat_uploads_dir, filename)
-                        ext = os.path.splitext(filename)[1].lower()
-
-                        try:
-                            if ext in {".csv", ".xls", ".xlsx"}:
-                                with open(file_path, "rb") as f:
-                                    text_content = (
-                                        file_parser.extract_test_data_from_bytes(
-                                            {filename: f.read()}
-                                        )
-                                    )
-                            else:
-                                text_content = file_parser.extract_history_text(
-                                    file_path
-                                )
-
-                            if text_content:
-                                contents[filename] = text_content
-                        except Exception as e:
-                            logger.warning(f"Chatbot failed to re-read {filename}: {e}")
-            else:
-                for file in files:
-                    content = await file.read()
-                    if len(content) > MAX_FILE_SIZE:
-                        raise HTTPException(
-                            status_code=413,
-                            detail=f"Plik {file.filename} jest za duży.",
-                        )
-
-                    file_path = os.path.join(chat_uploads_dir, file.filename)
-                    with open(file_path, "wb") as f:
-                        f.write(content)
-
-                    ext = os.path.splitext(file.filename)[1].lower()
-                    try:
-                        if ext in {".csv", ".xls", ".xlsx"}:
-                            text_content = file_parser.extract_test_data_from_bytes(
-                                {file.filename: content}
-                            )
-                        else:
-                            text_content = file_parser.extract_history_text(file_path)
-
-                        if text_content:
-                            contents[file.filename] = text_content
-                            rag.ingest_document(
-                                text_content, file.filename, entity_id=chat_id
-                            )
-                    except Exception as e:
-                        logger.warning(
-                            f"Chatbot failed to process {file.filename}: {e}"
-                        )
-
-            project_instructions = ""
-            if project_id:
-                project_instructions = storage.load_project_instructions(project_id)
-
-            search_query = message if message else "Podsumowanie plików"
-            rag_context = rag.search_context(
-                query=search_query, project_id=project_id, chat_id=chat_id
+            return await _handle_chatbot(
+                chat_id=chat_id,
+                project_id=project_id,
+                message=message,
+                language=language,
+                files=files,
+                chat_history=chat_history,
             )
 
-            context_block = ""
-            if project_instructions or rag_context:
-                context_block += "[BAZA WIEDZY PROJEKTU I RAG]\n"
-                if project_instructions:
-                    context_block += f"Wytyczne projektu: {project_instructions}\n"
-                if rag_context:
-                    context_block += f"Materiały referencyjne:\n{rag_context}\n"
-
-            if contents:
-                context_block += "\n[ZAŁĄCZONE PLIKI DO AKTUALNEJ ANALIZY]\n"
-                for fname, txt in contents.items():
-                    context_block += f"--- Plik: {fname} ---\n{txt}\n\n"
-
-            if language == "pl":
-                sys_prompt = (
-                    "Jesteś WYŁĄCZNIE asystentem konwersacyjnym (Chatbot). Twoim zadaniem jest prowadzenie ogólnej rozmowy i odpowiadanie na pytania.\n"
-                    "MASZ SUROWY ZAKAZ wykonywania zadań zarezerwowanych dla innych modułów:\n"
-                    "1) NIE WOLNO Ci tłumaczyć tekstów ani dokumentów.\n"
-                    "2) NIE WOLNO Ci generować ustrukturyzowanych raportów Go/No-Go ani decydować o wdrożeniach.\n"
-                    "3) NIE WOLNO Ci pełnić roli zaawansowanego analityka (Remedy).\n"
-                    "Jeśli użytkownik poprosi Cię o wykonanie któregoś z tych zadań, STANOWCZO ODMÓW i poinstruuj go, "
-                    "aby użył odpowiedniego modułu z menu poniżej (Tłumacz, Go/No-Go, Analiza). Nie próbuj nawet częściowo wykonywać tych zadań."
-                )
-            else:
-                sys_prompt = (
-                    "You are EXCLUSIVELY a conversational assistant (Chatbot). Your task is general conversation and answering questions.\n"
-                    "YOU ARE STRICTLY FORBIDDEN from performing tasks reserved for other modules:\n"
-                    "1) DO NOT translate texts or documents.\n"
-                    "2) DO NOT generate structured Go/No-Go reports or make deployment decisions.\n"
-                    "3) DO NOT act as an advanced data analyst (Remedy).\n"
-                    "If the user asks you to perform any of these tasks, FIRMLY REFUSE and instruct them "
-                    "to use the appropriate module from the menu below (Translator, Go/No-Go, Analysis). Do not even attempt to partially fulfill these requests."
-                )
-
-            user_prompt = f"{context_block}\n[ZAPYTANIE UŻYTKOWNIKA]\n{message}"
-            reply = llm.generate_response(sys_prompt, user_prompt, temperature=0.3)
-            return {"message": reply, "detected_mode": mode}
-
-        # ---------------------------------------------------------
-        # MODE 3: TRANSLATOR
-        # ---------------------------------------------------------
         elif mode == "translator":
-            chat_uploads_dir = storage.get_chat_uploads_dir(chat_id)
-            contents = {}
-
-            if not files:
-                if os.path.exists(chat_uploads_dir):
-                    for filename in os.listdir(chat_uploads_dir):
-                        ext = os.path.splitext(filename)[1].lower()
-
-                        if ext in {".txt", ".md", ".docx", ".pdf"}:
-                            file_path = os.path.join(chat_uploads_dir, filename)
-                            text_content = file_parser.extract_history_text(file_path)
-                            if text_content:
-                                contents[filename] = text_content
-            else:
-                for file in files:
-                    content = await file.read()
-                    if len(content) > MAX_FILE_SIZE:
-                        raise HTTPException(
-                            status_code=413,
-                            detail=f"Plik {file.filename} jest za duży.",
-                        )
-
-                    ext = os.path.splitext(file.filename)[1].lower()
-                    if ext not in {".txt", ".md", ".docx", ".pdf"}:
-                        continue
-
-                    file_path = os.path.join(chat_uploads_dir, file.filename)
-                    with open(file_path, "wb") as f:
-                        f.write(content)
-
-                    text_content = file_parser.extract_history_text(file_path)
-                    if text_content:
-                        contents[file.filename] = text_content
-                        try:
-                            rag.ingest_document(
-                                text_content, file.filename, entity_id=chat_id
-                            )
-                        except Exception as e:
-                            logger.warning(f"Could not vectorize {file.filename}: {e}")
-
-            text_to_translate = ""
-            if contents:
-                text_to_translate = "\n\n".join(
-                    [f"--- Plik: {fname} ---\n{txt}" for fname, txt in contents.items()]
-                )
-
-            if not text_to_translate and not message:
-                msg = (
-                    "Proszę wpisać tekst do przetłumaczenia lub załączyć pliki (TXT, PDF, DOCX)."
-                    if language == "pl"
-                    else "Please enter text to translate or attach files (TXT, PDF, DOCX)."
-                )
-                return {"message": msg, "detected_mode": mode}
-
-            project_instructions = ""
-            if project_id:
-                project_instructions = storage.load_project_instructions(project_id)
-
-            search_query = message if message else text_to_translate[:500]
-            rag_context = rag.search_context(
-                query=search_query, project_id=project_id, chat_id=chat_id
+            return await _handle_translator(
+                chat_id=chat_id,
+                project_id=project_id,
+                message=message,
+                language=language,
+                files=files,
+                chat_history=chat_history,
             )
-
-            if language == "pl":
-                sys_prompt = (
-                    "Jesteś WYŁĄCZNIE modułem tłumaczącym. Twoim jedynym zadaniem jest precyzyjny przekład tekstu (domyślnie PL ↔ EN).\n"
-                    "MASZ SUROWY ZAKAZ: 1) Prowadzenia konwersacji. 2) Odpowiadania na zadane pytania (jeśli użytkownik zadaje pytanie, po prostu je przetłumacz!). 3) Analizowania kodu czy danych.\n"
-                    "Cokolwiek użytkownik napisze w polu zapytania, potraktuj to JAKO TEKST DO PRZETŁUMACZENIA (chyba że to jawna instrukcja zmiany stylu tłumaczenia).\n"
-                    "Zwracaj WYŁĄCZNIE przetłumaczony tekst, bez żadnych wstępów, komentarzy i wyjaśnień."
-                )
-            else:
-                sys_prompt = (
-                    "You are EXCLUSIVELY a translation module. Your only task is precise text translation (default PL ↔ EN).\n"
-                    "YOU ARE STRICTLY FORBIDDEN from: 1) Engaging in conversation. 2) Answering questions (if the user asks a question, just translate the question itself!). 3) Analyzing code or data.\n"
-                    "Whatever the user writes, treat it AS TEXT TO TRANSLATE (unless it is a clear instruction on translation style).\n"
-                    "Return ONLY the translated text, with no introductions, comments, or explanations."
-                )
-
-            context_block = ""
-            if project_instructions or rag_context:
-                context_block = "[KONTEKST PROJEKTU I SŁOWNICZEK (RAG)]\n"
-                if project_instructions:
-                    context_block += f"Reguły projektu: {project_instructions}\n"
-                if rag_context:
-                    context_block += f"Materiały referencyjne (użyj do zachowania spójności słownictwa):\n{rag_context}\n"
-                context_block += "\nWykorzystaj powyższy kontekst, aby dostosować tłumaczenie do standardów i nomenklatury projektu.\n\n"
-
-            user_prompt = context_block
-
-            if text_to_translate and message:
-                user_prompt += f"Instrukcja od użytkownika: {message}\n\nTekst z dokumentów do przetłumaczenia:\n{text_to_translate}"
-            elif text_to_translate:
-                user_prompt += f"Przetłumacz poniższy tekst z dokumentów (wykryj język i przetłumacz na drugi - PL/EN):\n\n{text_to_translate}"
-            else:
-                user_prompt += f"Przetłumacz lub wykonaj polecenie:\n\n{message}"
-
-            logger.info(f"Executing translator mode for chat {chat_id}")
-            reply = llm.generate_response(sys_prompt, user_prompt, temperature=0.2)
-
-            return {"message": reply, "detected_mode": mode}
-
-        elif mode == "analysis":
-            return {
-                "message": f"Analysis module. Files received: {len(files)}",
-                "detected_mode": mode,
-            }
 
         else:
             return {
@@ -2433,7 +2518,9 @@ class StorageManager:
         """Saves chat metadata (which project it belongs to)."""
         meta_path = os.path.join(self.get_chat_dir(chat_id), "meta.json")
         with open(meta_path, "w", encoding="utf-8") as f:
-            json.dump({"project_id": project_id, "created_at": datetime.now().isoformat()}, f)
+            json.dump(
+                {"project_id": project_id, "created_at": datetime.now().isoformat()}, f
+            )
 
     def get_chat_project_id(self, chat_id: str) -> Optional[str]:
         """Returns the project ID for the given chat or None (if standalone)."""
@@ -2444,7 +2531,37 @@ class StorageManager:
         return None
 
     # ==========================================
-    # CACHE MANAGEMENT (draft JSON in chat folder)
+    # CHAT CACHE MANAGEMENT (draft JSON in chat folder)
+    # ==========================================
+
+    def get_chat_cache_dir(self, chat_id: str) -> str:
+        """Directory for conversation history and other temporary chat data."""
+        path = os.path.join(self.get_chat_dir(chat_id), "cache")
+        os.makedirs(path, exist_ok=True)
+        return path
+
+    def load_chat_history(self, chat_id: str) -> list:
+        """Loads the conversation history from history.json."""
+        history_path = os.path.join(self.get_chat_cache_dir(chat_id), "history.json")
+        if os.path.exists(history_path):
+            try:
+                with open(history_path, "r", encoding="utf-8") as f:
+                    return json.load(f)
+            except Exception as e:
+                self.logger.error(f"Failed to load chat history for {chat_id}: {e}")
+        return []
+
+    def save_chat_history(self, chat_id: str, history: list):
+        """Saves the conversation history to history.json."""
+        history_path = os.path.join(self.get_chat_cache_dir(chat_id), "history.json")
+        try:
+            with open(history_path, "w", encoding="utf-8") as f:
+                json.dump(history, f, ensure_ascii=False, indent=2)
+        except Exception as e:
+            self.logger.error(f"Failed to save chat history for {chat_id}: {e}")
+
+    # ==========================================
+    # GO-NOGO CACHE MANAGEMENT (draft JSON in chat folder)
     # ==========================================
 
     def save_to_cache(self, chat_id: str, structured_data: dict):
@@ -2455,7 +2572,7 @@ class StorageManager:
         cache_payload = {
             "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             "chat_id": chat_id,
-            "data": structured_data
+            "data": structured_data,
         }
         try:
             with open(filepath, "w", encoding="utf-8") as f:
@@ -2483,6 +2600,7 @@ class StorageManager:
             self.logger.info(f"Cache deleted for chat: {chat_id}")
             return True
         return False
+
 
 ============================================================
 --- PLIK: .\backend\src\services\rag.py ---
@@ -4797,151 +4915,5 @@ export const SidebarToggle = ({ isOpen, onToggle }: SidebarToggleProps) => {
     >
       {isOpen ? <ChevronLeft size={14} /> : <ChevronRight size={14} />}
     </button>
-  );
-};
-
-============================================================
---- PLIK: .\frontend\src\components\ProjectContextMenu.tsx ---
-============================================================
-
-// ============================================================
-// FILE: .\frontend\src\components\ProjectContextMenu.tsx
-// ============================================================
-
-import { useState, useRef, useEffect } from "react";
-import {
-  Pencil,
-  Archive,
-  ArchiveRestore,
-  Trash2,
-  AlertTriangle,
-} from "lucide-react";
-import type { Labels } from "../types";
-
-interface ProjectContextMenuProps {
-  x: number;
-  y: number;
-  isArchived: boolean;
-  onClose: () => void;
-  onRename: () => void;
-  onToggleArchive: () => void;
-  onDelete: () => void;
-  labels: Labels;
-}
-
-export const ProjectContextMenu = ({
-  x,
-  y,
-  isArchived,
-  onClose,
-  onRename,
-  onToggleArchive,
-  onDelete,
-  labels,
-}: ProjectContextMenuProps) => {
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const menuRef = useRef<HTMLDivElement>(null);
-
-  // Close on click outside
-  useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        onClose();
-      }
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, [onClose]);
-
-  // Close on Escape key
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    document.addEventListener("keydown", handler);
-    return () => document.removeEventListener("keydown", handler);
-  }, [onClose]);
-
-  // Clamp menu position to viewport
-  const style: React.CSSProperties = {
-    position: "fixed",
-    top: Math.min(y, window.innerHeight - 200),
-    left: Math.min(x, window.innerWidth - 180),
-    zIndex: 200,
-  };
-
-  return (
-    <div ref={menuRef} className="ctx-menu animate-ctx-menu" style={style}>
-      {/* Rename */}
-      <button
-        className="ctx-menu-item"
-        onClick={() => {
-          onRename();
-          onClose();
-        }}
-      >
-        <Pencil size={13} />
-        {labels.editName}
-      </button>
-
-      {/* Archive / Unarchive */}
-      <button
-        className="ctx-menu-item"
-        onClick={() => {
-          onToggleArchive();
-          onClose();
-        }}
-      >
-        {isArchived ? <ArchiveRestore size={13} /> : <Archive size={13} />}
-        {isArchived ? labels.unarchive : labels.archive}
-      </button>
-
-      <hr className="ctx-menu-divider" />
-
-      {/* Delete */}
-      {!showDeleteConfirm ? (
-        <button
-          className="ctx-menu-item danger"
-          onClick={() => setShowDeleteConfirm(true)}
-        >
-          <Trash2 size={13} />
-          {labels.deleteProject}
-        </button>
-      ) : (
-        <div className="ctx-menu-delete-confirm">
-          <span className="ctx-menu-delete-confirm-text">
-            <AlertTriangle
-              size={11}
-              style={{
-                display: "inline",
-                marginRight: 4,
-                verticalAlign: "middle",
-              }}
-            />
-            {labels.confirmDelete}
-            <br />
-            {labels.confirmDeleteMessage}
-          </span>
-          <div className="ctx-menu-delete-confirm-actions">
-            <button
-              className="ctx-menu-delete-yes"
-              onClick={() => {
-                onDelete();
-                onClose();
-              }}
-            >
-              <Trash2 size={10} />
-              {labels.yes}
-            </button>
-            <button
-              className="ctx-menu-delete-no"
-              onClick={() => setShowDeleteConfirm(false)}
-            >
-              {labels.no}
-            </button>
-          </div>
-        </div>
-      )}
-    </div>
   );
 };

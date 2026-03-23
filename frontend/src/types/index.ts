@@ -56,6 +56,7 @@ export interface ExportRequest {
   language: string;
   author: string;
   chart_paths: string[];
+  add_to_rag: boolean;
 }
 
 export interface ChatRequest {
