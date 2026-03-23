@@ -85,7 +85,9 @@ class StorageManager:
         """Saves chat metadata (which project it belongs to)."""
         meta_path = os.path.join(self.get_chat_dir(chat_id), "meta.json")
         with open(meta_path, "w", encoding="utf-8") as f:
-            json.dump({"project_id": project_id, "created_at": datetime.now().isoformat()}, f)
+            json.dump(
+                {"project_id": project_id, "created_at": datetime.now().isoformat()}, f
+            )
 
     def get_chat_project_id(self, chat_id: str) -> Optional[str]:
         """Returns the project ID for the given chat or None (if standalone)."""
@@ -96,7 +98,37 @@ class StorageManager:
         return None
 
     # ==========================================
-    # CACHE MANAGEMENT (draft JSON in chat folder)
+    # CHAT CACHE MANAGEMENT (draft JSON in chat folder)
+    # ==========================================
+
+    def get_chat_cache_dir(self, chat_id: str) -> str:
+        """Directory for conversation history and other temporary chat data."""
+        path = os.path.join(self.get_chat_dir(chat_id), "cache")
+        os.makedirs(path, exist_ok=True)
+        return path
+
+    def load_chat_history(self, chat_id: str) -> list:
+        """Loads the conversation history from history.json."""
+        history_path = os.path.join(self.get_chat_cache_dir(chat_id), "history.json")
+        if os.path.exists(history_path):
+            try:
+                with open(history_path, "r", encoding="utf-8") as f:
+                    return json.load(f)
+            except Exception as e:
+                self.logger.error(f"Failed to load chat history for {chat_id}: {e}")
+        return []
+
+    def save_chat_history(self, chat_id: str, history: list):
+        """Saves the conversation history to history.json."""
+        history_path = os.path.join(self.get_chat_cache_dir(chat_id), "history.json")
+        try:
+            with open(history_path, "w", encoding="utf-8") as f:
+                json.dump(history, f, ensure_ascii=False, indent=2)
+        except Exception as e:
+            self.logger.error(f"Failed to save chat history for {chat_id}: {e}")
+
+    # ==========================================
+    # GO-NOGO CACHE MANAGEMENT (draft JSON in chat folder)
     # ==========================================
 
     def save_to_cache(self, chat_id: str, structured_data: dict):
@@ -107,7 +139,7 @@ class StorageManager:
         cache_payload = {
             "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             "chat_id": chat_id,
-            "data": structured_data
+            "data": structured_data,
         }
         try:
             with open(filepath, "w", encoding="utf-8") as f:

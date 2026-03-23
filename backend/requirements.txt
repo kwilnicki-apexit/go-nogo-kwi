@@ -11,6 +11,7 @@ python-multipart
 requests
 pandas
 matplotlib
+unicodedata
 
 # for data validation and settings management
 pydantic
