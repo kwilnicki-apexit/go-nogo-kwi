@@ -2,6 +2,8 @@
 # FILE: .\backend\main.py
 # ============================================================
 
+import re
+
 from fastapi import FastAPI, HTTPException, Request, File, UploadFile, Depends
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
@@ -26,6 +28,19 @@ from src.services.chart_generator import ChartGenerator
 from src.core.logger import get_logger, request_id_var
 from src.core.exceptions import LLMConnectionError, DataProcessingError, ExportError
 
+from src.utils.validators import (
+    validate_message,
+    validate_upload,
+    validate_mime,
+    assert_within_directory,
+    normalize_extracted_text,
+    security_logger,
+    GONOGO_ALLOWED_EXTENSIONS,
+    PROJECT_ALLOWED_EXTENSIONS,
+    MAX_FILE_SIZE,
+    MAX_FILES,
+)
+
 logger = get_logger("FastAPI")
 
 app = FastAPI(
@@ -43,6 +58,31 @@ async def log_all_requests(request: Request, call_next):
     logger.info(f"Incoming request: {request.method} {request.url.path}")
     response = await call_next(request)
     logger.info(f"Completed request: {response.status_code} {request.url.path}")
+    return response
+
+
+@app.middleware("http")
+async def set_utf8_content_type(request: Request, call_next):
+    """
+    Middleware that ensures UTF-8 charset is explicitly declared in JSON response headers.
+
+    This middleware checks if the response content-type is 'application/json' and lacks
+    a charset declaration. If so, it adds 'charset=utf-8' to the content-type header.
+
+    This addresses requirement 4.5.3 - ensuring explicit UTF-8 charset declaration on
+    every JSON response.
+
+    Args:
+        request (Request): The incoming HTTP request object.
+        call_next: The next middleware or route handler in the chain.
+
+    Returns:
+        Response: The response object with updated content-type header if applicable.
+    """
+    response = await call_next(request)
+    content_type = response.headers.get("content-type", "")
+    if "application/json" in content_type and "charset" not in content_type:
+        response.headers["content-type"] = "application/json; charset=utf-8"
     return response
 
 
@@ -66,11 +106,10 @@ except Exception as e:
     logger.critical(f"Service initialization failed: {e}")
     raise SystemExit(1)
 
+
 # ==========================================
 # DATA MODELLING
 # ==========================================
-
-
 class ExportRequest(BaseModel):
     project_name: str
     edited_text: str
@@ -81,13 +120,9 @@ class ExportRequest(BaseModel):
     add_to_rag: bool = False
 
 
-MAX_FILE_SIZE = 5 * 1024 * 1024
-
 # =============================================
 # INTENT ROUTER (Auto-switch mode by keywords)
 # =============================================
-
-
 def remove_diacritics(text: str) -> str:
     return "".join(
         c for c in unicodedata.normalize("NFD", text) if unicodedata.category(c) != "Mn"
@@ -127,34 +162,10 @@ TRANSLATOR_KEYWORDS = [
 ]
 
 
-def detect_intent(message: str, current_mode: str) -> str:
-    """
-    Detects user intent from message keywords and overrides mode if needed.
-    Works from ANY mode — if user types 'przetłumacz' while in gonogo,
-    they get rerouted to translator.
-    """
-    msg_lower = message.lower().strip()
-    msg_no_diacritics = remove_diacritics(msg_lower)
-
-    # Check each keyword list; skip if already in that mode
-    if current_mode != "gonogo":
-        if any(kw in msg_lower or kw in msg_no_diacritics for kw in GONOGO_KEYWORDS):
-            return "gonogo"
-
-    if current_mode != "translator":
-        if any(
-            kw in msg_lower or kw in msg_no_diacritics for kw in TRANSLATOR_KEYWORDS
-        ):
-            return "translator"
-
-    return current_mode
-
-
 async def detect_intent_llm(
     message: str, current_mode: str, llm_client: LLMClient
 ) -> str:
     """Hybrydowy detektor intencji."""
-
     msg_lower = message.lower().strip()
     msg_no_diacritics = remove_diacritics(msg_lower)
 
@@ -186,12 +197,10 @@ async def detect_intent_llm(
         reply = llm_client.generate_response(
             system_prompt=router_sys_prompt,
             user_prompt=message,
-            temperature=0.0,  # maximal determinism 
+            temperature=0.0,
             max_tokens=50,
             force_json=True,
         )
-        import json
-
         mode_data = json.loads(reply)
         detected_mode = mode_data.get("mode", current_mode)
 
@@ -206,8 +215,6 @@ async def detect_intent_llm(
 # ==========================================
 # PROJECT ENDPOINTS (p-xxxxx)
 # ==========================================
-
-
 @app.post("/api/v2/projects/{project_id}/instructions")
 async def update_project_instructions(
     project_id: str, request: Request, user: dict = Depends(get_current_user)
@@ -232,26 +239,47 @@ async def upload_project_files(
     files: List[UploadFile] = File(...),
     user: dict = Depends(get_current_user),
 ):
-    """Uploads knowledge files (PDF, DOCX) to a project and indexes them in the ChromaDB vector store."""
     try:
+        # SANITIZATION
+        project_id = re.sub(r"[^a-zA-Z0-9\-_]", "", project_id)[:64]
+        if not project_id:
+            raise HTTPException(status_code=400, detail="Nieprawidłowy project_id.")
+
         proj_uploads_dir = storage.get_project_uploads_dir(project_id)
         ingested_count = 0
 
+        # VALIDATION
+        if len(files) > MAX_FILES:
+            security_logger.warning("Validation failed: too many files")
+            raise HTTPException(
+                status_code=400,
+                detail=f"Zbyt wiele plików ({len(files)}). Maksymalnie {MAX_FILES}.",
+            )
+
         for file in files:
             content = await file.read()
-            file_path = os.path.join(proj_uploads_dir, file.filename)
+
+            # SECURE VALIDATION
+            safe_name, content = validate_upload(
+                file.filename, content, PROJECT_ALLOWED_EXTENSIONS
+            )
+            validate_mime(safe_name, content)
+
+            file_path = os.path.join(proj_uploads_dir, safe_name)
+            assert_within_directory(file_path, proj_uploads_dir)
+
             with open(file_path, "wb") as f:
                 f.write(content)
 
-            # Extract text from PDF/DOCX/TXT via FileParser and ingest into RAG
             text_content = file_parser.extract_history_text(file_path)
             if text_content:
-                rag.ingest_document(text_content, file.filename, entity_id=project_id)
+                text_content = normalize_extracted_text(text_content)
+                rag.ingest_document(text_content, safe_name, entity_id=project_id)
                 ingested_count += 1
 
         return {
             "status": "success",
-            "message": f"Uploaded and vectorized {ingested_count} project knowledge file(s).",
+            "message": f"Uploaded and vectorized {ingested_count} file(s).",
         }
     except Exception as e:
         logger.error(f"Failed to upload project files: {e}", exc_info=True)
@@ -269,76 +297,72 @@ async def _handle_gonogo(
     files: List[UploadFile],
     chat_history: List[dict],
 ) -> dict:
-    """Handle Go/No-Go report generation mode."""
-
     chat_uploads_dir = storage.get_chat_uploads_dir(chat_id)
     contents = {}
 
-    # If no files provided, try to load from existing chat uploads
     if not files:
         if os.path.exists(chat_uploads_dir):
             for filename in os.listdir(chat_uploads_dir):
                 ext = os.path.splitext(filename)[1].lower()
-                if ext in {".csv", ".xls", ".xlsx"}:
+                if ext in GONOGO_ALLOWED_EXTENSIONS:
                     file_path = os.path.join(chat_uploads_dir, filename)
                     with open(file_path, "rb") as f:
                         contents[filename] = f.read()
 
         if not contents:
             msg = (
-                "Aby wygenerować raport Go/No-Go, proszę załącz pliki z wynikami testów (CSV/XLS)."
+                "Aby wygenerować raport Go/No-Go, proszę załącz pliki (CSV/XLS)."
                 if language == "pl"
-                else "Please attach files with test results."
+                else "Please attach files."
             )
             return {"message": msg, "detected_mode": "gonogo"}
 
-        logger.info(
-            f"Re-evaluating based on {len(contents)} existing files in chat {chat_id}."
-        )
-
-    # Process uploaded files
     else:
+        if len(files) > MAX_FILES:
+            raise HTTPException(
+                status_code=400, detail=f"Zbyt wiele plików. Maks to {MAX_FILES}."
+            )
+
         for file in files:
             content = await file.read()
-            if len(content) > MAX_FILE_SIZE:
-                raise HTTPException(
-                    status_code=413,
-                    detail=f"Plik {file.filename} jest za duży.",
+            try:
+                # VALIDATION
+                safe_name, content = validate_upload(
+                    file.filename, content, GONOGO_ALLOWED_EXTENSIONS
                 )
-
-            ext = os.path.splitext(file.filename)[1].lower()
-            if ext not in {".csv", ".xls", ".xlsx"}:
+                validate_mime(safe_name, content)
+            except HTTPException as e:
+                logger.warning(f"Skipping invalid file {file.filename}: {e.detail}")
                 continue
 
-            file_path = os.path.join(chat_uploads_dir, file.filename)
+            file_path = os.path.join(chat_uploads_dir, safe_name)
+            assert_within_directory(file_path, chat_uploads_dir)
+
             with open(file_path, "wb") as f:
                 f.write(content)
 
-            contents[file.filename] = content
+            contents[safe_name] = content
 
             try:
                 text_content = file_parser.extract_test_data_from_bytes(
-                    {file.filename: content}
+                    {safe_name: content}
                 )
-                rag.ingest_document(text_content, file.filename, entity_id=chat_id)
+                text_content = normalize_extracted_text(text_content)
+                rag.ingest_document(text_content, safe_name, entity_id=chat_id)
             except Exception as e:
-                logger.warning(f"Could not vectorize {file.filename}: {e}")
+                logger.warning(f"Could not vectorize {safe_name}: {e}")
 
     if not contents:
         return {
-            "message": "Nie załączono żadnych prawidłowych plików tabelarycznych.",
+            "message": "Nie załączono prawidłowych plików.",
             "detected_mode": "gonogo",
         }
 
-    # Parse test data
     parsed_test_data = file_parser.extract_test_data_from_bytes(contents)
 
-    # Load project instructions
-    project_instructions = ""
-    if project_id:
-        project_instructions = storage.load_project_instructions(project_id)
-
-    # Get RAG context
+    project_instructions = (
+        storage.load_project_instructions(project_id) if project_id else ""
+    )
     rag_context = rag.search_context(
         query=message, project_id=project_id, chat_id=chat_id
     )
@@ -346,15 +370,10 @@ async def _handle_gonogo(
     if project_instructions:
         rag_context = f"[GLOBALNE WYTYCZNE PROJEKTU]\n{project_instructions}\n\n[DOKUMENTY RAG]\n{rag_context}"
 
-    # Get historical cache
     historical_cache = storage.get_latest_history(chat_id=chat_id)
-
-    # Generate charts
     chart_paths = chart_generator.generate_all_charts(
         file_contents=contents, project_name=chat_id, lang=language
     )
-
-    # Generate report draft
     user_risks = message if message else "Brak dodatkowych uwag."
 
     draft_json = report_generator.generate_structured_draft(
@@ -366,11 +385,12 @@ async def _handle_gonogo(
         lang=language,
     )
 
-    # Save to cache
-    storage.save_to_cache(chat_id=chat_id, structured_data=draft_json)
-
     fallback_msg = "Zaktualizowałem raport." if language == "pl" else "Report updated."
     msg_response = draft_json.get("assistant_reply", fallback_msg)
+
+    chat_history.append({"role": "assistant", "content": msg_response})
+    storage.save_to_cache(chat_id=chat_id, structured_data=draft_json)
+    storage.save_chat_history(chat_id, chat_history)
 
     return {
         "message": msg_response,
@@ -388,12 +408,9 @@ async def _handle_chatbot(
     files: List[UploadFile],
     chat_history: List[dict],
 ) -> dict:
-    """Handle chatbot conversational mode."""
-
     chat_uploads_dir = storage.get_chat_uploads_dir(chat_id)
     contents = {}
 
-    # If no files provided, try to load from existing chat uploads
     if not files:
         if os.path.exists(chat_uploads_dir):
             for filename in os.listdir(chat_uploads_dir):
@@ -401,7 +418,7 @@ async def _handle_chatbot(
                 ext = os.path.splitext(filename)[1].lower()
 
                 try:
-                    if ext in {".csv", ".xls", ".xlsx"}:
+                    if ext in GONOGO_ALLOWED_EXTENSIONS:
                         with open(file_path, "rb") as f:
                             text_content = file_parser.extract_test_data_from_bytes(
                                 {filename: f.read()}
@@ -414,46 +431,57 @@ async def _handle_chatbot(
                 except Exception as e:
                     logger.warning(f"Chatbot failed to re-read {filename}: {e}")
     else:
-        # Process uploaded files
+        if len(files) > MAX_FILES:
+            raise HTTPException(
+                status_code=400, detail=f"Zbyt wiele plików. Maks to {MAX_FILES}."
+            )
+
+        combined_extensions = frozenset(
+            GONOGO_ALLOWED_EXTENSIONS | PROJECT_ALLOWED_EXTENSIONS
+        )
         for file in files:
             content = await file.read()
-            if len(content) > MAX_FILE_SIZE:
-                raise HTTPException(
-                    status_code=413,
-                    detail=f"Plik {file.filename} jest za duży.",
-                )
 
-            file_path = os.path.join(chat_uploads_dir, file.filename)
+            try:
+                # VALIDATION (kolega)
+                safe_name, content = validate_upload(
+                    file.filename, content, combined_extensions
+                )
+                validate_mime(safe_name, content)
+            except HTTPException as e:
+                logger.warning(f"Skipping invalid file {file.filename}: {e.detail}")
+                continue
+
+            file_path = os.path.join(chat_uploads_dir, safe_name)
+            assert_within_directory(file_path, chat_uploads_dir)
+
             with open(file_path, "wb") as f:
                 f.write(content)
 
-            ext = os.path.splitext(file.filename)[1].lower()
+            ext = os.path.splitext(safe_name)[1].lower()
             try:
-                if ext in {".csv", ".xls", ".xlsx"}:
+                if ext in GONOGO_ALLOWED_EXTENSIONS:
                     text_content = file_parser.extract_test_data_from_bytes(
-                        {file.filename: content}
+                        {safe_name: content}
                     )
                 else:
                     text_content = file_parser.extract_history_text(file_path)
 
                 if text_content:
-                    contents[file.filename] = text_content
-                    rag.ingest_document(text_content, file.filename, entity_id=chat_id)
+                    text_content = normalize_extracted_text(text_content)
+                    contents[safe_name] = text_content
+                    rag.ingest_document(text_content, safe_name, entity_id=chat_id)
             except Exception as e:
-                logger.warning(f"Chatbot failed to process {file.filename}: {e}")
+                logger.warning(f"Chatbot failed to process {safe_name}: {e}")
 
-    # Load project instructions
-    project_instructions = ""
-    if project_id:
-        project_instructions = storage.load_project_instructions(project_id)
-
-    # Get RAG context
+    project_instructions = (
+        storage.load_project_instructions(project_id) if project_id else ""
+    )
     search_query = message if message else "Podsumowanie plików"
     rag_context = rag.search_context(
         query=search_query, project_id=project_id, chat_id=chat_id
     )
 
-    # Build context block
     context_block = ""
     if project_instructions or rag_context:
         context_block += "[BAZA WIEDZY PROJEKTU I RAG]\n"
@@ -470,18 +498,16 @@ async def _handle_chatbot(
     if language == "pl":
         sys_prompt = (
             "Jesteś konwersacyjnym asystentem QA (Chatbot). Twoim zadaniem jest merytoryczna rozmowa, odpowiadanie na pytania i analiza luźnych zagadnień.\n"
+            "WAŻNE: Użytkownik ma możliwość załączania plików. System parsował je i wstrzyknął ich treść w bloku [ZAŁĄCZONE PLIKI DO AKTUALNEJ ANALIZY].\n"
+            "NIGDY nie mów, że nie masz dostępu do plików. Sprawdź nagłówki i poinformuj, co widzisz.\n"
             "Pamiętaj, że w tej aplikacji istnieją dedykowane moduły do innych zadań: 'Go/No-Go' do raportów decyzyjnych oraz 'Tłumacz' do translacji.\n"
-            "Nie masz uprawnień do generowania ustrukturyzowanych raportów wdrożeniowych ani bezpośredniego tłumaczenia całych dokumentów.\n"
-            "Jeśli użytkownik poprosi Cię o wykonanie takiego zadania, uprzejmie poinformuj go, że mechanizm automatycznego przełączania trybów "
-            "prawdopodobnie nie zadziałał. Poproś go o ręczne przełączenie trybu z menu poniżej lub sformułowanie polecenia inaczej."
+            "Nie masz uprawnień do generowania ustrukturyzowanych raportów wdrożeniowych ani bezpośredniego tłumaczenia całych dokumentów."
         )
     else:
         sys_prompt = (
-            "You are a conversational QA assistant (Chatbot). Your task is to engage in meaningful conversation, answer questions, and analyze general topics.\n"
-            "Remember that this application has dedicated modules for specific tasks: 'Go/No-Go' for deployment reports and 'Translator' for text translation.\n"
-            "You do not have the capability to generate structured deployment reports or translate entire documents directly.\n"
-            "If the user asks you to perform such a task, politely inform them that the automatic mode-switching mechanism likely failed. "
-            "Ask them to manually select the correct mode from the menu below or rephrase their request."
+            "You are a conversational QA assistant (Chatbot).\n"
+            "IMPORTANT: You have full access to files injected by the backend under [ATTACHED FILES]. Never claim you cannot see files.\n"
+            "Remember this app has dedicated modules: 'Go/No-Go' for structured reports and 'Translator'. Do not duplicate their specific tasks."
         )
 
     user_prompt = f"{context_block}\n[ZAPYTANIE UŻYTKOWNIKA]\n{message}"
@@ -503,111 +529,133 @@ async def _handle_translator(
     files: List[UploadFile],
     chat_history: List[dict],
 ) -> dict:
-    """Handle translator mode."""
-
     chat_uploads_dir = storage.get_chat_uploads_dir(chat_id)
     contents = {}
 
-    # If no files provided, try to load from existing chat uploads
     if not files:
         if os.path.exists(chat_uploads_dir):
             for filename in os.listdir(chat_uploads_dir):
                 ext = os.path.splitext(filename)[1].lower()
-
-                if ext in {".txt", ".md", ".docx", ".pdf"}:
+                if ext in PROJECT_ALLOWED_EXTENSIONS:
                     file_path = os.path.join(chat_uploads_dir, filename)
                     text_content = file_parser.extract_history_text(file_path)
                     if text_content:
                         contents[filename] = text_content
     else:
-        # Process uploaded files
+        if len(files) > MAX_FILES:
+            raise HTTPException(status_code=400, detail=f"Zbyt wiele plików.")
+
         for file in files:
             content = await file.read()
-            if len(content) > MAX_FILE_SIZE:
-                raise HTTPException(
-                    status_code=413,
-                    detail=f"Plik {file.filename} jest za duży.",
+            try:
+                # VALIDATION
+                safe_name, content = validate_upload(
+                    file.filename, content, PROJECT_ALLOWED_EXTENSIONS
                 )
-
-            ext = os.path.splitext(file.filename)[1].lower()
-            if ext not in {".txt", ".md", ".docx", ".pdf"}:
+                validate_mime(safe_name, content)
+            except HTTPException as e:
+                logger.warning(f"Skipping invalid file {file.filename}: {e.detail}")
                 continue
 
-            file_path = os.path.join(chat_uploads_dir, file.filename)
+            file_path = os.path.join(chat_uploads_dir, safe_name)
+            assert_within_directory(file_path, chat_uploads_dir)
+
             with open(file_path, "wb") as f:
                 f.write(content)
 
             text_content = file_parser.extract_history_text(file_path)
             if text_content:
-                contents[file.filename] = text_content
+                text_content = normalize_extracted_text(text_content)
+                contents[safe_name] = text_content
                 try:
-                    rag.ingest_document(text_content, file.filename, entity_id=chat_id)
+                    rag.ingest_document(text_content, safe_name, entity_id=chat_id)
                 except Exception as e:
-                    logger.warning(f"Could not vectorize {file.filename}: {e}")
+                    logger.warning(f"Could not vectorize {safe_name}: {e}")
 
-    # Combine text from files
-    text_to_translate = ""
+    # ==========================================
+    # HYBRID SOURCE DETECTION
+    # ==========================================
+    text_from_files = ""
     if contents:
-        text_to_translate = "\n\n".join(
+        text_from_files = "\n\n".join(
             [f"--- Plik: {fname} ---\n{txt}" for fname, txt in contents.items()]
         )
 
-    if not text_to_translate and not message:
-        msg = (
-            "Proszę wpisać tekst do przetłumaczenia lub załączyć pliki (TXT, PDF, DOCX)."
+    source_text = ""
+    instruction = ""
+
+    if text_from_files:
+        source_text = text_from_files
+        instruction = (
+            message
+            if message
+            else (
+                "Przetłumacz poniższe pliki"
+                if language == "pl"
+                else "Translate the files below"
+            )
+        )
+    elif message and len(message.strip()) > 15:
+        source_text = message
+        instruction = (
+            "Przetłumacz poniższy tekst (wykryj język i przetłumacz na drugi - PL/EN)."
             if language == "pl"
-            else "Please enter text to translate or attach files (TXT, PDF, DOCX)."
+            else "Translate the following text."
+        )
+    elif chat_history:
+        history_to_search = (
+            chat_history[:-1]
+            if (message and chat_history and chat_history[-1].get("content") == message)
+            else chat_history
+        )
+        if history_to_search:
+            source_text = history_to_search[-1].get("content", "")
+            instruction = (
+                message
+                if message
+                else ("Przetłumacz to" if language == "pl" else "Translate this")
+            )
+
+    if not source_text and not message and not contents:
+        msg = (
+            "Proszę wpisać tekst, załączyć pliki lub poprosić o przetłumaczenie poprzedniej wiadomości."
+            if language == "pl"
+            else "Please provide input."
         )
         return {"message": msg, "detected_mode": "translator"}
 
-    # Load project instructions
-    project_instructions = ""
-    if project_id:
-        project_instructions = storage.load_project_instructions(project_id)
-
-    # Get RAG context
-    search_query = message if message else text_to_translate[:500]
+    # ==========================================
+    # RAG & PROMPTS
+    # ==========================================
+    project_instructions = (
+        storage.load_project_instructions(project_id) if project_id else ""
+    )
+    search_query = message if message else source_text[:500]
     rag_context = rag.search_context(
         query=search_query, project_id=project_id, chat_id=chat_id
     )
 
     if language == "pl":
         sys_prompt = (
-            "Jesteś modułem tłumaczącym (Translator). Twoim jedynym zadaniem jest precyzyjny przekład tekstu (domyślnie PL ↔ EN).\n"
-            "Pamiętaj, że w tej aplikacji istnieją dedykowane moduły do innych zadań: 'Go/No-Go' do raportów decyzyjnych oraz 'Chatbot' do zwykłej merytorycznej rozmowy.\n"
-            "Nie masz uprawnień do generowania ustrukturyzowanych raportów wdrożeniowych ani bezpośredniego prowadzenia dłuższej konwersacji poza upewnieniem się poprawności tłumaczenia.\n"
-            "Jeśli użytkownik poprosi Cię o wykonanie takiego zadania, uprzejmie poinformuj go, że mechanizm automatycznego przełączania trybów "
-            "prawdopodobnie nie zadziałał. Poproś go o ręczne przełączenie trybu z menu poniżej lub sformułowanie polecenia inaczej."
+            "Jesteś modułem tłumaczącym (Translator). Twoim zadaniem jest precyzyjny przekład tekstu (domyślnie PL ↔ EN).\n"
+            "Zawsze zachowuj wierność i profesjonalizm. Odpowiadaj bezpośrednio tłumaczonym tekstem."
         )
     else:
-        sys_prompt = (
-            "You are a translation module (Translator). Your only task is precise text translation (default PL ↔ EN).\n"
-            "Remember that this application has dedicated modules for other tasks: 'Go/No-Go' for deployment reports and 'Chatbot' for general substantive conversation.\n"
-            "You do not have the authority to generate structured deployment reports or conduct extended conversations beyond ensuring translation accuracy.\n"
-            "If the user asks you to perform such a task, politely inform them that the automatic mode-switching mechanism "
-            "has likely failed. Ask them to manually switch the mode from the menu below or rephrase their request differently."
-        )
+        sys_prompt = "You are a translation module. Your task is precise text translation. Respond directly with the translated text."
 
-    # Build context block
     context_block = ""
     if project_instructions or rag_context:
         context_block = "[KONTEKST PROJEKTU I SŁOWNICZEK (RAG)]\n"
         if project_instructions:
             context_block += f"Reguły projektu: {project_instructions}\n"
         if rag_context:
-            context_block += f"Materiały referencyjne (użyj do zachowania spójności słownictwa):\n{rag_context}\n"
-        context_block += "\nWykorzystaj powyższy kontekst, aby dostosować tłumaczenie do standardów i nomenklatury projektu.\n\n"
+            context_block += f"Materiały referencyjne:\n{rag_context}\n"
+        context_block += "\nWykorzystaj powyższy kontekst do tłumaczenia.\n\n"
 
     user_prompt = context_block
+    user_prompt += f"Instrukcja od użytkownika: {instruction}\n\nTekst docelowy do przetłumaczenia:\n{source_text}"
 
-    if text_to_translate and message:
-        user_prompt += f"Instrukcja od użytkownika: {message}\n\nTekst z dokumentów do przetłumaczenia:\n{text_to_translate}"
-    elif text_to_translate:
-        user_prompt += f"Przetłumacz poniższy tekst z dokumentów (wykryj język i przetłumacz na drugi - PL/EN):\n\n{text_to_translate}"
-    else:
-        user_prompt += f"Przetłumacz lub wykonaj polecenie:\n\n{message}"
-
-    logger.info(f"Executing translator mode for chat {chat_id}")
+    logger.info(f"Executing hybrid translator mode for chat {chat_id}")
     reply = llm.generate_response(
         sys_prompt, user_prompt, temperature=0.2, chat_history=chat_history[-8:]
     )
@@ -646,6 +694,11 @@ async def chat_endpoint(request: Request, user: dict = Depends(get_current_user)
             project_id = data.get("project_id")
             files = []
 
+        if chat_id:
+            chat_id = re.sub(r"[^a-zA-Z0-9\-_]", "", chat_id)[:64]
+        if project_id:
+            project_id = re.sub(r"[^a-zA-Z0-9\-_]", "", project_id)[:64]
+
         if project_id in ["", "null", "undefined", "default"]:
             project_id = None
 
@@ -653,6 +706,8 @@ async def chat_endpoint(request: Request, user: dict = Depends(get_current_user)
             raise HTTPException(
                 status_code=400, detail="No chat_id provided in the request"
             )
+
+        message = validate_message(message, require_non_empty=False)
 
         # CACHE MEMORY (load history from cache if exists)
         chat_history = storage.load_chat_history(chat_id)
@@ -735,6 +790,8 @@ async def download_chat_file(
         chat_uploads_dir = storage.get_chat_uploads_dir(chat_id)
         file_path = os.path.join(chat_uploads_dir, filename)
 
+        assert_within_directory(file_path, chat_uploads_dir)
+
         if not os.path.exists(file_path):
             raise HTTPException(status_code=404, detail="File not found")
 
@@ -762,6 +819,8 @@ async def delete_chat_file(
         chat_uploads_dir = storage.get_chat_uploads_dir(chat_id)
         file_path = os.path.join(chat_uploads_dir, filename)
 
+        assert_within_directory(file_path, chat_uploads_dir)
+
         if os.path.exists(file_path):
             os.remove(file_path)
             logger.info(f"File {filename} deleted from disk for chat {chat_id}")
@@ -787,7 +846,6 @@ async def delete_chat_file(
 def export_report(req: ExportRequest, user: dict = Depends(get_current_user)):
     try:
         fmt = req.format.lower()
-
         chat_created_dir = storage.get_chat_created_dir(req.project_name)
         report_generator.final_output_path = chat_created_dir
 
@@ -823,6 +881,7 @@ def export_report(req: ExportRequest, user: dict = Depends(get_current_user)):
             try:
                 text_content = file_parser.extract_history_text(filepath)
                 if text_content:
+                    text_content = normalize_extracted_text(text_content)
                     filename = os.path.basename(filepath)
                     rag.ingest_document(
                         text_content, filename, entity_id=req.project_name
@@ -876,7 +935,6 @@ def delete_project_cache(chat_id: str, user: dict = Depends(get_current_user)):
 # ==========================
 # FRONTEND MOUNT
 # ==========================
-
 current_dir = os.path.dirname(os.path.abspath(__file__))
 frontend_dist_path = os.path.join(current_dir, "..", "frontend", "dist")
 

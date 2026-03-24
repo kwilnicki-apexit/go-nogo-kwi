@@ -13,6 +13,7 @@ import {
   FileSpreadsheet,
   FileIcon,
   ExternalLink,
+  HelpCircle,
 } from "lucide-react";
 import type { AppMode, AttachedFile, Labels } from "../types";
 import { generateId, formatFileSize } from "../lib/utils";
@@ -78,6 +79,8 @@ export const InputArea = ({
 }: InputAreaProps) => {
   const [text, setText] = useState("");
   const [attachedFiles, setAttachedFiles] = useState<AttachedFile[]>([]);
+  const [showHelp, setShowHelp] = useState(false);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -280,7 +283,14 @@ export const InputArea = ({
             marginTop: 14,
           }}
         >
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+              position: "relative",
+            }}
+          >
             {modes.map((m) => {
               const isActive = mode === m.key;
               return (
@@ -356,6 +366,113 @@ export const InputArea = ({
               <ExternalLink size={15} />
               <span>{labels.modeRemedy}</span>
             </button>
+
+            {/* IKONKA POMOCY (INSTRUKCJA) */}
+            <button
+              onMouseEnter={() => setShowHelp(true)}
+              onMouseLeave={() => setShowHelp(false)}
+              onClick={() => setShowHelp(!showHelp)}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                color: "var(--color-text-tertiary)",
+                padding: "8px",
+                borderRadius: "50%",
+                transition: "background-color 0.15s, color 0.15s",
+                cursor: "pointer",
+                marginLeft: "4px",
+              }}
+              onMouseOver={(e) => {
+                e.currentTarget.style.color = "var(--color-text-primary)";
+                e.currentTarget.style.backgroundColor =
+                  "var(--color-surface-tertiary)";
+              }}
+              onMouseOut={(e) => {
+                e.currentTarget.style.color = "var(--color-text-tertiary)";
+                e.currentTarget.style.backgroundColor = "transparent";
+              }}
+            >
+              <HelpCircle size={18} />
+            </button>
+
+            {/* POP-UP Z INSTRUKCJĄ */}
+            {showHelp && (
+              <div
+                className="animate-fade-in-up"
+                style={{
+                  position: "absolute",
+                  bottom: "100%",
+                  left: "0",
+                  marginBottom: "16px",
+                  width: "380px",
+                  padding: "16px",
+                  borderRadius: "12px",
+                  backgroundColor: "var(--color-surface)",
+                  border: "1px solid var(--color-border)",
+                  boxShadow: "0 10px 30px rgba(0,0,0,0.12)",
+                  zIndex: 100,
+                  fontSize: "12.5px",
+                  lineHeight: "1.5",
+                  color: "var(--color-text-secondary)",
+                  pointerEvents: "none", // Blokujemy pointer-events by tooltip nie migotał pod kursorem
+                }}
+              >
+                <strong
+                  style={{
+                    color: "var(--color-text-primary)",
+                    fontSize: "14px",
+                    display: "block",
+                    marginBottom: "10px",
+                  }}
+                >
+                  {labels.sendMessage === "Wyślij"
+                    ? "Jak działa asystent?"
+                    : "How does the assistant work?"}
+                </strong>
+                <ul
+                  style={{
+                    paddingLeft: "16px",
+                    margin: 0,
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "8px",
+                  }}
+                >
+                  <li>
+                    <strong>Chatbot:</strong>{" "}
+                    {labels.sendMessage === "Wyślij"
+                      ? "Zadawaj dowolne pytania. Chatbot widzi pliki załączone w oknie czatu oraz wiedzę z projektu."
+                      : "Ask any questions. Chatbot reads files attached below and project knowledge."}
+                  </li>
+                  <li>
+                    <strong>Go/No-Go:</strong>{" "}
+                    {labels.sendMessage === "Wyślij"
+                      ? "Załącz testy (CSV/XLS), a asystent wygeneruje raport decyzyjny (GO lub NO-GO) i wykresy."
+                      : "Attach tests (CSV/XLS) to generate a Go/No-Go decision report and charts."}
+                  </li>
+                  <li>
+                    <strong>Tłumacz:</strong>{" "}
+                    {labels.sendMessage === "Wyślij"
+                      ? "Tłumaczy tekst z plików, z pola wejściowego, a jeśli ich brak - przedostatnią wiadomość."
+                      : "Translates files, text input, or the previous message if empty."}
+                  </li>
+                </ul>
+                <div
+                  style={{
+                    marginTop: "12px",
+                    paddingTop: "12px",
+                    borderTop: "1px solid var(--color-border)",
+                    color: "var(--color-text-tertiary)",
+                    fontSize: "11px",
+                  }}
+                >
+                  {labels.sendMessage === "Wyślij"
+                    ? "💡 Wskazówka: Sztuczna inteligencja z automatu przełączy tryb na podstawie użytych słów (np. 'wygeneruj raport' lub 'przetłumacz')."
+                    : "💡 Tip: AI will automatically switch the mode based on keywords like 'generate report' or 'translate'."}
+                </div>
+              </div>
+            )}
           </div>
           <span style={{ fontSize: 11, color: "var(--color-text-muted)" }}>
             Enter ↵ {labels.sendMessage} · Shift+Enter {labels.newLine}

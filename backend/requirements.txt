@@ -12,6 +12,7 @@ requests
 pandas
 matplotlib
 unicodedata
+re
 
 # for data validation and settings management
 pydantic
