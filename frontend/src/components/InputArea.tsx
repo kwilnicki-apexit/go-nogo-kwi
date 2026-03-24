@@ -149,12 +149,12 @@ export const InputArea = ({
             style={{
               display: "flex",
               flexWrap:
-                "nowrap" /* ZMIANA: Wyłączamy zawijanie do nowych rzędów */,
-              overflowX: "auto" /* ZMIANA: Włączamy poziome przewijanie */,
-              overflowY: "hidden" /* ZMIANA: Blokujemy pionowe powiększanie */,
+                "nowrap",
+              overflowX: "auto",
+              overflowY: "hidden",
               gap: 8,
               marginBottom: 14,
-              paddingBottom: 8 /* ZMIANA: Odrobina miejsca na dole, by scrollbar nie ucinał tekstu */,
+              paddingBottom: 8,
             }}
           >
             {attachedFiles.map((af) => (
