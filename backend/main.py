@@ -20,7 +20,7 @@ import json
 
 from src.integration.llm_client import LLMClient
 from src.integration.auth import get_current_user
-from src.services.rag import RAGEngine
+from src.services.rag import RAGEngine, get_embedder
 from src.services.file_parser import FileParser
 from src.services.storage import StorageManager
 from src.services.report_generator import ReportGenerator
@@ -95,6 +95,9 @@ app.add_middleware(
 
 # Service initialization
 try:
+    logger.info("Loading embedding model for RAG engine...")
+    get_embedder()
+
     llm = LLMClient()
     rag = RAGEngine()
     file_parser = FileParser()
@@ -300,65 +303,26 @@ async def _handle_gonogo(
     chat_uploads_dir = storage.get_chat_uploads_dir(chat_id)
     contents = {}
 
-    if not files:
-        cached = storage.get_latest_history(chat_id=chat_id)
-        if not cached or not cached.get("parsed_test_data"):
-            msg = (
-                "Aby wygenerować raport Go/No-Go, proszę załącz pliki (CSV/XLS)."
-                if language == "pl"
-                else "Please attach files."
-            )
-            return {"message": msg, "detected_mode": "gonogo"}
+    # ALWAYS PRIORITIZE EXISTING FILES ON DISK (for continuity) - only if no new files in request
+    if os.path.exists(chat_uploads_dir):
+        for filename in os.listdir(chat_uploads_dir):
+            ext = os.path.splitext(filename)[1].lower()
+            if ext in GONOGO_ALLOWED_EXTENSIONS:
+                file_path = os.path.join(chat_uploads_dir, filename)
+                with open(file_path, "rb") as f:
+                    contents[filename] = f.read()
 
-        parsed_test_data = cached["parsed_test_data"]
-        project_instructions = (
-            storage.load_project_instructions(project_id) if project_id else ""
-        )
-        rag_context = rag.search_context(
-            query=message, project_id=project_id, chat_id=chat_id
-        )
-        if project_instructions:
-            rag_context = f"[GLOBALNE WYTYCZNE PROJEKTU]\n{project_instructions}\n\n[DOKUMENTY RAG]\n{rag_context}"
-
-        historical_cache = storage.get_latest_history(chat_id=chat_id)
-        chart_paths = chart_generator.generate_all_charts(
-            file_contents={}, project_name=chat_id, lang=language
-        )
-        user_risks = message if message else "Brak dodatkowych uwag."
-
-        draft_json = report_generator.generate_structured_draft(
-            historical_cache=historical_cache,
-            rag_context=rag_context,
-            parsed_test_data=parsed_test_data,
-            user_risks=user_risks,
-            project_name=chat_id,
-            lang=language,
-        )
-
-        fallback_msg = "Zaktualizowałem raport." if language == "pl" else "Report updated."
-        msg_response = draft_json.get("assistant_reply", fallback_msg)
-        chat_history.append({"role": "assistant", "content": msg_response})
-        storage.save_to_cache(chat_id=chat_id, structured_data=draft_json, parsed_test_data=parsed_test_data)
-        storage.save_chat_history(chat_id, chat_history)
-
-        return {
-            "message": msg_response,
-            "draft_data": draft_json,
-            "chart_paths": chart_paths,
-            "detected_mode": "gonogo",
-        }
-
-    else:
-        parsed_parts = []
-        if len(files) > MAX_FILES:
+    # IF NEW FILES ARE UPLOADED - VALIDATE, SAVE, INGEST
+    valid_files = [f for f in files if getattr(f, "filename", "")]
+    if valid_files:
+        if len(valid_files) > MAX_FILES:
             raise HTTPException(
-                status_code=400, detail=f"Zbyt wiele plików. Maks to {MAX_FILES}."
+                status_code=400, detail=f"Too many files. Maximal count is {MAX_FILES}."
             )
 
-        for file in files:
+        for file in valid_files:
             content = await file.read()
             try:
-                # VALIDATION
                 safe_name, content = validate_upload(
                     file.filename, content, GONOGO_ALLOWED_EXTENSIONS
                 )
@@ -385,11 +349,14 @@ async def _handle_gonogo(
             except Exception as e:
                 logger.warning(f"Could not vectorize {safe_name}: {e}")
 
+    # IF NO FILES AT ALL (neither new nor old) - return early with message
     if not contents:
-        return {
-            "message": "Nie załączono prawidłowych plików.",
-            "detected_mode": "gonogo",
-        }
+        msg = (
+            "Aby wygenerować raport Go/No-Go, proszę załącz pliki (CSV/XLS)."
+            if language == "pl"
+            else "Please attach files."
+        )
+        return {"message": msg, "detected_mode": "gonogo"}
 
     parsed_test_data = "\n\n".join(parsed_parts)
 
