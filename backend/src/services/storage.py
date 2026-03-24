@@ -131,7 +131,7 @@ class StorageManager:
     # GO-NOGO CACHE MANAGEMENT (draft JSON in chat folder)
     # ==========================================
 
-    def save_to_cache(self, chat_id: str, structured_data: dict):
+    def save_to_cache(self, chat_id: str, structured_data: dict, parsed_test_data: str = ""):
         """Saves the structured draft JSON to the chat's created directory."""
         created_dir = self.get_chat_created_dir(chat_id)
         filepath = os.path.join(created_dir, "draft_cache.json")
@@ -140,13 +140,8 @@ class StorageManager:
             "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             "chat_id": chat_id,
             "data": structured_data,
+            "parsed_test_data": parsed_test_data,
         }
-        try:
-            with open(filepath, "w", encoding="utf-8") as f:
-                json.dump(cache_payload, f, indent=4)
-            self.logger.info(f"Saved JSON draft cache for chat: {chat_id}")
-        except Exception as e:
-            self.logger.error(f"Failed to save JSON cache: {e}")
 
     def get_latest_history(self, chat_id: str) -> Optional[dict]:
         """Reads the latest draft cache for a given chat."""

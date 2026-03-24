@@ -301,21 +301,52 @@ async def _handle_gonogo(
     contents = {}
 
     if not files:
-        if os.path.exists(chat_uploads_dir):
-            for filename in os.listdir(chat_uploads_dir):
-                ext = os.path.splitext(filename)[1].lower()
-                if ext in GONOGO_ALLOWED_EXTENSIONS:
-                    file_path = os.path.join(chat_uploads_dir, filename)
-                    with open(file_path, "rb") as f:
-                        contents[filename] = f.read()
-
-        if not contents:
+        cached = storage.get_latest_history(chat_id=chat_id)
+        if not cached or not cached.get("parsed_test_data"):
             msg = (
                 "Aby wygenerować raport Go/No-Go, proszę załącz pliki (CSV/XLS)."
                 if language == "pl"
                 else "Please attach files."
             )
             return {"message": msg, "detected_mode": "gonogo"}
+
+        parsed_test_data = cached["parsed_test_data"]
+        project_instructions = (
+            storage.load_project_instructions(project_id) if project_id else ""
+        )
+        rag_context = rag.search_context(
+            query=message, project_id=project_id, chat_id=chat_id
+        )
+        if project_instructions:
+            rag_context = f"[GLOBALNE WYTYCZNE PROJEKTU]\n{project_instructions}\n\n[DOKUMENTY RAG]\n{rag_context}"
+
+        historical_cache = storage.get_latest_history(chat_id=chat_id)
+        chart_paths = chart_generator.generate_all_charts(
+            file_contents={}, project_name=chat_id, lang=language
+        )
+        user_risks = message if message else "Brak dodatkowych uwag."
+
+        draft_json = report_generator.generate_structured_draft(
+            historical_cache=historical_cache,
+            rag_context=rag_context,
+            parsed_test_data=parsed_test_data,
+            user_risks=user_risks,
+            project_name=chat_id,
+            lang=language,
+        )
+
+        fallback_msg = "Zaktualizowałem raport." if language == "pl" else "Report updated."
+        msg_response = draft_json.get("assistant_reply", fallback_msg)
+        chat_history.append({"role": "assistant", "content": msg_response})
+        storage.save_to_cache(chat_id=chat_id, structured_data=draft_json, parsed_test_data=parsed_test_data)
+        storage.save_chat_history(chat_id, chat_history)
+
+        return {
+            "message": msg_response,
+            "draft_data": draft_json,
+            "chart_paths": chart_paths,
+            "detected_mode": "gonogo",
+        }
 
     else:
         parsed_parts = []
@@ -391,7 +422,7 @@ async def _handle_gonogo(
     msg_response = draft_json.get("assistant_reply", fallback_msg)
 
     chat_history.append({"role": "assistant", "content": msg_response})
-    storage.save_to_cache(chat_id=chat_id, structured_data=draft_json)
+    storage.save_to_cache(chat_id=chat_id, structured_data=draft_json, parsed_test_data=parsed_test_data)
     storage.save_chat_history(chat_id, chat_history)
 
     return {
