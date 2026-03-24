@@ -72,6 +72,8 @@ function App() {
 
   const [activeId, setActiveId] = useState<string | null>(null);
   const [loadingStates, setLoadingStates] = useState<Record<string, boolean>>({});
+  const isLoading = activeId ? (loadingStates[activeId] || false) : false;
+
   const [canvasContent, setCanvasContent] = useState("");
   const [exportMessage, setExportMessage] = useState("");
   const [chartPaths, setChartPaths] = useState<string[]>([]);
@@ -429,7 +431,8 @@ function App() {
     async (files: FileList | File[]) => {
       if (!activeProject || files.length === 0) return;
       try {
-        setIsLoading(true);
+        setLoadingStates((prev) => ({ ...prev, [activeProject.id]: true }));
+
         const fileArray = Array.from(files);
         await api.uploadProjectFiles(activeProject.id, fileArray);
         const fileNames = fileArray.map((f) => f.name);
@@ -446,7 +449,7 @@ function App() {
       } catch {
         alert(labels.uploadError);
       } finally {
-        setIsLoading(false);
+        setLoadingStates((prev) => ({ ...prev, [activeProject.id]: false }));
       }
     },
     [activeProject, labels],
