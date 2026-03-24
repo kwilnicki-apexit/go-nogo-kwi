@@ -145,11 +145,16 @@ export const InputArea = ({
         {/* File chips */}
         {attachedFiles.length > 0 && (
           <div
+            className="custom-scrollbar"
             style={{
               display: "flex",
-              flexWrap: "wrap",
+              flexWrap:
+                "nowrap" /* ZMIANA: Wyłączamy zawijanie do nowych rzędów */,
+              overflowX: "auto" /* ZMIANA: Włączamy poziome przewijanie */,
+              overflowY: "hidden" /* ZMIANA: Blokujemy pionowe powiększanie */,
               gap: 8,
               marginBottom: 14,
+              paddingBottom: 8 /* ZMIANA: Odrobina miejsca na dole, by scrollbar nie ucinał tekstu */,
             }}
           >
             {attachedFiles.map((af) => (
@@ -165,6 +170,7 @@ export const InputArea = ({
                   backgroundColor: "var(--color-surface-secondary)",
                   padding: "8px 12px",
                   fontSize: 13,
+                  flexShrink: 0 /* ZMIANA: Zapobiega "zgniataniu" czipów, gdy brakuje miejsca */,
                 }}
               >
                 {getFileIcon(af.file.name)}

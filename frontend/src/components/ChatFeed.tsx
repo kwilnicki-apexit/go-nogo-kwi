@@ -6,8 +6,8 @@ import { useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import { Bot, Check, Copy, FileText } from "lucide-react";
 import type { ChatMessage, Labels } from "../types";
-import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
-import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
+import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
+import { vscDarkPlus } from "react-syntax-highlighter/dist/esm/styles/prism";
 import { formatTime } from "../lib/utils";
 
 interface ChatFeedProps {
@@ -56,7 +56,7 @@ const CodeBlock = ({
             justifyContent: "space-between",
             backgroundColor: "#2d2d2d",
             padding: "6px 16px",
-            borderBottom: "1px solid #404040"
+            borderBottom: "1px solid #404040",
           }}
         >
           <span
@@ -81,16 +81,16 @@ const CodeBlock = ({
               cursor: "pointer",
               border: "none",
               background: "none",
-              transition: "color 0.15s"
+              transition: "color 0.15s",
             }}
-            onMouseEnter={(e) => e.currentTarget.style.color = "#ffffff"}
-            onMouseLeave={(e) => e.currentTarget.style.color = "#d4d4d4"}
+            onMouseEnter={(e) => (e.currentTarget.style.color = "#ffffff")}
+            onMouseLeave={(e) => (e.currentTarget.style.color = "#d4d4d4")}
           >
             {copied ? <Check size={14} color="#10b981" /> : <Copy size={14} />}
             {copied ? "Skopiowano" : "Kopiuj"}
           </button>
         </div>
-        
+
         <SyntaxHighlighter
           children={String(children).replace(/\n$/, "")}
           style={vscDarkPlus as Record<string, object>}
@@ -100,13 +100,13 @@ const CodeBlock = ({
             margin: 0,
             padding: "16px",
             fontSize: "13px",
-            backgroundColor: "#1e1e1e"
+            backgroundColor: "#1e1e1e",
           }}
         />
       </div>
     );
   }
-  
+
   return (
     <code
       style={{
@@ -249,7 +249,7 @@ export const ChatFeed = ({
 
   return (
     <div
-      style={{ flex: 1, overflowY: "auto", padding: "32px 24px" }}
+      style={{ flex: 1, overflowY: "auto", padding: "32px 24px", minHeight: 0 }}
       className="custom-scrollbar"
     >
       <div style={{ maxWidth: 720, margin: "0 auto" }}>

@@ -280,6 +280,16 @@ function App() {
         const c = chats.find((x) => x.id === id);
         setCanvasContent(c?.canvasContent || "");
         setChartPaths(c?.chartPaths || []);
+
+        const hasGoNogoHistory = c?.messages.some(
+          (m) => m.mode === "gonogo" || !!m.draftData,
+        );
+
+        if (c?.mode !== "gonogo" && !hasGoNogoHistory) {
+          setIsCanvasOpen(false);
+        } else if (c?.canvasContent) {
+          setIsCanvasOpen(true);
+        }
       }
     },
     [projects, chats],

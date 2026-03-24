@@ -20,7 +20,7 @@ import json
 
 from src.integration.llm_client import LLMClient
 from src.integration.auth import get_current_user
-from src.services.rag import RAGEngine
+from src.services.rag import RAGEngine, get_embedder
 from src.services.file_parser import FileParser
 from src.services.storage import StorageManager
 from src.services.report_generator import ReportGenerator
@@ -95,6 +95,9 @@ app.add_middleware(
 
 # Service initialization
 try:
+    logger.info("Loading embedding model for RAG engine...")
+    get_embedder()
+    
     llm = LLMClient()
     rag = RAGEngine()
     file_parser = FileParser()
