@@ -344,6 +344,7 @@ async def _handle_gonogo(
                     {safe_name: content}
                 )
                 text_content = normalize_extracted_text(text_content)
+                parsed_parts.append(text_content)
                 rag.ingest_document(text_content, safe_name, entity_id=chat_id)
             except Exception as e:
                 logger.warning(f"Could not vectorize {safe_name}: {e}")
@@ -357,7 +358,7 @@ async def _handle_gonogo(
         )
         return {"message": msg, "detected_mode": "gonogo"}
 
-    parsed_test_data = file_parser.extract_test_data_from_bytes(contents)
+    parsed_test_data = "\n\n".join(parsed_parts)
 
     project_instructions = (
         storage.load_project_instructions(project_id) if project_id else ""
@@ -388,7 +389,7 @@ async def _handle_gonogo(
     msg_response = draft_json.get("assistant_reply", fallback_msg)
 
     chat_history.append({"role": "assistant", "content": msg_response})
-    storage.save_to_cache(chat_id=chat_id, structured_data=draft_json)
+    storage.save_to_cache(chat_id=chat_id, structured_data=draft_json, parsed_test_data=parsed_test_data)
     storage.save_chat_history(chat_id, chat_history)
 
     return {
