@@ -296,6 +296,7 @@ async def _handle_gonogo(
     language: str,
     files: List[UploadFile],
     chat_history: List[dict],
+    parsed_parts: List[str] = [],
 ) -> dict:
     chat_uploads_dir = storage.get_chat_uploads_dir(chat_id)
     contents = {}
@@ -348,6 +349,7 @@ async def _handle_gonogo(
                     {safe_name: content}
                 )
                 text_content = normalize_extracted_text(text_content)
+                parsed_parts.append(text_content)
                 rag.ingest_document(text_content, safe_name, entity_id=chat_id)
             except Exception as e:
                 logger.warning(f"Could not vectorize {safe_name}: {e}")
@@ -358,7 +360,7 @@ async def _handle_gonogo(
             "detected_mode": "gonogo",
         }
 
-    parsed_test_data = file_parser.extract_test_data_from_bytes(contents)
+    parsed_test_data = "\n\n".join(parsed_parts)
 
     project_instructions = (
         storage.load_project_instructions(project_id) if project_id else ""
