@@ -159,7 +159,8 @@ class ReportGenerator:
             user_prompt = f"""
                             Wygeneruj strukturę raportu w formacie JSON zachowując te klucze:
                             - "summary": (string) krótkie podsumowanie techniczne,
-                            - "test_analysis": (string) wnioski z testów,
+                            - "test_analysis": (array) lista wyników testów jako obiekty JSON. Każdy obiekt MUSI zawierać dokładnie te klucze: "test_name" (nazwa testu), "value" (wynik/wartość np. PASS/FAIL/liczba), "filename" (nazwa pliku źródłowego z którego pochodzi). Przejdź przez WSZYSTKIE wiersze z [ZPARSOWANE WYNIKI TESTÓW] i wypisz każdy test osobno. Nie grupuj, nie pomijaj.
+                            - "test_analysis_summary": (string) krótkie podsumowanie całej analizy testów (2-4 zdania) — ile testów przeszło, ile nie, jakie są główne wnioski.
                             - "risks_eval": (string) analiza ryzyk (zaznacz tu, czy użytkownik zaakceptował usterki),
                             - "decision": (string) dokładnie "GO" lub "NO-GO",
                             - "justification": (string) ostateczne uzasadnienie (uwzględnij autorytet użytkownika!).
@@ -197,7 +198,8 @@ class ReportGenerator:
             user_prompt = f"""
                             Generate the report structure in JSON format using exactly these keys:
                             - "summary": brief technical summary,
-                            - "test_analysis": conclusions from tests,
+                            - "test_analysis": (array) list of test results as JSON objects. Each object MUST contain exactly these keys: "test_name" (name of the test), "value" (result/value e.g. PASS/FAIL/number), "filename" (source filename it was taken from). Go through ALL rows from [PARSED TEST RESULTS] and list each test separately. Do not group or skip any.
+                            - "test_analysis_summary": (string) short summary of the full test analysis (2-4 sentences) — how many passed, how many failed, key takeaways.
                             - "risks_eval": risk evaluation (highlight if the user accepted the flaws),
                             - "decision": exactly "GO" or "NO-GO",
                             - "justification": final rationale (must respect the User's overriding authority),
@@ -239,7 +241,8 @@ class ReportGenerator:
             )
             return {
                 "summary": fallback_summary,
-                "test_analysis": "",
+                "test_analysis": [],
+                "test_analysis_summary": "",
                 "risks_eval": "",
                 "decision": "NO-GO",
                 "justification": fallback_justification,
@@ -323,28 +326,18 @@ class ReportGenerator:
 
             sections = self._parse_sections_from_text(final_text)
 
-            section_keys = [
-                "summary",
-                "test_analysis",
-                "risks_eval",
-                "decision",
-                "justification",
-            ]
+            section_keys = ["summary", "test_analysis", "risks_eval", "decision", "justification"]
+
             for key in section_keys:
-                heading = labels.get(key, key).upper()
+                heading = labels.get(key, key)
                 body = sections.get(key, "")
                 if not body:
                     continue
 
-                pdf.ln(4)
-                start_y = pdf.get_y()
-
-                # Red vertical accent on the left side
                 pdf.set_fill_color(227, 0, 15)
-                pdf.rect(10, start_y + 1.5, 1.5, 5, "F")
-
+                pdf.rect(10, pdf.get_y() + 1.5, 1.5, 6, "F")
                 pdf.set_x(14)
-                pdf.set_font(pdf.default_font, "B", 12)
+                pdf.set_font(pdf.default_font, "B", 14)
                 pdf.set_text_color(30, 41, 59)
                 pdf.cell(0, 8, heading, ln=True)
                 pdf.ln(2)
@@ -352,6 +345,17 @@ class ReportGenerator:
                 if key == "decision":
                     self._pdf_decision_badge(pdf, body.strip())
                     pdf.ln(6)
+                    continue
+
+                if key == "test_analysis":
+                    # body here is already a string from _parse_sections_from_text
+                    # render as plain text list
+                    pdf.set_x(10)
+                    pdf.set_font(pdf.default_font, "", 10.5)
+                    pdf.set_text_color(51, 65, 85)
+                    for line in body.strip().split("\n"):
+                        pdf.multi_cell(190, 6.5, line.strip())
+                    pdf.ln(5)
                     continue
 
                 pdf.set_x(10)
@@ -624,6 +628,7 @@ class ReportGenerator:
         result = {
             "summary": "",
             "test_analysis": "",
+            "test_analysis_summary": "",
             "risks_eval": "",
             "decision": "",
             "justification": "",
@@ -635,6 +640,8 @@ class ReportGenerator:
             "analiza testow": "test_analysis",
             "analiza testów": "test_analysis",
             "test analysis": "test_analysis",
+            "podsumowanie analizy": "test_analysis_summary",
+            "test analysis summary": "test_analysis_summary",
             "ocena ryzyk": "risks_eval",
             "risk evaluation": "risks_eval",
             "decyzja": "decision",

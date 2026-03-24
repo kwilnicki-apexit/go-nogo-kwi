@@ -43,7 +43,8 @@ export interface Chat {
 
 export interface StructuredDraft {
   summary: string;
-  test_analysis: string;
+  test_analysis: { test_name: string; value: string; filename: string }[];
+  test_analysis_summary: string;
   risks_eval: string;
   decision: string;
   justification: string;
