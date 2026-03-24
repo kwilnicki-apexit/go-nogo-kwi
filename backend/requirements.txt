@@ -13,6 +13,7 @@ pandas
 matplotlib
 unicodedata
 re
+asyncio
 
 # for data validation and settings management
 pydantic

@@ -2,6 +2,7 @@
 # FILE: .\backend\main.py
 # ============================================================
 
+import asyncio
 import re
 
 from fastapi import FastAPI, HTTPException, Request, File, UploadFile, Depends
@@ -166,9 +167,9 @@ TRANSLATOR_KEYWORDS = [
 
 
 async def detect_intent_llm(
-    message: str, current_mode: str, llm_client: LLMClient
+    message: str, current_mode: str, llm: LLMClient
 ) -> str:
-    """Hybrydowy detektor intencji."""
+    """Hybrid intent detection"""
     msg_lower = message.lower().strip()
     msg_no_diacritics = remove_diacritics(msg_lower)
 
@@ -197,13 +198,15 @@ async def detect_intent_llm(
     )
 
     try:
-        reply = llm_client.generate_response(
+        reply = await asyncio.to_thread(
+            llm.generate_response,
             system_prompt=router_sys_prompt,
             user_prompt=message,
             temperature=0.0,
             max_tokens=50,
             force_json=True,
         )
+
         mode_data = json.loads(reply)
         detected_mode = mode_data.get("mode", current_mode)
 
@@ -375,7 +378,8 @@ async def _handle_gonogo(
     )
     user_risks = message if message else "Brak dodatkowych uwag."
 
-    draft_json = report_generator.generate_structured_draft(
+    draft_json = await asyncio.to_thread(
+        report_generator.generate_structured_draft,
         historical_cache=historical_cache,
         rag_context=rag_context,
         parsed_test_data=parsed_test_data,
@@ -510,8 +514,12 @@ async def _handle_chatbot(
         )
 
     user_prompt = f"{context_block}\n[ZAPYTANIE UŻYTKOWNIKA]\n{message}"
-    reply = llm.generate_response(
-        sys_prompt, user_prompt, temperature=0.3, chat_history=chat_history[-8:]
+    reply = await asyncio.to_thread(
+        llm.generate_response,
+        sys_prompt, 
+        user_prompt, 
+        temperature=0.3, 
+        chat_history=chat_history[-8:]
     )
 
     chat_history.append({"role": "assistant", "content": reply})
@@ -655,8 +663,12 @@ async def _handle_translator(
     user_prompt += f"Instrukcja od użytkownika: {instruction}\n\nTekst docelowy do przetłumaczenia:\n{source_text}"
 
     logger.info(f"Executing hybrid translator mode for chat {chat_id}")
-    reply = llm.generate_response(
-        sys_prompt, user_prompt, temperature=0.2, chat_history=chat_history[-8:]
+    reply = await asyncio.to_thread(
+        llm.generate_response,
+        sys_prompt, 
+        user_prompt, 
+        temperature=0.2, 
+        chat_history=chat_history[-8:]
     )
 
     chat_history.append({"role": "assistant", "content": reply})
