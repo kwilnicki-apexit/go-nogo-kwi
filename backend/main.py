@@ -296,7 +296,6 @@ async def _handle_gonogo(
     language: str,
     files: List[UploadFile],
     chat_history: List[dict],
-    parsed_parts: List[str] = [],
 ) -> dict:
     chat_uploads_dir = storage.get_chat_uploads_dir(chat_id)
     contents = {}
@@ -319,6 +318,7 @@ async def _handle_gonogo(
             return {"message": msg, "detected_mode": "gonogo"}
 
     else:
+        parsed_parts = []
         if len(files) > MAX_FILES:
             raise HTTPException(
                 status_code=400, detail=f"Zbyt wiele plików. Maks to {MAX_FILES}."
