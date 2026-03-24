@@ -97,7 +97,7 @@ app.add_middleware(
 try:
     logger.info("Loading embedding model for RAG engine...")
     get_embedder()
-    
+
     llm = LLMClient()
     rag = RAGEngine()
     file_parser = FileParser()
@@ -303,33 +303,26 @@ async def _handle_gonogo(
     chat_uploads_dir = storage.get_chat_uploads_dir(chat_id)
     contents = {}
 
-    if not files:
-        if os.path.exists(chat_uploads_dir):
-            for filename in os.listdir(chat_uploads_dir):
-                ext = os.path.splitext(filename)[1].lower()
-                if ext in GONOGO_ALLOWED_EXTENSIONS:
-                    file_path = os.path.join(chat_uploads_dir, filename)
-                    with open(file_path, "rb") as f:
-                        contents[filename] = f.read()
+    # ALWAYS PRIORITIZE EXISTING FILES ON DISK (for continuity) - only if no new files in request
+    if os.path.exists(chat_uploads_dir):
+        for filename in os.listdir(chat_uploads_dir):
+            ext = os.path.splitext(filename)[1].lower()
+            if ext in GONOGO_ALLOWED_EXTENSIONS:
+                file_path = os.path.join(chat_uploads_dir, filename)
+                with open(file_path, "rb") as f:
+                    contents[filename] = f.read()
 
-        if not contents:
-            msg = (
-                "Aby wygenerować raport Go/No-Go, proszę załącz pliki (CSV/XLS)."
-                if language == "pl"
-                else "Please attach files."
-            )
-            return {"message": msg, "detected_mode": "gonogo"}
-
-    else:
-        if len(files) > MAX_FILES:
+    # IF NEW FILES ARE UPLOADED - VALIDATE, SAVE, INGEST
+    valid_files = [f for f in files if getattr(f, "filename", "")]
+    if valid_files:
+        if len(valid_files) > MAX_FILES:
             raise HTTPException(
-                status_code=400, detail=f"Zbyt wiele plików. Maks to {MAX_FILES}."
+                status_code=400, detail=f"Too many files. Maximal count is {MAX_FILES}."
             )
 
-        for file in files:
+        for file in valid_files:
             content = await file.read()
             try:
-                # VALIDATION
                 safe_name, content = validate_upload(
                     file.filename, content, GONOGO_ALLOWED_EXTENSIONS
                 )
@@ -355,11 +348,14 @@ async def _handle_gonogo(
             except Exception as e:
                 logger.warning(f"Could not vectorize {safe_name}: {e}")
 
+    # IF NO FILES AT ALL (neither new nor old) - return early with message
     if not contents:
-        return {
-            "message": "Nie załączono prawidłowych plików.",
-            "detected_mode": "gonogo",
-        }
+        msg = (
+            "Aby wygenerować raport Go/No-Go, proszę załącz pliki (CSV/XLS)."
+            if language == "pl"
+            else "Please attach files."
+        )
+        return {"message": msg, "detected_mode": "gonogo"}
 
     parsed_test_data = file_parser.extract_test_data_from_bytes(contents)
 

@@ -71,7 +71,7 @@ function App() {
   }, [chats]);
 
   const [activeId, setActiveId] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const [loadingStates, setLoadingStates] = useState<Record<string, boolean>>({});
   const [canvasContent, setCanvasContent] = useState("");
   const [exportMessage, setExportMessage] = useState("");
   const [chartPaths, setChartPaths] = useState<string[]>([]);
@@ -158,7 +158,7 @@ function App() {
         }),
       );
 
-      setIsLoading(true);
+      setLoadingStates(prev => ({ ...prev, [chatId!]: true }));
 
       try {
         const response = await api.sendMessage({
@@ -221,7 +221,7 @@ function App() {
           ),
         );
       } finally {
-        setIsLoading(false);
+        setLoadingStates(prev => ({ ...prev, [chatId!]: false }));
       }
     },
     [activeId, chats, language, canvasContent, isCanvasOpen, labels],
