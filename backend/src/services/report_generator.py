@@ -153,17 +153,21 @@ class ReportGenerator:
                 "Ostateczną instancją decyzyjną (Release Managerem) jest Użytkownik.\n"
                 "ZASADA NADRZĘDNA (AUTORYTET UŻYTKOWNIKA): Jeśli w sekcji [UWAGI UŻYTKOWNIKA] człowiek jawnie akceptuje ryzyka, nakazuje zmianę decyzji lub twierdzi, że błędy są znane, MUSISZ bezwzględnie zmienić decyzję na 'GO'. "
                 "W takiej sytuacji w polu 'justification' wyjaśnij, że mimo błędów technicznych, ryzyko zostało zaakceptowane biznesowo ORAZ WYMIEŃ KONKRETNIE WSZYSTKIE BŁĘDY/RYZYKA (np. problemy z wydajnością, błędy konkretnych komponentów), które użytkownik zdecydował się zignorować/zaakceptować.\n"
-                "Zwróć odpowiedź WYŁĄCZNIE jako surowy, poprawny obiekt JSON. Nie używaj znaczników ```json ani Markdown."
+                "Zwróć odpowiedź WYŁĄCZNIE jako surowy, poprawny obiekt JSON. Nie używaj znaczników ```json ani Markdown.\n"
+                "!!! BARDZO WAŻNE - EKSTREMALNY WYMÓG OBJĘTOŚCI !!!\n"
+                "Wszystkie pola opisowe w JSON ('summary', 'test_analysis_summary', 'risks_eval', 'justification') MUSZĄ BYĆ NIEZWYKLE DŁUGIE I SZCZEGÓŁOWE. "
+                "Traktuj je jak rozbudowane eseje analityczne. Lanie wody, opisywanie kontekstu, wskazywanie szczegółów i wielowątkowa analiza są tu bezwzględnie wymagane. "
+                "Każde z tych pól musi zawierać co najmniej 15-20 długich, złożonych zdań. Zbyt krótkie odpowiedzi uznane będą za błąd krytyczny."
             )
 
             user_prompt = f"""
                             Wygeneruj bardzo szczegółowy i wyczerpujący raport w formacie JSON zachowując te klucze:
-                            - "summary": (string) Bardzo szczegółowe, wieloaspektowe podsumowanie menedżerskie. Minimum 3 rozbudowane akapity. Opisz dokładnie kontekst testów, ogólny stan systemu, kluczowe metryki oraz główne wnioski płynące z całej kampanii testowej.
+                            - "summary": (string) BARDZO DŁUGI TEKST (minimum 300 słów). Dogłębne, wieloaspektowe podsumowanie menedżerskie. Opisz dokładnie kontekst testów, ogólny stan systemu, kluczowe metryki oraz główne wnioski płynące z całej kampanii testowej.
                             - "test_analysis": (array) lista wyników testów jako obiekty JSON. Każdy obiekt MUSI zawierać dokładnie te klucze: "test_name", "value", "filename". Przejdź przez WSZYSTKIE wiersze z [ZPARSOWANE WYNIKI TESTÓW] i wypisz każdy test osobno. Nie grupuj, nie pomijaj absolutnie żadnego testu.
-                            - "test_analysis_summary": (string) Pogłębiona, obszerna analiza statystyczna i jakościowa wyników testów. Minimum 3 akapity. Zinterpretuj wyniki, wskaż wzorce w błędach, opisz ewentualne anomalie i szczegółowo wyjaśnij, co te wyniki oznaczają dla stabilności całego systemu.
-                            - "risks_eval": (string) Kompleksowa i bardzo długa ocena ryzyk (minimum 3 akapity). Przeanalizuj dogłębnie ryzyka techniczne i biznesowe, wpływ potencjalnych błędów na środowisko produkcyjne, bezpieczeństwo i wydajność. Odnotuj szczegółowo stanowisko użytkownika.
+                            - "test_analysis_summary": (string) BARDZO DŁUGI TEKST (minimum 300 słów). Pogłębiona, obszerna analiza statystyczna i jakościowa wyników testów. Zinterpretuj wyniki, wskaż wzorce w błędach, opisz ewentualne anomalie i szczegółowo wyjaśnij, co te wyniki oznaczają dla stabilności całego systemu.
+                            - "risks_eval": (string) BARDZO DŁUGI TEKST (minimum 300 słów). Kompleksowa ocena ryzyk. Przeanalizuj dogłębnie ryzyka techniczne i biznesowe, wpływ potencjalnych błędów na środowisko produkcyjne, bezpieczeństwo i wydajność. Odnotuj szczegółowo stanowisko użytkownika.
                             - "decision": (string) dokładnie "GO" lub "NO-GO",
-                            - "justification": (string) Wyczerpujące, obszerne uzasadnienie ostatecznej decyzji (minimum 3 akapity). Zbuduj pełną argumentację opartą o wyniki testów, zidentyfikowane ryzyka oraz konsekwencje biznesowe. (Pamiętaj o uwzględnieniu autorytetu użytkownika z sekcji [UWAGI UŻYTKOWNIKA]!).
+                            - "justification": (string) BARDZO DŁUGI TEKST (minimum 300 słów). Wyczerpujące uzasadnienie ostatecznej decyzji. Zbuduj pełną, rozwlekłą argumentację opartą o wyniki testów, zidentyfikowane ryzyka oraz konsekwencje biznesowe. (Pamiętaj o uwzględnieniu autorytetu użytkownika z sekcji [UWAGI UŻYTKOWNIKA]!).
                             - "assistant_reply": (string) Krótka, naturalna i przyjazna odpowiedź w czacie. Wyjaśnij użytkownikowi, że wygenerowałeś obszerny raport (i wskaż decyzję). Poinformuj, że jest to wersja robocza i użytkownik może poprosić o poprawki, zignorowanie ryzyk lub zmianę decyzji w kolejnej wiadomości.
 
                             [GLOBALNE ZASADY BIZNESOWE (RAG)]
@@ -192,17 +196,21 @@ class ReportGenerator:
                 "You are a Lead QA Engineer acting as a technical advisor. The User is the ultimate Release Manager.\n"
                 "OVERRIDE RULE: If the User in the [USER INPUT] section explicitly accepts risks, commands a decision change, or states that bugs are known/accepted, you MUST set the decision to 'GO'. "
                 "In such cases, use the 'justification' field to state that despite technical failures, the risks were business-accepted by the User AND EXPLICITLY LIST ALL SPECIFIC BUGS/RISKS (e.g., performance issues, specific component failures) that the User decided to ignore/accept.\n"
-                "Return the response STRICTLY as a valid JSON object. Do not use ```json or Markdown wrappers."
+                "Return the response STRICTLY as a valid JSON object. Do not use ```json or Markdown wrappers.\n"
+                "!!! CRITICAL VOLUME REQUIREMENT !!!\n"
+                "The text fields in your JSON ('summary', 'test_analysis_summary', 'risks_eval', 'justification') MUST BE EXTREMELY LONG AND DETAILED. "
+                "Treat them as extensive, technical analytical essays. Elaborating heavily, providing context, and diving deep into details is highly desired here. "
+                "EACH of these fields must contain at least 15-20 long, complex sentences. Short responses will be considered a critical failure."
             )
 
             user_prompt = f"""
                             Generate a highly detailed and comprehensive report in JSON format keeping exactly these keys:
-                            - "summary": (string) A very detailed, multi-faceted executive summary. Minimum 3 extensive paragraphs. Thoroughly describe the context of the tests, the overall system state, key metrics, and the main conclusions drawn from the entire test campaign.
+                            - "summary": (string) VERY LONG TEXT (minimum 300 words). A very detailed, multi-faceted executive summary. Thoroughly describe the context of the tests, the overall system state, key metrics, and the main conclusions drawn from the entire test campaign.
                             - "test_analysis": (array) a list of test results as JSON objects. Each object MUST contain exactly these keys: "test_name", "value", "filename". Iterate through ALL rows from [PARSED TEST RESULTS] and list each test separately. Do not group, do not omit any single test.
-                            - "test_analysis_summary": (string) An in-depth, extensive statistical and qualitative analysis of the test results. Minimum 3 paragraphs. Interpret the results, identify error patterns, describe any anomalies, and explain in detail what these results mean for overall system stability.
-                            - "risks_eval": (string) A comprehensive and very lengthy risk evaluation (minimum 3 paragraphs). Deeply analyze technical and business risks, the impact of potential bugs on the production environment, security, and performance. Detail the user's stance on these risks.
+                            - "test_analysis_summary": (string) VERY LONG TEXT (minimum 300 words). An in-depth, extensive statistical and qualitative analysis of the test results. Interpret the results, identify error patterns, describe any anomalies, and explain in detail what these results mean for overall system stability.
+                            - "risks_eval": (string) VERY LONG TEXT (minimum 300 words). A comprehensive and very lengthy risk evaluation. Deeply analyze technical and business risks, the impact of potential bugs on the production environment, security, and performance. Detail the user's stance on these risks.
                             - "decision": (string) exactly "GO" or "NO-GO",
-                            - "justification": (string) An exhaustive, extensive justification for the final decision (minimum 3 paragraphs). Build a full argumentation based on test results, identified risks, and business consequences. (Remember to respect the user's authority from the [USER NOTES] section!).
+                            - "justification": (string) VERY LONG TEXT (minimum 300 words). An exhaustive, extensive justification for the final decision. Build a full argumentation based on test results, identified risks, and business consequences. (Remember to respect the user's authority from the [USER NOTES] section!).
                             - "assistant_reply": (string) A short, natural, and friendly chat response. Explain to the user that you have generated a comprehensive draft report (and state the decision). Inform them that this is a draft and they can request adjustments, risk acceptance, or a decision change in their next message.
 
                             [GLOBAL BUSINESS RULES (RAG)]

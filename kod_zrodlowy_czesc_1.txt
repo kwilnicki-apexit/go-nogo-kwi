@@ -2220,11 +2220,11 @@ class ReportGenerator:
         self.logger.info(f"Generating structured JSON report (lang: {lang})")
 
         if lang == "pl":
-            history_str = "brak historycznych raportow"
+            history_str = "To jest pierwsza wersja (draft) raportu. Nie ma jeszcze decyzji ostatecznej."
             if historical_cache and historical_cache.get("data"):
                 prev_status = historical_cache["data"].get("decision", "Nieznany")
                 prev_risks = historical_cache["data"].get("risks_eval", "Brak")
-                history_str = f"Ostatnia decyzja: {prev_status}.\nPoprzednie ryzyka: {prev_risks}."
+                history_str = f"To jest kolejna iteracja (aktualizacja) raportu. Poprzednia decyzja to: {prev_status}.\nPoprzednie zidentyfikowane ryzyka: {prev_risks}."
 
             system_prompt = (
                 "Jesteś Głównym Inżynierem QA, ale działasz jako doradca techniczny. "
@@ -2233,16 +2233,16 @@ class ReportGenerator:
                 "W takiej sytuacji w polu 'justification' wyjaśnij, że mimo błędów technicznych, ryzyko zostało zaakceptowane biznesowo ORAZ WYMIEŃ KONKRETNIE WSZYSTKIE BŁĘDY/RYZYKA (np. problemy z wydajnością, błędy konkretnych komponentów), które użytkownik zdecydował się zignorować/zaakceptować.\n"
                 "Zwróć odpowiedź WYŁĄCZNIE jako surowy, poprawny obiekt JSON. Nie używaj znaczników ```json ani Markdown."
             )
-            
+
             user_prompt = f"""
-                            Wygeneruj strukturę raportu w formacie JSON zachowując te klucze:
-                            - "summary": (string) krótkie podsumowanie techniczne,
-                            - "test_analysis": (array) lista wyników testów jako obiekty JSON. Każdy obiekt MUSI zawierać dokładnie te klucze: "test_name" (nazwa testu), "value" (wynik/wartość np. PASS/FAIL/liczba), "filename" (nazwa pliku źródłowego z którego pochodzi). Przejdź przez WSZYSTKIE wiersze z [ZPARSOWANE WYNIKI TESTÓW] i wypisz każdy test osobno. Nie grupuj, nie pomijaj.
-                            - "test_analysis_summary": (string) krótkie podsumowanie całej analizy testów (2-4 zdania) — ile testów przeszło, ile nie, jakie są główne wnioski.
-                            - "risks_eval": (string) analiza ryzyk (zaznacz tu, czy użytkownik zaakceptował usterki),
+                            Wygeneruj bardzo szczegółowy i wyczerpujący raport w formacie JSON zachowując te klucze:
+                            - "summary": (string) Bardzo szczegółowe, wieloaspektowe podsumowanie menedżerskie. Minimum 3 rozbudowane akapity. Opisz dokładnie kontekst testów, ogólny stan systemu, kluczowe metryki oraz główne wnioski płynące z całej kampanii testowej.
+                            - "test_analysis": (array) lista wyników testów jako obiekty JSON. Każdy obiekt MUSI zawierać dokładnie te klucze: "test_name", "value", "filename". Przejdź przez WSZYSTKIE wiersze z [ZPARSOWANE WYNIKI TESTÓW] i wypisz każdy test osobno. Nie grupuj, nie pomijaj absolutnie żadnego testu.
+                            - "test_analysis_summary": (string) Pogłębiona, obszerna analiza statystyczna i jakościowa wyników testów. Minimum 3 akapity. Zinterpretuj wyniki, wskaż wzorce w błędach, opisz ewentualne anomalie i szczegółowo wyjaśnij, co te wyniki oznaczają dla stabilności całego systemu.
+                            - "risks_eval": (string) Kompleksowa i bardzo długa ocena ryzyk (minimum 3 akapity). Przeanalizuj dogłębnie ryzyka techniczne i biznesowe, wpływ potencjalnych błędów na środowisko produkcyjne, bezpieczeństwo i wydajność. Odnotuj szczegółowo stanowisko użytkownika.
                             - "decision": (string) dokładnie "GO" lub "NO-GO",
-                            - "justification": (string) ostateczne uzasadnienie (uwzględnij autorytet użytkownika!).
-                            - "assistant_reply": (string) krótka, merytoryczna odpowiedź do użytkownika na czacie, podsumowująca co dokładnie zmieniłeś w raporcie (np. "Zaakceptowałem ryzyko związane z wydajnością i zmieniłem status na GO.").
+                            - "justification": (string) Wyczerpujące, obszerne uzasadnienie ostatecznej decyzji (minimum 3 akapity). Zbuduj pełną argumentację opartą o wyniki testów, zidentyfikowane ryzyka oraz konsekwencje biznesowe. (Pamiętaj o uwzględnieniu autorytetu użytkownika z sekcji [UWAGI UŻYTKOWNIKA]!).
+                            - "assistant_reply": (string) Krótka, naturalna i przyjazna odpowiedź w czacie. Wyjaśnij użytkownikowi, że wygenerowałeś obszerny raport (i wskaż decyzję). Poinformuj, że jest to wersja robocza i użytkownik może poprosić o poprawki, zignorowanie ryzyk lub zmianę decyzji w kolejnej wiadomości.
 
                             [GLOBALNE ZASADY BIZNESOWE (RAG)]
                             {rag_context}
@@ -2272,27 +2272,27 @@ class ReportGenerator:
                 "In such cases, use the 'justification' field to state that despite technical failures, the risks were business-accepted by the User AND EXPLICITLY LIST ALL SPECIFIC BUGS/RISKS (e.g., performance issues, specific component failures) that the User decided to ignore/accept.\n"
                 "Return the response STRICTLY as a valid JSON object. Do not use ```json or Markdown wrappers."
             )
-            
+
             user_prompt = f"""
-                            Generate the report structure in JSON format using exactly these keys:
-                            - "summary": brief technical summary,
-                            - "test_analysis": (array) list of test results as JSON objects. Each object MUST contain exactly these keys: "test_name" (name of the test), "value" (result/value e.g. PASS/FAIL/number), "filename" (source filename it was taken from). Go through ALL rows from [PARSED TEST RESULTS] and list each test separately. Do not group or skip any.
-                            - "test_analysis_summary": (string) short summary of the full test analysis (2-4 sentences) — how many passed, how many failed, key takeaways.
-                            - "risks_eval": risk evaluation (highlight if the user accepted the flaws),
-                            - "decision": exactly "GO" or "NO-GO",
-                            - "justification": final rationale (must respect the User's overriding authority),
-                            - "assistant_reply": (string) brief, substantive reply to the user in the chat, summarizing exactly what you changed in the report (e.g., "I accepted the performance-related risk and changed the status to GO.").
+                            Generate a highly detailed and comprehensive report in JSON format keeping exactly these keys:
+                            - "summary": (string) A very detailed, multi-faceted executive summary. Minimum 3 extensive paragraphs. Thoroughly describe the context of the tests, the overall system state, key metrics, and the main conclusions drawn from the entire test campaign.
+                            - "test_analysis": (array) a list of test results as JSON objects. Each object MUST contain exactly these keys: "test_name", "value", "filename". Iterate through ALL rows from [PARSED TEST RESULTS] and list each test separately. Do not group, do not omit any single test.
+                            - "test_analysis_summary": (string) An in-depth, extensive statistical and qualitative analysis of the test results. Minimum 3 paragraphs. Interpret the results, identify error patterns, describe any anomalies, and explain in detail what these results mean for overall system stability.
+                            - "risks_eval": (string) A comprehensive and very lengthy risk evaluation (minimum 3 paragraphs). Deeply analyze technical and business risks, the impact of potential bugs on the production environment, security, and performance. Detail the user's stance on these risks.
+                            - "decision": (string) exactly "GO" or "NO-GO",
+                            - "justification": (string) An exhaustive, extensive justification for the final decision (minimum 3 paragraphs). Build a full argumentation based on test results, identified risks, and business consequences. (Remember to respect the user's authority from the [USER NOTES] section!).
+                            - "assistant_reply": (string) A short, natural, and friendly chat response. Explain to the user that you have generated a comprehensive draft report (and state the decision). Inform them that this is a draft and they can request adjustments, risk acceptance, or a decision change in their next message.
 
                             [GLOBAL BUSINESS RULES (RAG)]
                             {rag_context}
 
-                            [CONTEXT FROM PREVIOUS REPORT DRAFTS]
+                            [HISTORY CONTEXT FROM PREVIOUS DRAFTS]
                             {history_str}
 
                             [PARSED TEST RESULTS]
                             {parsed_test_data}
 
-                            [USER INPUT (HIGHEST PRIORITY)]
+                            [USER NOTES (TOP PRIORITY)]
                             {user_risks}
                             """
             fallback_summary = "JSON parsing error"
@@ -2301,8 +2301,8 @@ class ReportGenerator:
         raw_response = self.llm.generate_response(
             system_prompt,
             user_prompt,
-            temperature=0.1,
-            max_tokens=2000,
+            temperature=0.5,
+            max_tokens=8000,
             force_json=True,
         )
 
@@ -2404,7 +2404,13 @@ class ReportGenerator:
 
             sections = self._parse_sections_from_text(final_text)
 
-            section_keys = ["summary", "test_analysis", "risks_eval", "decision", "justification"]
+            section_keys = [
+                "summary",
+                "test_analysis",
+                "risks_eval",
+                "decision",
+                "justification",
+            ]
 
             for key in section_keys:
                 heading = labels.get(key, key)
