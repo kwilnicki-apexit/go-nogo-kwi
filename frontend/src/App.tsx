@@ -15,10 +15,7 @@ import { useLanguage } from "./hooks/useLanguage";
 import { useUserConfig } from "./hooks/useUserConfig";
 import { getLabels } from "./i18n/labels";
 import { api } from "./api/client";
-import {
-  generateId,
-  draftToHtml,
-} from "./lib/utils";
+import { generateId, draftToMarkdown } from "./lib/utils";
 import type { Project, Chat, ChatMessage, AppMode } from "./types";
 import { CheckCircle, Download, FileText, User, X, Lock } from "lucide-react";
 import "./styles/main.css";
@@ -193,11 +190,14 @@ function App() {
             };
 
             if (response.draft_data) {
-              const html = draftToHtml(response.draft_data, language === "pl");
-              upd.canvasContent = html;
+              const mdContent = draftToMarkdown(
+                response.draft_data,
+                language === "pl",
+              );
+              upd.canvasContent = mdContent;
               upd.draft = response.draft_data;
               upd.chartPaths = response.chart_paths || [];
-              setCanvasContent(html);
+              setCanvasContent(mdContent);
               setChartPaths(response.chart_paths || []);
               setIsCanvasOpen(true);
             }
