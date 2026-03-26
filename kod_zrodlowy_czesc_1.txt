@@ -524,9 +524,6 @@ async def _handle_gonogo(
         rag_context = f"[GLOBALNE WYTYCZNE PROJEKTU]\n{project_instructions}\n\n[DOKUMENTY RAG]\n{rag_context}"
 
     historical_cache = storage.get_latest_history(chat_id=chat_id)
-    chart_paths = chart_generator.generate_all_charts(
-        file_contents=contents, project_name=chat_id, lang=language
-    )
     user_risks = message if message else "Brak dodatkowych uwag."
 
     draft_json = report_generator.generate_structured_draft(
@@ -536,6 +533,12 @@ async def _handle_gonogo(
         user_risks=user_risks,
         project_name=chat_id,
         lang=language,
+    )
+
+    chart_paths = chart_generator.generate_all_charts(
+        chart_data=draft_json.get("chart_data", {}),
+        project_name=chat_id,
+        lang=language
     )
 
     fallback_msg = "Zaktualizowałem raport." if language == "pl" else "Report updated."
@@ -1004,7 +1007,7 @@ def export_report(req: ExportRequest, user: dict = Depends(get_current_user)):
 
         if fmt == "pdf":
             filepath = report_generator.export_to_pdf(
-                final_text=req.edited_text,
+                final_text_html=req.edited_text,
                 charts_paths=req.chart_paths,
                 custom_name=req.project_name,
                 author=req.author,
@@ -1012,7 +1015,7 @@ def export_report(req: ExportRequest, user: dict = Depends(get_current_user)):
             )
         elif fmt == "docx":
             filepath = report_generator.export_to_docx(
-                final_text=req.edited_text,
+                final_text_html=req.edited_text,
                 charts_paths=req.chart_paths,
                 custom_name=req.project_name,
                 author=req.author,
@@ -1020,7 +1023,7 @@ def export_report(req: ExportRequest, user: dict = Depends(get_current_user)):
             )
         elif fmt == "md":
             filepath = report_generator.export_to_md(
-                final_text=req.edited_text,
+                final_text_html=req.edited_text,
                 charts_paths=req.chart_paths,
                 custom_name=req.project_name,
                 author=req.author,
@@ -1121,7 +1124,6 @@ requests
 pandas
 matplotlib
 unicodedata2
-re
 
 # for data validation and settings management
 pydantic
@@ -2115,25 +2117,29 @@ class ReportGenerator:
 
     def _prepare_html_content(self, raw_html: str) -> str:
         """
-        Wykrywa nagłówki Decyzji (np. <h2>Decyzja: GO</h2> lub podobne generowane z markdowna)
-        i podmienia je na sformatowane tarcze (badges) w HTML, które ładnie wyglądają na PDFie.
+        Cleans empty lines from Quill, detects Decision headers
+        and replaces them with formatted HTML badges.
         """
+        # Quill często zostawia puste linie, które brzydko wyglądają na PDFie
+        cleaned_html = raw_html.replace("<p><br></p>", "")
 
         def replacer(match):
             prefix = match.group(1)
             decision = match.group(2).upper()
             color = "#4CAF50" if decision == "GO" else "#F44336"
+            # Dodany wrapper wymuszający przerwę (blok z margin-bottom)
             return (
-                f'<div style="background-color: {color}; color: white; padding: 12px 24px; '
+                f'<div style="margin: 20px 0 30px 0;">'
+                f'<div style="background-color: {color}; color: white; padding: 10px 24px; '
                 f"text-align: center; font-size: 20px; font-weight: bold; border-radius: 8px; "
-                f'margin: 20px 0; display: inline-block;">{prefix}: {decision}</div>'
+                f'display: inline-block;">{prefix}: {decision}</div>'
+                f"</div>"
             )
 
-        # Szukamy różnych wariantów (np. "<h2>Decyzja: GO</h2>", "<h2>Decision: NO-GO</h2>")
         processed_html = re.sub(
             r"<h2>\s*(.*?(?:Decyzja|Decision)\s*):\s*(GO|NO-GO)\s*</h2>",
             replacer,
-            raw_html,
+            cleaned_html,
             flags=re.IGNORECASE,
         )
         return processed_html
@@ -2232,6 +2238,18 @@ class ReportGenerator:
                     .ql-align-center {{ text-align: center; }}
                     .ql-align-right {{ text-align: right; }}
                     .ql-align-justify {{ text-align: justify; }}
+
+                    /* Nadpisanie tabel - "Squish" na wierszach */
+                    table {{
+                        width: 100%;
+                        border-collapse: collapse;
+                        margin-top: 10px;
+                        margin-bottom: 20px;
+                    }}
+                    th, td {{
+                        padding: 4px 8px !important; /* Zmniejsza wysokość komórki */
+                        line-height: 1.0 !important; /* Ciasny tekst wewnątrz tabeli */
+                    }}
                 </style>
             </head>
             <body>
@@ -2433,29 +2451,25 @@ class ReportGenerator:
                 history_str = f"To jest kolejna iteracja (aktualizacja) raportu. Poprzednia decyzja to: {prev_status}.\nPoprzednie zidentyfikowane ryzyka: {prev_risks}."
 
             system_prompt = (
-                "Jesteś Głównym Inżynierem QA, ale działasz jako doradca techniczny. "
-                "Ostateczną instancją decyzyjną (Release Managerem) jest Użytkownik.\n"
-                "ZASADA NADRZĘDNA (AUTORYTET UŻYTKOWNIKA): Jeśli w sekcji [UWAGI UŻYTKOWNIKA] człowiek jawnie akceptuje ryzyka, nakazuje zmianę decyzji lub twierdzi, że błędy są znane, MUSISZ bezwzględnie zmienić decyzję na 'GO'. "
-                "W takiej sytuacji w polu 'justification' wyjaśnij, że mimo błędów technicznych, ryzyko zostało zaakceptowane biznesowo ORAZ WYMIEŃ KONKRETNIE WSZYSTKIE BŁĘDY/RYZYKA (np. problemy z wydajnością, błędy konkretnych komponentów), które użytkownik zdecydował się zignorować/zaakceptować.\n"
-                "Zwróć odpowiedź WYŁĄCZNIE jako surowy, poprawny obiekt JSON. Nie używaj znaczników ```json ani Markdown.\n"
-                "!!! BARDZO WAŻNE - EKSTREMALNY WYMÓG OBJĘTOŚCI !!!\n"
-                "Wszystkie pola opisowe w JSON ('summary', 'test_analysis_summary', 'risks_eval', 'justification') MUSZĄ BYĆ NIEZWYKLE DŁUGIE I SZCZEGÓŁOWE. "
-                "Traktuj je jak rozbudowane eseje analityczne. Lanie wody, opisywanie kontekstu, wskazywanie szczegółów i wielowątkowa analiza są tu bezwzględnie wymagane. "
-                "Każde z tych pól musi zawierać co najmniej 15-20 długich, złożonych zdań. Zbyt krótkie odpowiedzi uznane będą za błąd krytyczny."
+                "Jesteś Głównym Inżynierem QA i doradcą technicznym. Ostateczną instancją decyzyjną jest Użytkownik.\n"
+                "ZASADA NADRZĘDNA: Jeśli w sekcji [UWAGI UŻYTKOWNIKA] człowiek jawnie akceptuje ryzyka lub nakazuje zmianę decyzji, MUSISZ ustawić 'GO'. "
+                "W polu 'justification' wyjaśnij wtedy zwięźle, że ryzyko zostało zaakceptowane biznesowo i wylistuj te zaakceptowane błędy.\n"
+                "Zwróć odpowiedź WYŁĄCZNIE jako surowy, poprawny obiekt JSON (bez znaczników ```json). "
+                "W wartościach tekstowych używaj formatowania Markdown (pogrubienia, listy), aby tekst był maksymalnie czytelny.\n"
+                "!!! BARDZO WAŻNE - ZWIĘZŁOŚĆ I KONKRET !!!\n"
+                "Pisz stylem zwięzłym, biznesowym i inżynieryjnym. Unikaj jakichkolwiek powtórzeń. Jeśli informacja (np. o braku błędów krytycznych) padła w podsumowaniu, nie powtarzaj jej w uzasadnieniu. Skup się na faktach, liczbach i konkretnych defektach. Żadnego lania wody."
             )
 
             user_prompt = f"""
-                            Wygeneruj bardzo szczegółowy i wyczerpujący raport w formacie JSON zachowując te klucze:
-                            - "summary": (string) BARDZO DŁUGI TEKST (minimum 300 słów). Dogłębne, wieloaspektowe podsumowanie menedżerskie. Opisz dokładnie kontekst testów, ogólny stan systemu, kluczowe metryki oraz główne wnioski płynące z całej kampanii testowej.
-                            - "test_analysis": (array) lista wyników testów jako obiekty JSON. Każdy obiekt MUSI zawierać dokładnie te klucze: "test_name", "value", "filename". Przejdź przez WSZYSTKIE wiersze z [ZPARSOWANE WYNIKI TESTÓW] i wypisz każdy test osobno. Nie grupuj, nie pomijaj absolutnie żadnego testu.
-                            - "chart_data": (object) Obiekt z dwiema tablicami: "tests" oraz "bugs". 
-                                Tablica "tests" ma zawierać wyniki testów, gdzie każdy obiekt to: {"component": (string, nazwa modułu/systemu), "status": (string, WYŁĄCZNIE jedna z wartości: "Passed", "Failed", "Skipped", "Blocked")}. 
-                                Tablica "bugs" ma zawierać defekty, gdzie każdy obiekt to: {"severity": (string, WYŁĄCZNIE jedna z wartości: "Krytyczny", "Wysoki", "Średni", "Niski"), "component": (string, nazwa modułu)}. Wyciągnij te dane z [ZPARSOWANE WYNIKI TESTÓW].
-                            - "test_analysis_summary": (string) BARDZO DŁUGI TEKST (minimum 300 słów). Pogłębiona, obszerna analiza statystyczna i jakościowa wyników testów. Zinterpretuj wyniki, wskaż wzorce w błędach, opisz ewentualne anomalie i szczegółowo wyjaśnij, co te wyniki oznaczają dla stabilności całego systemu.
-                            - "risks_eval": (string) BARDZO DŁUGI TEKST (minimum 300 słów). Kompleksowa ocena ryzyk. Przeanalizuj dogłębnie ryzyka techniczne i biznesowe, wpływ potencjalnych błędów na środowisko produkcyjne, bezpieczeństwo i wydajność. Odnotuj szczegółowo stanowisko użytkownika.
-                            - "decision": (string) dokładnie "GO" lub "NO-GO",
-                            - "justification": (string) BARDZO DŁUGI TEKST (minimum 300 słów). Wyczerpujące uzasadnienie ostatecznej decyzji. Zbuduj pełną, rozwlekłą argumentację opartą o wyniki testów, zidentyfikowane ryzyka oraz konsekwencje biznesowe. (Pamiętaj o uwzględnieniu autorytetu użytkownika z sekcji [UWAGI UŻYTKOWNIKA]!).
-                            - "assistant_reply": (string) Krótka, naturalna i przyjazna odpowiedź w czacie. Wyjaśnij użytkownikowi, że wygenerowałeś obszerny raport (i wskaż decyzję). Poinformuj, że jest to wersja robocza i użytkownik może poprosić o poprawki, zignorowanie ryzyk lub zmianę decyzji w kolejnej wiadomości.
+                            Wygeneruj profesjonalny i zwięzły raport w formacie JSON zachowując te klucze:
+                            - "summary": (string) Krótkie podsumowanie menedżerskie (max 3-4 zdania). Kontekst, ogólny stan i główny wniosek.
+                            - "test_analysis": (array) Lista obiektów JSON: "test_name", "value", "filename". Uwzględnij wszystkie wiersze z [ZPARSOWANE WYNIKI TESTÓW].
+                            - "chart_data": (object) Obiekt z tablicami: "tests" (component, status: "Passed"/"Failed"/"Skipped"/"Blocked") oraz "bugs" (severity: "Krytyczny"/"Wysoki"/"Średni"/"Niski", component).
+                            - "test_analysis_summary": (string) Zwięzła analiza wyników (max 4-5 zdań). Interpretacja danych, wzorce błędów, ewentualne odchylenia (np. słabsze systemy).
+                            - "risks_eval": (string) Ocena ryzyk. Krótko i na temat: czy coś zagraża wdrożeniu i jakie jest stanowisko użytkownika.
+                            - "decision": (string) "GO" lub "NO-GO",
+                            - "justification": (string) Jednoznaczne, 2-3 zdaniowe uzasadnienie decyzji oparte na twardych danych testowych.
+                            - "assistant_reply": (string) Krótka, naturalna odpowiedź w czacie informująca o wygenerowaniu draftu i możliwości naniesienia poprawek.
 
                             [GLOBALNE ZASADY BIZNESOWE (RAG)]
                             {rag_context}
@@ -2480,28 +2494,25 @@ class ReportGenerator:
                 history_str = f"Last decision: {prev_status} | Last risks: {prev_risks}"
 
             system_prompt = (
-                "You are a Lead QA Engineer acting as a technical advisor. The User is the ultimate Release Manager.\n"
-                "OVERRIDE RULE: If the User in the [USER INPUT] section explicitly accepts risks, commands a decision change, or states that bugs are known/accepted, you MUST set the decision to 'GO'. "
-                "In such cases, use the 'justification' field to state that despite technical failures, the risks were business-accepted by the User AND EXPLICITLY LIST ALL SPECIFIC BUGS/RISKS (e.g., performance issues, specific component failures) that the User decided to ignore/accept.\n"
-                "Return the response STRICTLY as a valid JSON object. Do not use ```json or Markdown wrappers.\n"
-                "!!! CRITICAL VOLUME REQUIREMENT !!!\n"
-                "The text fields in your JSON ('summary', 'test_analysis_summary', 'risks_eval', 'justification') MUST BE EXTREMELY LONG AND DETAILED. "
-                "Treat them as extensive, technical analytical essays. Elaborating heavily, providing context, and diving deep into details is highly desired here. "
-                "EACH of these fields must contain at least 15-20 long, complex sentences. Short responses will be considered a critical failure."
+                "You are a Lead QA Engineer and technical advisor. The User is the ultimate decision-making authority.\n"
+                "OVERRIDE RULE: If the User in the [USER NOTES] section explicitly accepts risks or commands a decision change, you MUST set the decision to 'GO'. "
+                "In the 'justification' field, briefly explain that the risk was accepted from a business perspective and explicitly list the accepted bugs.\n"
+                "Return the response EXCLUSIVELY as a raw, valid JSON object (do not use ```json tags). "
+                "Use Markdown formatting (bolding, lists) within text values to maximize readability.\n"
+                "!!! VERY IMPORTANT - CONCISENESS AND SPECIFICS !!!\n"
+                "Write in a concise, business, and engineering style. Avoid any repetitions. If a piece of information (e.g., zero critical bugs) was mentioned in the summary, do not repeat it in the justification. Focus on facts, numbers, and specific defects. Absolutely no fluff or filler words."
             )
 
             user_prompt = f"""
-                            Generate a highly detailed and comprehensive report in JSON format keeping exactly these keys:
-                            - "summary": (string) VERY LONG TEXT (minimum 300 words). A very detailed, multi-faceted executive summary. Thoroughly describe the context of the tests, the overall system state, key metrics, and the main conclusions drawn from the entire test campaign.
-                            - "test_analysis": (array) a list of test results as JSON objects. Each object MUST contain exactly these keys: "test_name", "value", "filename". Iterate through ALL rows from [PARSED TEST RESULTS] and list each test separately. Do not group, do not omit any single test.
-                            - "chart_data": (object) An object with two arrays: "tests" and "bugs". 
-                                The "tests" array should contain test results, where each object is: {{"component": (string, name of module/system), "status": (string, ONLY one of these values: "Passed", "Failed", "Skipped", "Blocked")}}. 
-                                The "bugs" array should contain defects, where each object is: {{"severity": (string, ONLY one of these values: "Critical", "High", "Medium", "Low"), "component": (string, name of module)}}. Extract this data from [PARSED TEST RESULTS].
-                            - "test_analysis_summary": (string) VERY LONG TEXT (minimum 300 words). An in-depth, extensive statistical and qualitative analysis of the test results. Interpret the results, identify error patterns, describe any anomalies, and explain in detail what these results mean for overall system stability.
-                            - "risks_eval": (string) VERY LONG TEXT (minimum 300 words). A comprehensive and very lengthy risk evaluation. Deeply analyze technical and business risks, the impact of potential bugs on the production environment, security, and performance. Detail the user's stance on these risks.
+                            Generate a professional and concise report in JSON format keeping exactly these keys:
+                            - "summary": (string) Short executive summary (max 3-4 sentences). Context, overall system state, and main conclusion.
+                            - "test_analysis": (array) List of JSON objects: "test_name", "value", "filename". Include all rows from [PARSED TEST RESULTS].
+                            - "chart_data": (object) Object with arrays: "tests" (component, status: "Passed"/"Failed"/"Skipped"/"Blocked") and "bugs" (severity: "Critical"/"High"/"Medium"/"Low", component). Extract this data from [PARSED TEST RESULTS].
+                            - "test_analysis_summary": (string) Concise analysis of results (max 4-5 sentences). Data interpretation, error patterns, any deviations (e.g., weaker performing systems).
+                            - "risks_eval": (string) Risk evaluation. Short and to the point: identify any deployment threats and state the user's stance.
                             - "decision": (string) exactly "GO" or "NO-GO",
-                            - "justification": (string) VERY LONG TEXT (minimum 300 words). An exhaustive, extensive justification for the final decision. Build a full argumentation based on test results, identified risks, and business consequences. (Remember to respect the user's authority from the [USER NOTES] section!).
-                            - "assistant_reply": (string) A short, natural, and friendly chat response. Explain to the user that you have generated a comprehensive draft report (and state the decision). Inform them that this is a draft and they can request adjustments, risk acceptance, or a decision change in their next message.
+                            - "justification": (string) Unambiguous, 2-3 sentence justification of the decision based on hard test data.
+                            - "assistant_reply": (string) A short, natural chat response informing the user that the draft has been generated and can be adjusted.
 
                             [GLOBAL BUSINESS RULES (RAG)]
                             {rag_context}
@@ -2521,8 +2532,8 @@ class ReportGenerator:
         raw_response = self.llm.generate_response(
             system_prompt,
             user_prompt,
-            temperature=0.5,
-            max_tokens=8000,
+            temperature=0.2,
+            max_tokens=10000,
             force_json=True,
         )
 
@@ -3416,8 +3427,6 @@ import { api } from "./api/client";
 import {
   generateId,
   draftToHtml,
-  htmlToMarkdown,
-  stripHtml,
 } from "./lib/utils";
 import type { Project, Chat, ChatMessage, AppMode } from "./types";
 import { CheckCircle, Download, FileText, User, X, Lock } from "lucide-react";
@@ -3876,10 +3885,7 @@ function App() {
       if (!activeChat) return;
       setExportMessage(labels.generatingFile);
       try {
-        const text =
-          format === "md"
-            ? htmlToMarkdown(canvasContent)
-            : stripHtml(canvasContent);
+        const text = canvasContent;
 
         await api.exportReport({
           project_name: activeChat.id,

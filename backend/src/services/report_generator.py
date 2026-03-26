@@ -234,7 +234,7 @@ class ReportGenerator:
                     }}
                     th, td {{
                         padding: 4px 8px !important; /* Zmniejsza wysokość komórki */
-                        line-height: 1.2 !important; /* Ciasny tekst wewnątrz tabeli */
+                        line-height: 1.0 !important; /* Ciasny tekst wewnątrz tabeli */
                     }}
                 </style>
             </head>
@@ -480,28 +480,25 @@ class ReportGenerator:
                 history_str = f"Last decision: {prev_status} | Last risks: {prev_risks}"
 
             system_prompt = (
-                "You are a Lead QA Engineer acting as a technical advisor. The User is the ultimate Release Manager.\n"
-                "OVERRIDE RULE: If the User in the [USER INPUT] section explicitly accepts risks, commands a decision change, or states that bugs are known/accepted, you MUST set the decision to 'GO'. "
-                "In such cases, use the 'justification' field to state that despite technical failures, the risks were business-accepted by the User AND EXPLICITLY LIST ALL SPECIFIC BUGS/RISKS (e.g., performance issues, specific component failures) that the User decided to ignore/accept.\n"
-                "Return the response STRICTLY as a valid JSON object (do not use ```json code blocks). INSIDE the text fields (like summary, justification), YOU MUST USE rich Markdown formatting (bolding, bullet points, headers) to make the report structured and readable.\n"
-                "!!! CRITICAL VOLUME REQUIREMENT !!!\n"
-                "The text fields in your JSON ('summary', 'test_analysis_summary', 'risks_eval', 'justification') MUST BE EXTREMELY LONG AND DETAILED. "
-                "Treat them as extensive, technical analytical essays. Elaborating heavily, providing context, and diving deep into details is highly desired here. "
-                "EACH of these fields must contain at least 15-20 long, complex sentences. Short responses will be considered a critical failure."
+                "You are a Lead QA Engineer and technical advisor. The User is the ultimate decision-making authority.\n"
+                "OVERRIDE RULE: If the User in the [USER NOTES] section explicitly accepts risks or commands a decision change, you MUST set the decision to 'GO'. "
+                "In the 'justification' field, briefly explain that the risk was accepted from a business perspective and explicitly list the accepted bugs.\n"
+                "Return the response EXCLUSIVELY as a raw, valid JSON object (do not use ```json tags). "
+                "Use Markdown formatting (bolding, lists) within text values to maximize readability.\n"
+                "!!! VERY IMPORTANT - CONCISENESS AND SPECIFICS !!!\n"
+                "Write in a concise, business, and engineering style. Avoid any repetitions. If a piece of information (e.g., zero critical bugs) was mentioned in the summary, do not repeat it in the justification. Focus on facts, numbers, and specific defects. Absolutely no fluff or filler words."
             )
 
             user_prompt = f"""
-                            Generate a highly detailed and comprehensive report in JSON format keeping exactly these keys:
-                            - "summary": (string) VERY LONG TEXT (minimum 300 words). A very detailed, multi-faceted executive summary. Thoroughly describe the context of the tests, the overall system state, key metrics, and the main conclusions drawn from the entire test campaign.
-                            - "test_analysis": (array) a list of test results as JSON objects. Each object MUST contain exactly these keys: "test_name", "value", "filename". Iterate through ALL rows from [PARSED TEST RESULTS] and list each test separately. Do not group, do not omit any single test.
-                            - "chart_data": (object) An object with two arrays: "tests" and "bugs". 
-                                The "tests" array should contain test results, where each object is: {{"component": (string, name of module/system), "status": (string, ONLY one of these values: "Passed", "Failed", "Skipped", "Blocked")}}. 
-                                The "bugs" array should contain defects, where each object is: {{"severity": (string, ONLY one of these values: "Critical", "High", "Medium", "Low"), "component": (string, name of module)}}. Extract this data from [PARSED TEST RESULTS].
-                            - "test_analysis_summary": (string) VERY LONG TEXT (minimum 300 words). An in-depth, extensive statistical and qualitative analysis of the test results. Interpret the results, identify error patterns, describe any anomalies, and explain in detail what these results mean for overall system stability.
-                            - "risks_eval": (string) VERY LONG TEXT (minimum 300 words). A comprehensive and very lengthy risk evaluation. Deeply analyze technical and business risks, the impact of potential bugs on the production environment, security, and performance. Detail the user's stance on these risks.
+                            Generate a professional and concise report in JSON format keeping exactly these keys:
+                            - "summary": (string) Short executive summary (max 3-4 sentences). Context, overall system state, and main conclusion.
+                            - "test_analysis": (array) List of JSON objects: "test_name", "value", "filename". Include all rows from [PARSED TEST RESULTS].
+                            - "chart_data": (object) Object with arrays: "tests" (component, status: "Passed"/"Failed"/"Skipped"/"Blocked") and "bugs" (severity: "Critical"/"High"/"Medium"/"Low", component). Extract this data from [PARSED TEST RESULTS].
+                            - "test_analysis_summary": (string) Concise analysis of results (max 4-5 sentences). Data interpretation, error patterns, any deviations (e.g., weaker performing systems).
+                            - "risks_eval": (string) Risk evaluation. Short and to the point: identify any deployment threats and state the user's stance.
                             - "decision": (string) exactly "GO" or "NO-GO",
-                            - "justification": (string) VERY LONG TEXT (minimum 300 words). An exhaustive, extensive justification for the final decision. Build a full argumentation based on test results, identified risks, and business consequences. (Remember to respect the user's authority from the [USER NOTES] section!).
-                            - "assistant_reply": (string) A short, natural, and friendly chat response. Explain to the user that you have generated a comprehensive draft report (and state the decision). Inform them that this is a draft and they can request adjustments, risk acceptance, or a decision change in their next message.
+                            - "justification": (string) Unambiguous, 2-3 sentence justification of the decision based on hard test data.
+                            - "assistant_reply": (string) A short, natural chat response informing the user that the draft has been generated and can be adjusted.
 
                             [GLOBAL BUSINESS RULES (RAG)]
                             {rag_context}
