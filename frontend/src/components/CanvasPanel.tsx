@@ -2,9 +2,8 @@
 // FILE: .\frontend\src\components\CanvasPanel.tsx
 // ============================================================
 
-import { useRef, useState } from "react";
-import ReactQuill from "react-quill-new";
-import "react-quill-new/dist/quill.snow.css";
+import { useState } from "react";
+import MDEditor from "@uiw/react-md-editor";
 import { X, Download, FileType2, FileCode } from "lucide-react";
 import type { Labels } from "../types";
 
@@ -17,30 +16,6 @@ interface CanvasPanelProps {
   exportMessage: string;
   labels: Labels;
 }
-
-const QUILL_MODULES = {
-  toolbar: [
-    [{ header: [1, 2, 3, false] }],
-    ["bold", "italic", "underline", "strike"],
-    [{ list: "ordered" }, { list: "bullet" }],
-    [{ color: [] }, { background: [] }],
-    ["blockquote", "code-block"],
-    ["clean"],
-  ],
-};
-
-const QUILL_FORMATS = [
-  "header",
-  "bold",
-  "italic",
-  "underline",
-  "strike",
-  "list",
-  "color",
-  "background",
-  "blockquote",
-  "code-block",
-];
 
 const exportBtnStyle = (): React.CSSProperties => ({
   display: "inline-flex",
@@ -76,9 +51,9 @@ export const CanvasPanel = ({
   exportMessage,
   labels,
 }: CanvasPanelProps) => {
-  const quillRef = useRef<ReactQuill>(null);
+  // Wywaliliśmy quillRef! 🔥
   const [addToRag, setAddToRag] = useState(true);
-  
+
   if (!isOpen) return null;
 
   const isError = isErrorMessage(exportMessage);
@@ -118,15 +93,27 @@ export const CanvasPanel = ({
           {labels.canvasTitle}
         </h3>
 
-        <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, fontWeight: 500, color: "var(--color-text-secondary)", cursor: "pointer" }}>
-            <input 
-              type="checkbox" 
-              checked={addToRag} 
-              onChange={(e) => setAddToRag(e.target.checked)} 
-              style={{ cursor: "pointer" }}
-            />
-            {labels.downloadPdf === "PDF" ? "Zapisz do bazy wiedzy (RAG)" : "Save to Knowledge Base (RAG)"}
-          </label>
+        <label
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 6,
+            fontSize: 12,
+            fontWeight: 500,
+            color: "var(--color-text-secondary)",
+            cursor: "pointer",
+          }}
+        >
+          <input
+            type="checkbox"
+            checked={addToRag}
+            onChange={(e) => setAddToRag(e.target.checked)}
+            style={{ cursor: "pointer" }}
+          />
+          {labels.downloadPdf === "PDF"
+            ? "Zapisz do bazy wiedzy (RAG)"
+            : "Save to Knowledge Base (RAG)"}
+        </label>
 
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <button
@@ -208,18 +195,19 @@ export const CanvasPanel = ({
         </div>
       </div>
 
-      {/* Editor */}
+      {/* Edytor Markdown */}
       <div
         className="canvas-editor custom-scrollbar"
-        style={{ flex: 1, overflowY: "auto" }}
+        style={{ flex: 1, overflowY: "auto", padding: "16px" }}
+        data-color-mode="light"
       >
-        <ReactQuill
-          ref={quillRef}
-          theme="snow"
+        <MDEditor
           value={content}
-          onChange={onChange}
-          modules={QUILL_MODULES}
-          formats={QUILL_FORMATS}
+          onChange={(val) => onChange(val || "")}
+          height="100%"
+          preview="live"
+          hideToolbar={false}
+          visibleDragbar={false}
         />
       </div>
 

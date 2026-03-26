@@ -9,7 +9,7 @@ from datetime import datetime
 from pathlib import Path
 
 from weasyprint import HTML, CSS
-from markdownify import markdownify as md
+import markdown
 from docx import Document
 from docx.shared import Inches, Pt, RGBColor
 from docx.enum.text import WD_ALIGN_PARAGRAPH
@@ -101,19 +101,17 @@ class ReportGenerator:
 
     # ─── HTML Preparator ─────────────────────────────────────────
 
-    def _prepare_html_content(self, raw_html: str) -> str:
+    def _prepare_html_content(self, raw_md: str) -> str:
         """
-        Cleans empty lines from Quill, detects Decision headers
-        and replaces them with formatted HTML badges.
+        Zamienia czysty Markdown z frontendu na HTML dla PDF i DOCX.
+        Oraz podmienia nagłówki decyzji na odznaki (badges).
         """
-        # Quill często zostawia puste linie, które brzydko wyglądają na PDFie
-        cleaned_html = raw_html.replace("<p><br></p>", "")
+        html_content = markdown.markdown(raw_md, extensions=["tables", "fenced_code"])
 
         def replacer(match):
             prefix = match.group(1)
             decision = match.group(2).upper()
             color = "#4CAF50" if decision == "GO" else "#F44336"
-            # Dodany wrapper wymuszający przerwę (blok z margin-bottom)
             return (
                 f'<div style="margin: 20px 0 30px 0;">'
                 f'<div style="background-color: {color}; color: white; padding: 10px 24px; '
@@ -125,7 +123,7 @@ class ReportGenerator:
         processed_html = re.sub(
             r"<h2>\s*(.*?(?:Decyzja|Decision)\s*):\s*(GO|NO-GO)\s*</h2>",
             replacer,
-            cleaned_html,
+            html_content,
             flags=re.IGNORECASE,
         )
         return processed_html
@@ -195,6 +193,9 @@ class ReportGenerator:
                         color: #1e293b;
                         line-height: 1.6;
                         font-size: 11pt;
+                        overflow-wrap: break-word;
+                        word-wrap: break-word;
+                        hyphens: auto;
                     }}
                     .banner {{
                         position: fixed; top: -25mm; left: -20mm; right: -20mm; height: 6mm; background-color: #e3000f;
@@ -231,10 +232,13 @@ class ReportGenerator:
                         border-collapse: collapse;
                         margin-top: 10px;
                         margin-bottom: 20px;
+                        table-layout: fixed;
                     }}
                     th, td {{
-                        padding: 4px 8px !important; /* Zmniejsza wysokość komórki */
-                        line-height: 1.0 !important; /* Ciasny tekst wewnątrz tabeli */
+                        padding: 4px 8px !important;
+                        line-height: 1.0 !important;
+                        overflow-wrap: break-word;
+                        word-wrap: break-word;
                     }}
                 </style>
             </head>
