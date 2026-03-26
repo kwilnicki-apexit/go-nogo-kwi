@@ -103,9 +103,11 @@ class ReportGenerator:
 
     def _prepare_html_content(self, raw_html: str) -> str:
         """
-        Wykrywa nagłówki Decyzji (np. <h2>Decyzja: GO</h2> lub podobne generowane z markdowna)
-        i podmienia je na sformatowane tarcze (badges) w HTML, które ładnie wyglądają na PDFie.
+        Cleans empty lines from Quill, detects Decision headers
+        and replaces them with formatted HTML badges.
         """
+        # Quill często zostawia puste linie, które brzydko wyglądają na PDFie
+        cleaned_html = raw_html.replace("<p><br></p>", "")
 
         def replacer(match):
             prefix = match.group(1)
@@ -117,11 +119,10 @@ class ReportGenerator:
                 f'margin: 20px 0; display: inline-block;">{prefix}: {decision}</div>'
             )
 
-        # Szukamy różnych wariantów (np. "<h2>Decyzja: GO</h2>", "<h2>Decision: NO-GO</h2>")
         processed_html = re.sub(
             r"<h2>\s*(.*?(?:Decyzja|Decision)\s*):\s*(GO|NO-GO)\s*</h2>",
             replacer,
-            raw_html,
+            cleaned_html,
             flags=re.IGNORECASE,
         )
         return processed_html
