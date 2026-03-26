@@ -854,7 +854,7 @@ def export_report(req: ExportRequest, user: dict = Depends(get_current_user)):
 
         if fmt == "pdf":
             filepath = report_generator.export_to_pdf(
-                final_text=req.edited_text,
+                final_text_html=req.edited_text,
                 charts_paths=req.chart_paths,
                 custom_name=req.project_name,
                 author=req.author,
@@ -862,7 +862,7 @@ def export_report(req: ExportRequest, user: dict = Depends(get_current_user)):
             )
         elif fmt == "docx":
             filepath = report_generator.export_to_docx(
-                final_text=req.edited_text,
+                final_text_html=req.edited_text,
                 charts_paths=req.chart_paths,
                 custom_name=req.project_name,
                 author=req.author,
@@ -870,7 +870,7 @@ def export_report(req: ExportRequest, user: dict = Depends(get_current_user)):
             )
         elif fmt == "md":
             filepath = report_generator.export_to_md(
-                final_text=req.edited_text,
+                final_text_html=req.edited_text,
                 charts_paths=req.chart_paths,
                 custom_name=req.project_name,
                 author=req.author,
