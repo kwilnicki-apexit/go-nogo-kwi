@@ -113,10 +113,13 @@ class ReportGenerator:
             prefix = match.group(1)
             decision = match.group(2).upper()
             color = "#4CAF50" if decision == "GO" else "#F44336"
+            # Dodany wrapper wymuszający przerwę (blok z margin-bottom)
             return (
-                f'<div style="background-color: {color}; color: white; padding: 12px 24px; '
+                f'<div style="margin: 20px 0 30px 0;">'
+                f'<div style="background-color: {color}; color: white; padding: 10px 24px; '
                 f"text-align: center; font-size: 20px; font-weight: bold; border-radius: 8px; "
-                f'margin: 20px 0; display: inline-block;">{prefix}: {decision}</div>'
+                f'display: inline-block;">{prefix}: {decision}</div>'
+                f"</div>"
             )
 
         processed_html = re.sub(
@@ -221,6 +224,18 @@ class ReportGenerator:
                     .ql-align-center {{ text-align: center; }}
                     .ql-align-right {{ text-align: right; }}
                     .ql-align-justify {{ text-align: justify; }}
+
+                    /* Nadpisanie tabel - "Squish" na wierszach */
+                    table {{
+                        width: 100%;
+                        border-collapse: collapse;
+                        margin-top: 10px;
+                        margin-bottom: 20px;
+                    }}
+                    th, td {{
+                        padding: 4px 8px !important; /* Zmniejsza wysokość komórki */
+                        line-height: 1.2 !important; /* Ciasny tekst wewnątrz tabeli */
+                    }}
                 </style>
             </head>
             <body>
@@ -422,29 +437,25 @@ class ReportGenerator:
                 history_str = f"To jest kolejna iteracja (aktualizacja) raportu. Poprzednia decyzja to: {prev_status}.\nPoprzednie zidentyfikowane ryzyka: {prev_risks}."
 
             system_prompt = (
-                "Jesteś Głównym Inżynierem QA, ale działasz jako doradca techniczny. "
-                "Ostateczną instancją decyzyjną (Release Managerem) jest Użytkownik.\n"
-                "ZASADA NADRZĘDNA (AUTORYTET UŻYTKOWNIKA): Jeśli w sekcji [UWAGI UŻYTKOWNIKA] człowiek jawnie akceptuje ryzyka, nakazuje zmianę decyzji lub twierdzi, że błędy są znane, MUSISZ bezwzględnie zmienić decyzję na 'GO'. "
-                "W takiej sytuacji w polu 'justification' wyjaśnij, że mimo błędów technicznych, ryzyko zostało zaakceptowane biznesowo ORAZ WYMIEŃ KONKRETNIE WSZYSTKIE BŁĘDY/RYZYKA (np. problemy z wydajnością, błędy konkretnych komponentów), które użytkownik zdecydował się zignorować/zaakceptować.\n"
-                "Zwróć odpowiedź WYŁĄCZNIE jako surowy, poprawny obiekt JSON (nie używaj znaczników ```json na początku i końcu). Wewnątrz wartości tekstowych (np. summary, justification) ŚMIAŁO UŻYWAJ bogatego formatowania Markdown (pogrubienia, wypunktowania, nagłówki), aby tekst był przejrzysty, ustrukturyzowany i czytelny.\n"
-                "!!! BARDZO WAŻNE - EKSTREMALNY WYMÓG OBJĘTOŚCI !!!\n"
-                "Wszystkie pola opisowe w JSON ('summary', 'test_analysis_summary', 'risks_eval', 'justification') MUSZĄ BYĆ NIEZWYKLE DŁUGIE I SZCZEGÓŁOWE. "
-                "Traktuj je jak rozbudowane eseje analityczne. Lanie wody, opisywanie kontekstu, wskazywanie szczegółów i wielowątkowa analiza są tu bezwzględnie wymagane. "
-                "Każde z tych pól musi zawierać co najmniej 15-20 długich, złożonych zdań. Zbyt krótkie odpowiedzi uznane będą za błąd krytyczny."
+                "Jesteś Głównym Inżynierem QA i doradcą technicznym. Ostateczną instancją decyzyjną jest Użytkownik.\n"
+                "ZASADA NADRZĘDNA: Jeśli w sekcji [UWAGI UŻYTKOWNIKA] człowiek jawnie akceptuje ryzyka lub nakazuje zmianę decyzji, MUSISZ ustawić 'GO'. "
+                "W polu 'justification' wyjaśnij wtedy zwięźle, że ryzyko zostało zaakceptowane biznesowo i wylistuj te zaakceptowane błędy.\n"
+                "Zwróć odpowiedź WYŁĄCZNIE jako surowy, poprawny obiekt JSON (bez znaczników ```json). "
+                "W wartościach tekstowych używaj formatowania Markdown (pogrubienia, listy), aby tekst był maksymalnie czytelny.\n"
+                "!!! BARDZO WAŻNE - ZWIĘZŁOŚĆ I KONKRET !!!\n"
+                "Pisz stylem zwięzłym, biznesowym i inżynieryjnym. Unikaj jakichkolwiek powtórzeń. Jeśli informacja (np. o braku błędów krytycznych) padła w podsumowaniu, nie powtarzaj jej w uzasadnieniu. Skup się na faktach, liczbach i konkretnych defektach. Żadnego lania wody."
             )
 
             user_prompt = f"""
-                            Wygeneruj bardzo szczegółowy i wyczerpujący raport w formacie JSON zachowując te klucze:
-                            - "summary": (string) BARDZO DŁUGI TEKST (minimum 300 słów). Dogłębne, wieloaspektowe podsumowanie menedżerskie. Opisz dokładnie kontekst testów, ogólny stan systemu, kluczowe metryki oraz główne wnioski płynące z całej kampanii testowej.
-                            - "test_analysis": (array) lista wyników testów jako obiekty JSON. Każdy obiekt MUSI zawierać dokładnie te klucze: "test_name", "value", "filename". Przejdź przez WSZYSTKIE wiersze z [ZPARSOWANE WYNIKI TESTÓW] i wypisz każdy test osobno. Nie grupuj, nie pomijaj absolutnie żadnego testu.
-                            - "chart_data": (object) Obiekt z dwiema tablicami: "tests" oraz "bugs". 
-                            Tablica "tests" ma zawierać wyniki testów, gdzie każdy obiekt to: {{"component": (string, nazwa modułu/systemu), "status": (string, WYŁĄCZNIE jedna z wartości: "Passed", "Failed", "Skipped", "Blocked")}}. 
-                            Tablica "bugs" ma zawierać defekty, gdzie każdy obiekt to: {{"severity": (string, WYŁĄCZNIE jedna z wartości: "Krytyczny", "Wysoki", "Średni", "Niski"), "component": (string, nazwa modułu)}}. Wyciągnij te dane z [ZPARSOWANE WYNIKI TESTÓW].
-                            - "test_analysis_summary": (string) BARDZO DŁUGI TEKST (minimum 300 słów). Pogłębiona, obszerna analiza statystyczna i jakościowa wyników testów. Zinterpretuj wyniki, wskaż wzorce w błędach, opisz ewentualne anomalie i szczegółowo wyjaśnij, co te wyniki oznaczają dla stabilności całego systemu.
-                            - "risks_eval": (string) BARDZO DŁUGI TEKST (minimum 300 słów). Kompleksowa ocena ryzyk. Przeanalizuj dogłębnie ryzyka techniczne i biznesowe, wpływ potencjalnych błędów na środowisko produkcyjne, bezpieczeństwo i wydajność. Odnotuj szczegółowo stanowisko użytkownika.
-                            - "decision": (string) dokładnie "GO" lub "NO-GO",
-                            - "justification": (string) BARDZO DŁUGI TEKST (minimum 300 słów). Wyczerpujące uzasadnienie ostatecznej decyzji. Zbuduj pełną, rozwlekłą argumentację opartą o wyniki testów, zidentyfikowane ryzyka oraz konsekwencje biznesowe. (Pamiętaj o uwzględnieniu autorytetu użytkownika z sekcji [UWAGI UŻYTKOWNIKA]!).
-                            - "assistant_reply": (string) Krótka, naturalna i przyjazna odpowiedź w czacie. Wyjaśnij użytkownikowi, że wygenerowałeś obszerny raport (i wskaż decyzję). Poinformuj, że jest to wersja robocza i użytkownik może poprosić o poprawki, zignorowanie ryzyk lub zmianę decyzji w kolejnej wiadomości.
+                            Wygeneruj profesjonalny i zwięzły raport w formacie JSON zachowując te klucze:
+                            - "summary": (string) Krótkie podsumowanie menedżerskie (max 3-4 zdania). Kontekst, ogólny stan i główny wniosek.
+                            - "test_analysis": (array) Lista obiektów JSON: "test_name", "value", "filename". Uwzględnij wszystkie wiersze z [ZPARSOWANE WYNIKI TESTÓW].
+                            - "chart_data": (object) Obiekt z tablicami: "tests" (component, status: "Passed"/"Failed"/"Skipped"/"Blocked") oraz "bugs" (severity: "Krytyczny"/"Wysoki"/"Średni"/"Niski", component).
+                            - "test_analysis_summary": (string) Zwięzła analiza wyników (max 4-5 zdań). Interpretacja danych, wzorce błędów, ewentualne odchylenia (np. słabsze systemy).
+                            - "risks_eval": (string) Ocena ryzyk. Krótko i na temat: czy coś zagraża wdrożeniu i jakie jest stanowisko użytkownika.
+                            - "decision": (string) "GO" lub "NO-GO",
+                            - "justification": (string) Jednoznaczne, 2-3 zdaniowe uzasadnienie decyzji oparte na twardych danych testowych.
+                            - "assistant_reply": (string) Krótka, naturalna odpowiedź w czacie informująca o wygenerowaniu draftu i możliwości naniesienia poprawek.
 
                             [GLOBALNE ZASADY BIZNESOWE (RAG)]
                             {rag_context}
@@ -510,8 +521,8 @@ class ReportGenerator:
         raw_response = self.llm.generate_response(
             system_prompt,
             user_prompt,
-            temperature=0.5,
-            max_tokens=8000,
+            temperature=0.2,
+            max_tokens=10000,
             force_json=True,
         )
 
