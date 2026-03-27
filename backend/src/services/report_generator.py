@@ -159,8 +159,9 @@ class ReportGenerator:
             user_prompt = f"""
                             Wygeneruj strukturę raportu w formacie JSON zachowując te klucze:
                             - "summary": (string) krótkie podsumowanie techniczne,
-                            - "test_analysis": (string) wnioski z testów,
-                            - "risks_eval": (string) analiza ryzyk (zaznacz tu, czy użytkownik zaakceptował usterki),
+                            - "test_analysis": (array) lista wyników testów jako obiekty JSON. Każdy obiekt MUSI zawierać dokładnie te klucze: "test_name" (nazwa testu), "value" (wynik/wartość np. PASS/FAIL/liczba), "filename" (nazwa pliku źródłowego z którego pochodzi). Przejdź przez WSZYSTKIE wiersze z [ZPARSOWANE WYNIKI TESTÓW] i wypisz każdy test osobno. Nie grupuj, nie pomijaj.
+                            - "test_analysis_summary": (string) krótkie podsumowanie całej analizy testów (2-4 zdania) — ile testów przeszło, ile nie, jakie są główne wnioski.
+                            - - "risks_eval": (array) lista WYŁĄCZNIE ryzykownych testów z test_analysis. Każdy obiekt MUSI zawierać: "test_name" (nazwa testu), "filename" (plik źródłowy), "value" (wynik testu), "reason" (dlaczego jest ryzykowny — jeśli ryzyko wynika z wiadomości użytkownika z [UWAGI UŻYTKOWNIKA] napisz "z chatu: [cytat z wiadomości]", jeśli z danych w pliku napisz "na bazie [nazwa pliku]: [cytat/opis]"). Jeśli żaden test nie jest ryzykowny, zwróć pustą tablicę [].
                             - "decision": (string) dokładnie "GO" lub "NO-GO",
                             - "justification": (string) ostateczne uzasadnienie (uwzględnij autorytet użytkownika!).
                             - "assistant_reply": (string) krótka, merytoryczna odpowiedź do użytkownika na czacie, podsumowująca co dokładnie zmieniłeś w raporcie (np. "Zaakceptowałem ryzyko związane z wydajnością i zmieniłem status na GO.").
@@ -197,8 +198,9 @@ class ReportGenerator:
             user_prompt = f"""
                             Generate the report structure in JSON format using exactly these keys:
                             - "summary": brief technical summary,
-                            - "test_analysis": conclusions from tests,
-                            - "risks_eval": risk evaluation (highlight if the user accepted the flaws),
+                            - "test_analysis": (array) list of test results as JSON objects. Each object MUST contain exactly these keys: "test_name" (name of the test), "value" (result/value e.g. PASS/FAIL/number), "filename" (source filename it was taken from). Go through ALL rows from [PARSED TEST RESULTS] and list each test separately. Do not group or skip any.
+                            - "test_analysis_summary": (string) short summary of the full test analysis (2-4 sentences) — how many passed, how many failed, key takeaways.
+                            - "risks_eval": (array) list of ONLY the risky tests from test_analysis. Each object MUST contain: "test_name" (test name), "filename" (source file), "value" (test result), "reason" (why it is risky — if the risk comes from the user's message in [USER INPUT] write "from chat: [quote from message]", if from file data write "based on [filename]: [quote/description]"). If no tests are risky, return an empty array [].
                             - "decision": exactly "GO" or "NO-GO",
                             - "justification": final rationale (must respect the User's overriding authority),
                             - "assistant_reply": (string) brief, substantive reply to the user in the chat, summarizing exactly what you changed in the report (e.g., "I accepted the performance-related risk and changed the status to GO.").
@@ -239,8 +241,9 @@ class ReportGenerator:
             )
             return {
                 "summary": fallback_summary,
-                "test_analysis": "",
-                "risks_eval": "",
+                "test_analysis": [],
+                "test_analysis_summary": "",
+                "risks_eval": [],
                 "decision": "NO-GO",
                 "justification": fallback_justification,
             }
@@ -624,6 +627,7 @@ class ReportGenerator:
         result = {
             "summary": "",
             "test_analysis": "",
+            "test_analysis_summary": "",
             "risks_eval": "",
             "decision": "",
             "justification": "",
@@ -635,6 +639,8 @@ class ReportGenerator:
             "analiza testow": "test_analysis",
             "analiza testów": "test_analysis",
             "test analysis": "test_analysis",
+            "podsumowanie analizy": "test_analysis_summary",
+            "test analysis summary": "test_analysis_summary",
             "ocena ryzyk": "risks_eval",
             "risk evaluation": "risks_eval",
             "decyzja": "decision",

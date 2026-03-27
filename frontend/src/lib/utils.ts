@@ -66,12 +66,46 @@ export function draftToHtml(
   const sections = [
     { heading: isPl ? "Podsumowanie" : "Summary", content: draft.summary },
     {
-      heading: isPl ? "Analiza testów" : "Test Analysis",
-      content: draft.test_analysis,
+      heading: isPl ? "Analiza Testów" : "Test Analysis",
+      content: (() => {
+        const rows = Array.isArray(draft.test_analysis) ? draft.test_analysis : [];
+        const table = rows.length > 0
+          ? `<table style="width:100%;border-collapse:collapse;font-size:0.9em;margin-bottom:12px">
+              <thead>
+                <tr>
+                  <th style="text-align:left;padding:6px 10px;border-bottom:2px solid #e2e8f0">${isPl ? "Nazwa testu" : "Test name"}</th>
+                  <th style="text-align:left;padding:6px 10px;border-bottom:2px solid #e2e8f0">${isPl ? "Wynik" : "Value"}</th>
+                  <th style="text-align:left;padding:6px 10px;border-bottom:2px solid #e2e8f0">${isPl ? "Plik" : "File"}</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${rows.map(r => `<tr>
+                  <td style="padding:5px 10px;border-bottom:1px solid #f1f5f9">${r.test_name}</td>
+                  <td style="padding:5px 10px;border-bottom:1px solid #f1f5f9">${r.value}</td>
+                  <td style="padding:5px 10px;border-bottom:1px solid #f1f5f9;color:#64748b;font-size:0.85em">${r.filename}</td>
+                </tr>`).join("")}
+              </tbody>
+            </table>`
+          : "";
+        const summary = draft.test_analysis_summary
+          ? `<p style="margin-top:8px;color:#475569;font-style:italic">${draft.test_analysis_summary}</p>`
+          : "";
+        return table + summary;
+      })(),
     },
     {
-      heading: isPl ? "Ocena ryzyk" : "Risk Evaluation",
-      content: draft.risks_eval,
+      heading: isPl ? "Ocena Ryzyk" : "Risk Evaluation",
+      content: (() => {
+        const rows = Array.isArray(draft.risks_eval) ? draft.risks_eval : [];
+        if (rows.length === 0)
+          return `<p style="color:#64748b;font-style:italic">${isPl ? "Brak zidentyfikowanych ryzyk." : "No risks identified."}</p>`;
+        return rows.map(r => `
+          <div style="border-left:3px solid #ef4444;padding:8px 12px;margin-bottom:10px;background:#fef2f2;border-radius:0 6px 6px 0">
+            <div style="font-weight:500;color:#1e293b">— ${r.test_name}</div>
+            <div style="font-size:0.85em;color:#64748b;margin-top:2px">${isPl ? "Plik" : "File"}: ${r.filename} &nbsp;|&nbsp; ${isPl ? "Wynik" : "Value"}: <strong>${r.value}</strong></div>
+            <div style="font-size:0.9em;color:#475569;margin-top:4px;font-style:italic">${r.reason}</div>
+          </div>`).join("");
+      })(),
     },
     {
       heading: isPl ? "Decyzja" : "Decision",
