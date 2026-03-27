@@ -376,9 +376,6 @@ async def _handle_gonogo(
         rag_context = f"[GLOBALNE WYTYCZNE PROJEKTU]\n{project_instructions}\n\n[DOKUMENTY RAG]\n{rag_context}"
 
     historical_cache = storage.get_latest_history(chat_id=chat_id)
-    chart_paths = chart_generator.generate_all_charts(
-        file_contents=contents, project_name=chat_id, lang=language
-    )
     user_risks = message if message else "Brak dodatkowych uwag."
 
     draft_json = await asyncio.to_thread(
@@ -389,6 +386,12 @@ async def _handle_gonogo(
         user_risks=user_risks,
         project_name=chat_id,
         lang=language,
+    )
+
+    chart_paths = chart_generator.generate_all_charts(
+        chart_data=draft_json.get("chart_data", {}),
+        project_name=chat_id,
+        lang=language
     )
 
     fallback_msg = "Zaktualizowałem raport." if language == "pl" else "Report updated."
@@ -865,7 +868,7 @@ def export_report(req: ExportRequest, user: dict = Depends(get_current_user)):
 
         if fmt == "pdf":
             filepath = report_generator.export_to_pdf(
-                final_text=req.edited_text,
+                final_text_html=req.edited_text,
                 charts_paths=req.chart_paths,
                 custom_name=req.project_name,
                 author=req.author,
@@ -873,7 +876,7 @@ def export_report(req: ExportRequest, user: dict = Depends(get_current_user)):
             )
         elif fmt == "docx":
             filepath = report_generator.export_to_docx(
-                final_text=req.edited_text,
+                final_text_html=req.edited_text,
                 charts_paths=req.chart_paths,
                 custom_name=req.project_name,
                 author=req.author,
@@ -881,7 +884,7 @@ def export_report(req: ExportRequest, user: dict = Depends(get_current_user)):
             )
         elif fmt == "md":
             filepath = report_generator.export_to_md(
-                final_text=req.edited_text,
+                final_text_html=req.edited_text,
                 charts_paths=req.chart_paths,
                 custom_name=req.project_name,
                 author=req.author,
