@@ -45,7 +45,7 @@ export interface StructuredDraft {
   summary: string;
   test_analysis: { test_name: string; value: string; filename: string }[];
   test_analysis_summary: string;
-  risks_eval: { test_name: string; filename: string; value: string; reason: string }[];
+  risks_eval: { test_name: string; filename: string; value: string; reason: string; severity: "high" | "medium" | "low" }[];
   decision: string;
   justification: string;
 }
