@@ -4,7 +4,7 @@
 
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
-import type { StructuredDraft } from '../types';
+import type { StructuredDraft } from "../types";
 
 /** Merges Tailwind CSS class names with clsx for conditional logic. */
 export function cn(...inputs: ClassValue[]) {
@@ -58,65 +58,42 @@ export function draftToHtml(draft: StructuredDraft, isPl: boolean) {
   const sections = [
     { heading: isPl ? "Podsumowanie" : "Summary", content: draft.summary },
     {
-      heading: isPl ? "Analiza testów" : "Test analysis",
+      heading: isPl ? "Analiza testów" : "Test Analysis",
       content: (() => {
-        const rows = Array.isArray(draft.test_analysis) ? draft.test_analysis : [];
-        const table = rows.length > 0
-          ? `<table style="width:100%;border-collapse:collapse;font-size:0.9em;margin-bottom:12px">
-              <thead>
-                <tr>
-                  <th style="text-align:left;padding:6px 10px;border-bottom:2px solid #e2e8f0">${isPl ? "Nazwa testu" : "Test name"}</th>
-                  <th style="text-align:left;padding:6px 10px;border-bottom:2px solid #e2e8f0">${isPl ? "Wynik" : "Value"}</th>
-                  <th style="text-align:left;padding:6px 10px;border-bottom:2px solid #e2e8f0">${isPl ? "Plik" : "File"}</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${rows.map(r => `<tr>
-                  <td style="padding:5px 10px;border-bottom:1px solid #f1f5f9">${r.test_name}</td>
-                  <td style="padding:5px 10px;border-bottom:1px solid #f1f5f9">${r.value}</td>
-                  <td style="padding:5px 10px;border-bottom:1px solid #f1f5f9;color:#64748b;font-size:0.85em">${r.filename}</td>
-                </tr>`).join("")}
-              </tbody>
-            </table>`
-          : "";
-        const summary = draft.test_analysis_summary
-          ? `<p style="margin-top:8px;color:#475569;font-style:italic">${draft.test_analysis_summary}</p>`
-          : "";
-        return table + summary;
+        const rows = Array.isArray(draft.test_analysis)
+          ? draft.test_analysis
+          : [];
+        if (rows.length === 0)
+          return `<p>${isPl ? "Brak testów." : "No tests."}</p>`;
+
+        let html = `<table border="1" style="width:100%; border-collapse:collapse; margin-bottom:1em; font-size:0.9em;">`;
+        html += `<tr style="background:#f1f5f9;"><th style="padding:6px; text-align:left;">${isPl ? "Nazwa testu" : "Test Name"}</th><th style="padding:6px; text-align:left;">Wynik</th><th style="padding:6px; text-align:left;">Plik</th></tr>`;
+        rows.forEach((r) => {
+          html += `<tr><td style="padding:6px;">${r.test_name || ""}</td><td style="padding:6px;"><b>${r.value || ""}</b></td><td style="padding:6px;">${r.filename || ""}</td></tr>`;
+        });
+        html += `</table>`;
+        return html;
       })(),
     },
     {
-      heading: isPl ? "Ocena ryzyk" : "Risk evaluation",
+      heading: isPl ? "Ocena ryzyk" : "Risk Evaluation",
       content: (() => {
         const rows = Array.isArray(draft.risks_eval) ? draft.risks_eval : [];
         if (rows.length === 0)
-          return `<p style="color:#64748b;font-style:italic">${isPl ? "Brak zidentyfikowanych ryzyk." : "No risks identified."}</p>`;
-        return `<table style="width:100%;border-collapse:collapse;font-size:0.9em">
-          <thead>
-            <tr>
-              <th style="text-align:left;padding:6px 10px;border-bottom:2px solid #e2e8f0;color:#dc2626">${isPl ? "Nazwa testu" : "Test name"}</th>
-              <th style="text-align:left;padding:6px 10px;border-bottom:2px solid #e2e8f0;color:#dc2626">${isPl ? "Plik" : "File"}</th>
-              <th style="text-align:left;padding:6px 10px;border-bottom:2px solid #e2e8f0;color:#dc2626">${isPl ? "Wynik" : "Value"}</th>
-              <th style="text-align:left;padding:6px 10px;border-bottom:2px solid #e2e8f0;color:#dc2626">${isPl ? "Powód" : "Reason"}</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${rows.map(r => {
-              const color = r.severity === "high" ? "#dc2626" : r.severity === "medium" ? "#ea580c" : "#ca8a04";
-              return `<tr>
-                <td style="padding:5px 10px;border-bottom:1px solid #f1f5f9;color:${color};font-weight:500">${r.test_name}</td>
-                <td style="padding:5px 10px;border-bottom:1px solid #f1f5f9;color:${color};font-size:0.85em">${r.filename}</td>
-                <td style="padding:5px 10px;border-bottom:1px solid #f1f5f9;color:${color}"><strong>${r.value}</strong></td>
-                <td style="padding:5px 10px;border-bottom:1px solid #f1f5f9;color:${color};font-style:italic">${r.reason}</td>
-              </tr>`;
-            }).join("")}
-          </tbody>
-        </table>`;
+          return `<p style="color:#64748b; font-style:italic;">${isPl ? "Brak zidentyfikowanych ryzyk." : "No risks identified."}</p>`;
+
+        let html = `<table border="1" style="width:100%; border-collapse:collapse; margin-bottom:1em; font-size:0.9em;">`;
+        html += `<tr style="background:#f1f5f9;"><th style="padding:6px; text-align:left;">Test</th><th style="padding:6px; text-align:left;">Poziom</th><th style="padding:6px; text-align:left;">Powód</th></tr>`;
+        rows.forEach((r) => {
+          html += `<tr><td style="padding:6px;">${r.test_name || ""}</td><td style="padding:6px;"><b>${r.severity || ""}</b></td><td style="padding:6px;">${r.reason || ""}</td></tr>`;
+        });
+        html += `</table>`;
+        return html;
       })(),
     },
     {
       heading: isPl ? "Decyzja" : "Decision",
-      content: `<p><strong style="font-size:1.3em;color:${draft.decision === "GO" ? "#10b981" : "#ef4444"}">${draft.decision}</strong></p>`,
+      content: `<p style="font-size:1.5em"><strong style="color:${draft.decision === "GO" ? "#10b981" : "#ef4444"}">${draft.decision}</strong></p>`,
     },
     {
       heading: isPl ? "Uzasadnienie" : "Justification",
@@ -133,6 +110,24 @@ export function draftToHtml(draft: StructuredDraft, isPl: boolean) {
 /** Converts basic HTML to Markdown for export. */
 export function htmlToMarkdown(html: string): string {
   let md = html;
+
+  md = md.replace(/<table[^>]*>([\s\S]*?)<\/table>/gi, (match) => {
+    let markdownTable = "\n\n";
+    const rows = match.match(/<tr[^>]*>([\s\S]*?)<\/tr>/gi) || [];
+    
+    rows.forEach((row, index) => {
+      const cells = row.match(/<t[dh][^>]*>([\s\S]*?)<\/t[dh]>/gi) || [];
+      
+      const rowText = "| " + cells.map(c => c.replace(/<[^>]+>/g, "").trim()).join(" | ") + " |\n";
+      markdownTable += rowText;
+      
+      if (index === 0) {
+        markdownTable += "| " + cells.map(() => "---").join(" | ") + " |\n";
+      }
+    });
+    return markdownTable + "\n";
+  });
+
   md = md.replace(/<h1>(.*?)<\/h1>/gi, "# $1\n\n");
   md = md.replace(/<h2>(.*?)<\/h2>/gi, "## $1\n\n");
   md = md.replace(/<h3>(.*?)<\/h3>/gi, "### $1\n\n");
