@@ -155,7 +155,7 @@ class ReportGenerator:
                 "W takiej sytuacji w polu 'justification' wyjaśnij, że mimo błędów technicznych, ryzyko zostało zaakceptowane biznesowo ORAZ WYMIEŃ KONKRETNIE WSZYSTKIE BŁĘDY/RYZYKA (np. problemy z wydajnością, błędy konkretnych komponentów), które użytkownik zdecydował się zignorować/zaakceptować.\n"
                 "Zwróć odpowiedź WYŁĄCZNIE jako surowy, poprawny obiekt JSON. Nie używaj znaczników ```json ani Markdown."
             )
-            
+
             user_prompt = f"""
                             Wygeneruj strukturę raportu w formacie JSON zachowując te klucze:
                             - "summary": (string) krótkie podsumowanie techniczne,
@@ -194,7 +194,7 @@ class ReportGenerator:
                 "In such cases, use the 'justification' field to state that despite technical failures, the risks were business-accepted by the User AND EXPLICITLY LIST ALL SPECIFIC BUGS/RISKS (e.g., performance issues, specific component failures) that the User decided to ignore/accept.\n"
                 "Return the response STRICTLY as a valid JSON object. Do not use ```json or Markdown wrappers."
             )
-            
+
             user_prompt = f"""
                             Generate the report structure in JSON format using exactly these keys:
                             - "summary": brief technical summary,
@@ -357,10 +357,61 @@ class ReportGenerator:
                     pdf.ln(6)
                     continue
 
-                pdf.set_x(10)
                 pdf.set_font(pdf.default_font, "", 10.5)
-                pdf.set_text_color(51, 65, 85)
-                pdf.multi_cell(190, 6.5, body.strip())
+                for line in body.strip().split("\n"):
+                    line = line.strip()
+                    if not line:
+                        pdf.ln(2)
+                        continue
+
+                    # Obsługa tabel Markdown
+                    if line.startswith("|") and line.endswith("|"):
+                        if "---" in line:  # Pomijamy wiersz oddzielający nagłówki
+                            continue
+
+                        cells = [c.strip() for c in line.strip("|").split("|")]
+                        if not cells:
+                            continue
+
+                        col_width = 190 / len(cells)
+                        pdf.set_x(10)
+
+                        for cell in cells:
+                            cell_clean = cell.replace("**", "").replace("*", "")
+
+                            # Nakładanie kolorów dla statusów
+                            if cell_clean in ["GO", "PASS", "Low", "Niskie", "low"]:
+                                pdf.set_text_color(34, 197, 94)  # Zielony
+                            elif cell_clean in [
+                                "NO-GO",
+                                "FAIL",
+                                "High",
+                                "Wysokie",
+                                "high",
+                            ]:
+                                pdf.set_text_color(239, 68, 68)  # Czerwony
+                            elif cell_clean in ["WARN", "Medium", "Średnie", "medium"]:
+                                pdf.set_text_color(245, 158, 11)  # Pomarańczowy
+                            else:
+                                pdf.set_text_color(51, 65, 85)  # Standardowy szary
+
+                            pdf.cell(col_width, 8, cell_clean, border=1)
+
+                        pdf.ln(8)
+                        pdf.set_text_color(51, 65, 85)  # Reset koloru po wierszu
+
+                    # Obsługa list punktowanych
+                    elif line.startswith("- "):
+                        pdf.set_x(15)
+                        pdf.set_text_color(51, 65, 85)
+                        pdf.multi_cell(185, 6, "• " + line[2:].replace("**", ""))
+
+                    # Zwykły tekst
+                    else:
+                        pdf.set_x(10)
+                        pdf.set_text_color(51, 65, 85)
+                        pdf.multi_cell(190, 6, line.replace("**", ""))
+
                 pdf.ln(5)
 
             # Charts attachments
@@ -501,7 +552,69 @@ class ReportGenerator:
                         RGBColor(76, 175, 80) if is_go else RGBColor(244, 67, 54)
                     )
                 else:
-                    doc.add_paragraph(body.strip())
+                    current_table = None
+                    for line in body.strip().split("\n"):
+                        line = line.strip()
+                        if not line:
+                            current_table = None  # Pusta linia przerywa tabelę
+                            continue
+
+                        # Obsługa tabel Markdown
+                        if line.startswith("|") and line.endswith("|"):
+                            if "---" in line:
+                                continue  # Pomijamy separator
+
+                            cells = [c.strip() for c in line.strip("|").split("|")]
+
+                            if current_table is None:
+                                current_table = doc.add_table(rows=1, cols=len(cells))
+                                current_table.style = "Table Grid"
+                                row_cells = current_table.rows[0].cells
+                            else:
+                                row_cells = current_table.add_row().cells
+
+                            for i, cell in enumerate(cells):
+                                if i < len(row_cells):
+                                    cell_clean = cell.replace("**", "").replace("*", "")
+                                    p = row_cells[i].paragraphs[0]
+                                    run = p.add_run(cell_clean)
+
+                                    # Nakładanie kolorów DOCX
+                                    if cell_clean in [
+                                        "GO",
+                                        "PASS",
+                                        "Low",
+                                        "Niskie",
+                                        "low",
+                                    ]:
+                                        run.font.color.rgb = RGBColor(34, 197, 94)
+                                    elif cell_clean in [
+                                        "NO-GO",
+                                        "FAIL",
+                                        "High",
+                                        "Wysokie",
+                                        "high",
+                                    ]:
+                                        run.font.color.rgb = RGBColor(239, 68, 68)
+                                    elif cell_clean in [
+                                        "WARN",
+                                        "Medium",
+                                        "Średnie",
+                                        "medium",
+                                    ]:
+                                        run.font.color.rgb = RGBColor(245, 158, 11)
+
+                        # Obsługa list punktowanych
+                        elif line.startswith("- "):
+                            current_table = None
+                            doc.add_paragraph(
+                                line[2:].replace("**", ""), style="List Bullet"
+                            )
+
+                        # Zwykły tekst
+                        else:
+                            current_table = None
+                            doc.add_paragraph(line.replace("**", ""))
 
             # Charts
             valid_charts = [c for c in charts_paths if os.path.exists(c)]

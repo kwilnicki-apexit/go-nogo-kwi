@@ -116,11 +116,11 @@ export function draftToHtml(draft: StructuredDraft, isPl: boolean) {
     },
     {
       heading: isPl ? "Decyzja" : "Decision",
-      content: `<strong style="font-size:1.3em;color:${draft.decision === "GO" ? "#10b981" : "#ef4444"}">${draft.decision}</strong>`,
+      content: `<p><strong style="font-size:1.3em;color:${draft.decision === "GO" ? "#10b981" : "#ef4444"}">${draft.decision}</strong></p>`,
     },
     {
       heading: isPl ? "Uzasadnienie" : "Justification",
-      content: draft.justification,
+      content: `<p>${draft.justification}</p>`,
     },
   ];
 
@@ -133,19 +133,29 @@ export function draftToHtml(draft: StructuredDraft, isPl: boolean) {
 /** Converts basic HTML to Markdown for export. */
 export function htmlToMarkdown(html: string): string {
   let md = html;
-  md = md.replace(/<h1[^>]*>(.*?)<\/h1>/gi, "# $1\n");
-  md = md.replace(/<h2[^>]*>(.*?)<\/h2>/gi, "## $1\n");
-  md = md.replace(/<h3[^>]*>(.*?)<\/h3>/gi, "### $1\n");
-  md = md.replace(/<strong[^>]*>(.*?)<\/strong>/gi, "**$1**");
-  md = md.replace(/<em[^>]*>(.*?)<\/em>/gi, "*$1*");
-  md = md.replace(/<br\s*\/?>/gi, "\n");
-  md = md.replace(/<\/p>\s*<p>/gi, "\n\n");
-  md = md.replace(/<li[^>]*>(.*?)<\/li>/gi, "- $1\n");
+  md = md.replace(/<h1>(.*?)<\/h1>/gi, "# $1\n\n");
+  md = md.replace(/<h2>(.*?)<\/h2>/gi, "## $1\n\n");
+  md = md.replace(/<h3>(.*?)<\/h3>/gi, "### $1\n\n");
+  md = md.replace(/<strong>(.*?)<\/strong>/gi, "**$1**");
+  md = md.replace(/<b>(.*?)<\/b>/gi, "**$1**");
+  md = md.replace(/<em>(.*?)<\/em>/gi, "*$1*");
+  md = md.replace(/<i>(.*?)<\/i>/gi, "*$1*");
+  md = md.replace(/<ul>/gi, "\n");
+  md = md.replace(/<\/ul>/gi, "\n\n");
+  md = md.replace(/<li>(.*?)<\/li>/gi, "- $1\n");
+  md = md.replace(/<p>/gi, "");
+  md = md.replace(/<\/p>/gi, "\n\n");
+  md = md.replace(/<br\s*[/]?>/gi, "\n");
+
+  md = md.replace(/<table[^>]*>/gi, "\n\n");
+  md = md.replace(/<\/table>/gi, "\n\n");
+  md = md.replace(/<tr[^>]*>/gi, "| ");
+  md = md.replace(/<\/tr>/gi, " |\n");
+  md = md.replace(/<th[^>]*>(.*?)<\/th>/gi, "$1 | ");
+  md = md.replace(/<td[^>]*>(.*?)<\/td>/gi, "$1 | ");
+
   md = md.replace(/<[^>]+>/g, "");
-  md = md.replace(/&nbsp;/g, " ");
-  md = md.replace(/&amp;/g, "&");
-  md = md.replace(/&lt;/g, "<");
-  md = md.replace(/&gt;/g, ">");
-  md = md.replace(/\n{3,}/g, "\n\n");
+  md = md.replace(/&nbsp;/gi, " ");
+
   return md.trim();
 }
