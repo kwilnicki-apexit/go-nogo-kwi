@@ -11,8 +11,9 @@ python-multipart
 requests
 pandas
 matplotlib
+unicodedata
+re
 asyncio
-unicodedata2
 
 # for data validation and settings management
 pydantic
@@ -24,9 +25,6 @@ pdfplumber
 fpdf2
 python-docx
 tabulate
-weasyprint 
-markdownify 
-htmldocx
 
 # for vector database and embeddings
 chromadb

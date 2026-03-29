@@ -18,6 +18,8 @@ import { api } from "./api/client";
 import {
   generateId,
   draftToHtml,
+  htmlToMarkdown,
+  stripHtml,
 } from "./lib/utils";
 import type { Project, Chat, ChatMessage, AppMode } from "./types";
 import { CheckCircle, Download, FileText, User, X, Lock } from "lucide-react";
@@ -479,7 +481,10 @@ function App() {
       if (!activeChat) return;
       setExportMessage(labels.generatingFile);
       try {
-        const text = canvasContent;
+        const text =
+          format === "md"
+            ? htmlToMarkdown(canvasContent)
+            : stripHtml(canvasContent);
 
         await api.exportReport({
           project_name: activeChat.id,

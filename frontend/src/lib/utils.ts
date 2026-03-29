@@ -4,7 +4,6 @@
 
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
-import type { StructuredDraft } from "../types";
 
 /** Merges Tailwind CSS class names with clsx for conditional logic. */
 export function cn(...inputs: ClassValue[]) {
@@ -54,18 +53,24 @@ export function stripHtml(html: string): string {
 }
 
 /** Converts a structured draft object into HTML for the Quill editor. */
-export function draftToHtml(draft: StructuredDraft, isPl: boolean): string {
+export function draftToHtml(
+  draft: {
+    summary: string;
+    test_analysis: string;
+    risks_eval: string;
+    decision: string;
+    justification: string;
+  },
+  isPl: boolean,
+): string {
   const sections = [
-    { heading: isPl ? "Podsumowanie" : "Summary", content: draft.summary ? draft.summary.replace(/\n/g, '<br/>') : "" },
+    { heading: isPl ? "Podsumowanie" : "Summary", content: draft.summary },
     {
       heading: isPl ? "Analiza Testów" : "Test Analysis",
       content: (() => {
-        const rows = Array.isArray(draft.test_analysis)
-          ? draft.test_analysis
-          : [];
-        const table =
-          rows.length > 0
-            ? `<table style="width:100%;border-collapse:collapse;font-size:0.9em;margin-bottom:12px">
+        const rows = Array.isArray(draft.test_analysis) ? draft.test_analysis : [];
+        const table = rows.length > 0
+          ? `<table style="width:100%;border-collapse:collapse;font-size:0.9em;margin-bottom:12px">
               <thead>
                 <tr>
                   <th style="text-align:left;padding:6px 10px;border-bottom:2px solid #e2e8f0">${isPl ? "Nazwa testu" : "Test name"}</th>
@@ -74,23 +79,17 @@ export function draftToHtml(draft: StructuredDraft, isPl: boolean): string {
                 </tr>
               </thead>
               <tbody>
-                ${rows
-                  .map(
-                    (r) => `<tr>
-                  <td style="padding:5px 10px;border-bottom:1px solid #f1f5f9">${r.test_name || ""}</td>
-                  <td style="padding:5px 10px;border-bottom:1px solid #f1f5f9;font-weight:600">${r.value || ""}</td>
-                  <td style="padding:5px 10px;border-bottom:1px solid #f1f5f9;color:#64748b;font-size:0.85em">${r.filename || ""}</td>
-                </tr>`,
-                  )
-                  .join("")}
+                ${rows.map(r => `<tr>
+                  <td style="padding:5px 10px;border-bottom:1px solid #f1f5f9">${r.test_name}</td>
+                  <td style="padding:5px 10px;border-bottom:1px solid #f1f5f9">${r.value}</td>
+                  <td style="padding:5px 10px;border-bottom:1px solid #f1f5f9;color:#64748b;font-size:0.85em">${r.filename}</td>
+                </tr>`).join("")}
               </tbody>
             </table>`
-            : "";
-
+          : "";
         const summary = draft.test_analysis_summary
           ? `<p style="margin-top:8px;color:#475569;font-style:italic">${draft.test_analysis_summary}</p>`
           : "";
-
         return table + summary;
       })(),
     },
