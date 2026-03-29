@@ -66,12 +66,18 @@ export function draftToHtml(draft: StructuredDraft, isPl: boolean) {
         if (rows.length === 0)
           return `<p>${isPl ? "Brak testów." : "No tests."}</p>`;
 
-        let html = `<table border="1" style="width:100%; border-collapse:collapse; margin-bottom:1em; font-size:0.9em;">`;
-        html += `<tr style="background:#f1f5f9;"><th style="padding:6px; text-align:left;">${isPl ? "Nazwa testu" : "Test Name"}</th><th style="padding:6px; text-align:left;">Wynik</th><th style="padding:6px; text-align:left;">Plik</th></tr>`;
+        let html = `<p style="font-family: monospace; white-space: pre-wrap;">`;
+        html += `| ${isPl ? "Nazwa testu" : "Test Name"} | ${isPl ? "Wynik" : "Result"} | ${isPl ? "Plik" : "File"} |<br>`;
+        html += `|---|---|---|<br>`;
+
         rows.forEach((r) => {
-          html += `<tr><td style="padding:6px;">${r.test_name || ""}</td><td style="padding:6px;"><b>${r.value || ""}</b></td><td style="padding:6px;">${r.filename || ""}</td></tr>`;
+          const testName = (r.test_name || "-").replace(/\|/g, "");
+          const value = (r.value || "-").replace(/\|/g, "");
+          const filename = (r.filename || "-").replace(/\|/g, "");
+          html += `| ${testName} | **${value}** | ${filename} |<br>`;
         });
-        html += `</table>`;
+
+        html += `</p>`;
         return html;
       })(),
     },
@@ -82,12 +88,19 @@ export function draftToHtml(draft: StructuredDraft, isPl: boolean) {
         if (rows.length === 0)
           return `<p style="color:#64748b; font-style:italic;">${isPl ? "Brak zidentyfikowanych ryzyk." : "No risks identified."}</p>`;
 
-        let html = `<table border="1" style="width:100%; border-collapse:collapse; margin-bottom:1em; font-size:0.9em;">`;
-        html += `<tr style="background:#f1f5f9;"><th style="padding:6px; text-align:left;">Test</th><th style="padding:6px; text-align:left;">Poziom</th><th style="padding:6px; text-align:left;">Powód</th></tr>`;
+        // Budujemy tabelę ryzyk
+        let html = `<p style="font-family: monospace; white-space: pre-wrap;">`;
+        html += `| ${isPl ? "Test" : "Test"} | ${isPl ? "Poziom" : "Severity"} | ${isPl ? "Powód" : "Reason"} |<br>`;
+        html += `|---|---|---|<br>`;
+
         rows.forEach((r) => {
-          html += `<tr><td style="padding:6px;">${r.test_name || ""}</td><td style="padding:6px;"><b>${r.severity || ""}</b></td><td style="padding:6px;">${r.reason || ""}</td></tr>`;
+          const testName = (r.test_name || "-").replace(/\|/g, "");
+          const severity = (r.severity || "-").replace(/\|/g, "");
+          const reason = (r.reason || "-").replace(/\|/g, "");
+          html += `| ${testName} | **${severity}** | ${reason} |<br>`;
         });
-        html += `</table>`;
+
+        html += `</p>`;
         return html;
       })(),
     },
@@ -114,13 +127,16 @@ export function htmlToMarkdown(html: string): string {
   md = md.replace(/<table[^>]*>([\s\S]*?)<\/table>/gi, (match) => {
     let markdownTable = "\n\n";
     const rows = match.match(/<tr[^>]*>([\s\S]*?)<\/tr>/gi) || [];
-    
+
     rows.forEach((row, index) => {
       const cells = row.match(/<t[dh][^>]*>([\s\S]*?)<\/t[dh]>/gi) || [];
-      
-      const rowText = "| " + cells.map(c => c.replace(/<[^>]+>/g, "").trim()).join(" | ") + " |\n";
+
+      const rowText =
+        "| " +
+        cells.map((c) => c.replace(/<[^>]+>/g, "").trim()).join(" | ") +
+        " |\n";
       markdownTable += rowText;
-      
+
       if (index === 0) {
         markdownTable += "| " + cells.map(() => "---").join(" | ") + " |\n";
       }
