@@ -311,7 +311,7 @@ class ReportGenerator:
 
             pdf.set_y(start_meta_y + 3.5)
             pdf.set_x(14)
-            pdf.set_font(pdf.default_font, "B", 10)
+            pdf.set_font(pdf.default_font, "B", 8)
             pdf.set_text_color(71, 85, 105)
 
             meta_text = (
@@ -465,7 +465,7 @@ class ReportGenerator:
                 f'{labels["author"]}: {author}  |  '
                 f'{labels["date"]}: {timestamp_display}'
             )
-            meta_run.font.size = Pt(10)
+            meta_run.font.size = Pt(8)
             meta_run.font.color.rgb = RGBColor(255, 255, 255)
 
             doc.add_paragraph("")

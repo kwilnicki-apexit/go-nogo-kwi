@@ -58,7 +58,7 @@ export function draftToHtml(draft: StructuredDraft, isPl: boolean) {
   const sections = [
     { heading: isPl ? "Podsumowanie" : "Summary", content: draft.summary },
     {
-      heading: isPl ? "Analiza Testów" : "Test Analysis",
+      heading: isPl ? "Analiza testów" : "Test analysis",
       content: (() => {
         const rows = Array.isArray(draft.test_analysis) ? draft.test_analysis : [];
         const table = rows.length > 0
@@ -86,6 +86,7 @@ export function draftToHtml(draft: StructuredDraft, isPl: boolean) {
       })(),
     },
     {
+      heading: isPl ? "Ocena ryzyk" : "Risk evaluation",
       content: (() => {
         const rows = Array.isArray(draft.risks_eval) ? draft.risks_eval : [];
         if (rows.length === 0)

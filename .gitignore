@@ -83,3 +83,4 @@ output/reports/*
 !backend/output/reports/.gitkeep
 
 gonogo_test_suite/
+*.txt
