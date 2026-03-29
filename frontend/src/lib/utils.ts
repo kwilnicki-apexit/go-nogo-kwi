@@ -4,6 +4,7 @@
 
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
+import type { StructuredDraft } from '../types';
 
 /** Merges Tailwind CSS class names with clsx for conditional logic. */
 export function cn(...inputs: ClassValue[]) {
@@ -53,16 +54,7 @@ export function stripHtml(html: string): string {
 }
 
 /** Converts a structured draft object into HTML for the Quill editor. */
-export function draftToHtml(
-  draft: {
-    summary: string;
-    test_analysis: string;
-    risks_eval: string;
-    decision: string;
-    justification: string;
-  },
-  isPl: boolean,
-): string {
+export function draftToHtml(draft: StructuredDraft, isPl: boolean) {
   const sections = [
     { heading: isPl ? "Podsumowanie" : "Summary", content: draft.summary },
     {

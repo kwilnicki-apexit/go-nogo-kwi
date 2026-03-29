@@ -145,43 +145,6 @@ if __name__ == "__main__":
 
 
 ============================================================
---- PLIK: .\backend\requirements.txt ---
-============================================================
-
-# TODO: review nest asyncio usage and remove if not needed
-# added to fix RuntimeError in Jupyter when running async code (like LLM calls) 
-# in the same event loop
-nest-asyncio
-
-# backend dependencies
-fastapi
-uvicorn
-python-dotenv
-python-multipart
-requests
-pandas
-matplotlib
-unicodedata
-re
-
-# for data validation and settings management
-pydantic
-urllib3
-
-# for file parsing and report generation
-openpyxl
-pdfplumber
-fpdf2
-python-docx
-tabulate
-
-# for vector database and embeddings
-chromadb
-sentence-transformers
-langchain-text-splitters
-charset-normalizer
-
-============================================================
 --- PLIK: .\backend\main.py ---
 ============================================================
 
@@ -189,6 +152,7 @@ charset-normalizer
 # FILE: .\backend\main.py
 # ============================================================
 
+import asyncio
 import re
 
 from fastapi import FastAPI, HTTPException, Request, File, UploadFile, Depends
@@ -207,7 +171,7 @@ import json
 
 from src.integration.llm_client import LLMClient
 from src.integration.auth import get_current_user
-from src.services.rag import RAGEngine
+from src.services.rag import RAGEngine, get_embedder
 from src.services.file_parser import FileParser
 from src.services.storage import StorageManager
 from src.services.report_generator import ReportGenerator
@@ -282,6 +246,9 @@ app.add_middleware(
 
 # Service initialization
 try:
+    logger.info("Loading embedding model for RAG engine...")
+    get_embedder()
+
     llm = LLMClient()
     rag = RAGEngine()
     file_parser = FileParser()
@@ -350,9 +317,9 @@ TRANSLATOR_KEYWORDS = [
 
 
 async def detect_intent_llm(
-    message: str, current_mode: str, llm_client: LLMClient
+    message: str, current_mode: str, llm: LLMClient
 ) -> str:
-    """Hybrydowy detektor intencji."""
+    """Hybrid intent detection"""
     msg_lower = message.lower().strip()
     msg_no_diacritics = remove_diacritics(msg_lower)
 
@@ -381,13 +348,15 @@ async def detect_intent_llm(
     )
 
     try:
-        reply = llm_client.generate_response(
+        reply = await asyncio.to_thread(
+            llm.generate_response,
             system_prompt=router_sys_prompt,
             user_prompt=message,
             temperature=0.0,
             max_tokens=50,
             force_json=True,
         )
+
         mode_data = json.loads(reply)
         detected_mode = mode_data.get("mode", current_mode)
 
@@ -487,33 +456,24 @@ async def _handle_gonogo(
     chat_uploads_dir = storage.get_chat_uploads_dir(chat_id)
     contents = {}
 
-    if not files:
-        if os.path.exists(chat_uploads_dir):
-            for filename in os.listdir(chat_uploads_dir):
-                ext = os.path.splitext(filename)[1].lower()
-                if ext in GONOGO_ALLOWED_EXTENSIONS:
-                    file_path = os.path.join(chat_uploads_dir, filename)
-                    with open(file_path, "rb") as f:
-                        contents[filename] = f.read()
+    # RE-EVALUATION: no new files → load parsed_test_data from cache directly
+    cached = storage.get_latest_history(chat_id=chat_id)
+    cached_parsed = cached.get("parsed_test_data", "") if cached else ""
 
-        if not contents:
-            msg = (
-                "Aby wygenerować raport Go/No-Go, proszę załącz pliki (CSV/XLS)."
-                if language == "pl"
-                else "Please attach files."
-            )
-            return {"message": msg, "detected_mode": "gonogo"}
+    
 
-    else:
-        if len(files) > MAX_FILES:
+    # IF NEW FILES ARE UPLOADED - VALIDATE, SAVE, INGEST
+    valid_files = [f for f in files if getattr(f, "filename", "")]
+    parsed_parts = []
+    if valid_files:
+        if len(valid_files) > MAX_FILES:
             raise HTTPException(
-                status_code=400, detail=f"Zbyt wiele plików. Maks to {MAX_FILES}."
+                status_code=400, detail=f"Too many files. Maximal count is {MAX_FILES}."
             )
 
-        for file in files:
+        for file in valid_files:
             content = await file.read()
             try:
-                # VALIDATION
                 safe_name, content = validate_upload(
                     file.filename, content, GONOGO_ALLOWED_EXTENSIONS
                 )
@@ -535,17 +495,25 @@ async def _handle_gonogo(
                     {safe_name: content}
                 )
                 text_content = normalize_extracted_text(text_content)
+                parsed_parts.append(text_content)
                 rag.ingest_document(text_content, safe_name, entity_id=chat_id)
             except Exception as e:
                 logger.warning(f"Could not vectorize {safe_name}: {e}")
 
-    if not contents:
-        return {
-            "message": "Nie załączono prawidłowych plików.",
-            "detected_mode": "gonogo",
-        }
+    # Determine parsed_test_data: new upload → from parsed_parts, re-eval → from cache
+    if valid_files and parsed_parts:
+        parsed_test_data = "\n\n".join(parsed_parts)
+    elif cached_parsed:
+        parsed_test_data = cached_parsed
+    else:
+        msg = (
+            "Aby wygenerować raport Go/No-Go, proszę załącz pliki (CSV/XLS)."
+            if language == "pl"
+            else "Please attach files."
+        )
+        return {"message": msg, "detected_mode": "gonogo"}
 
-    parsed_test_data = file_parser.extract_test_data_from_bytes(contents)
+    parsed_test_data = "\n\n".join(parsed_parts)
 
     project_instructions = (
         storage.load_project_instructions(project_id) if project_id else ""
@@ -563,7 +531,8 @@ async def _handle_gonogo(
     )
     user_risks = message if message else "Brak dodatkowych uwag."
 
-    draft_json = report_generator.generate_structured_draft(
+    draft_json = await asyncio.to_thread(
+        report_generator.generate_structured_draft,
         historical_cache=historical_cache,
         rag_context=rag_context,
         parsed_test_data=parsed_test_data,
@@ -576,7 +545,7 @@ async def _handle_gonogo(
     msg_response = draft_json.get("assistant_reply", fallback_msg)
 
     chat_history.append({"role": "assistant", "content": msg_response})
-    storage.save_to_cache(chat_id=chat_id, structured_data=draft_json)
+    storage.save_to_cache(chat_id=chat_id, structured_data=draft_json, parsed_test_data=parsed_test_data)
     storage.save_chat_history(chat_id, chat_history)
 
     return {
@@ -698,8 +667,12 @@ async def _handle_chatbot(
         )
 
     user_prompt = f"{context_block}\n[ZAPYTANIE UŻYTKOWNIKA]\n{message}"
-    reply = llm.generate_response(
-        sys_prompt, user_prompt, temperature=0.3, chat_history=chat_history[-8:]
+    reply = await asyncio.to_thread(
+        llm.generate_response,
+        sys_prompt, 
+        user_prompt, 
+        temperature=0.3, 
+        chat_history=chat_history[-8:]
     )
 
     chat_history.append({"role": "assistant", "content": reply})
@@ -843,8 +816,12 @@ async def _handle_translator(
     user_prompt += f"Instrukcja od użytkownika: {instruction}\n\nTekst docelowy do przetłumaczenia:\n{source_text}"
 
     logger.info(f"Executing hybrid translator mode for chat {chat_id}")
-    reply = llm.generate_response(
-        sys_prompt, user_prompt, temperature=0.2, chat_history=chat_history[-8:]
+    reply = await asyncio.to_thread(
+        llm.generate_response,
+        sys_prompt, 
+        user_prompt, 
+        temperature=0.2, 
+        chat_history=chat_history[-8:]
     )
 
     chat_history.append({"role": "assistant", "content": reply})
@@ -1138,6 +1115,44 @@ if __name__ == "__main__":
 
 
 ============================================================
+--- PLIK: .\backend\requirements.txt ---
+============================================================
+
+# TODO: review nest asyncio usage and remove if not needed
+# added to fix RuntimeError in Jupyter when running async code (like LLM calls) 
+# in the same event loop
+nest-asyncio
+
+# backend dependencies
+fastapi
+uvicorn
+python-dotenv
+python-multipart
+requests
+pandas
+matplotlib
+unicodedata
+re
+asyncio
+
+# for data validation and settings management
+pydantic
+urllib3
+
+# for file parsing and report generation
+openpyxl
+pdfplumber
+fpdf2
+python-docx
+tabulate
+
+# for vector database and embeddings
+chromadb
+sentence-transformers
+langchain-text-splitters
+charset-normalizer
+
+============================================================
 --- PLIK: .\backend\src\core\config.py ---
 ============================================================
 
@@ -1387,6 +1402,337 @@ class LLMClient:
         except Exception as e:
             self.logger.error(f"Unexpected connection error: {str(e)}")
             raise LLMConnectionError(f"Connection error: {str(e)}")
+
+============================================================
+--- PLIK: .\backend\src\services\file_parser.py ---
+============================================================
+
+# ============================================================
+# FILE: .\backend\src\services\file_parser.py
+# ============================================================
+
+import pandas as pd
+import io
+import pdfplumber
+
+from docx import Document
+from typing import Dict
+
+from src.core.logger import get_logger
+
+
+class FileParser:
+    """Parses test data files (CSV, Excel) and knowledge documents (PDF, DOCX, TXT)."""
+
+    def __init__(self):
+        self.logger = get_logger(self.__class__.__name__)
+
+    def extract_test_data_from_bytes(self, file_contents: Dict[str, bytes]) -> str:
+        """
+        Parses test data from pre-read file bytes (CSV or Excel).
+
+        Args:
+            file_contents: Dictionary mapping filename to raw file bytes.
+
+        Returns:
+            Concatenated markdown-formatted table string of all parsed files.
+        """
+        extracted_data = []
+
+        for filename, content in file_contents.items():
+            lower_name = filename.lower()
+
+            try:
+                if lower_name.endswith(".csv"):
+                    df = pd.read_csv(io.BytesIO(content))
+                    extracted_data.append(f"### Data from file: {filename}\n" + df.to_markdown(index=False))
+
+                elif lower_name.endswith((".xls", ".xlsx")):
+                    df = pd.read_excel(io.BytesIO(content))
+                    extracted_data.append(f"### Data from file: {filename}\n" + df.to_markdown(index=False))
+
+                else:
+                    self.logger.warning(f"Skipped file with unsupported extension: {filename}")
+
+            except Exception as e:
+                self.logger.error(f"Failed to parse file {filename}: {e}")
+
+        return "\n\n".join(extracted_data)
+
+    def extract_history_text(self, filepath: str) -> str:
+        """
+        Extracts plain text from a document file (PDF, DOCX, TXT, MD).
+
+        Args:
+            filepath: Absolute or relative path to the file.
+
+        Returns:
+            Extracted text content, or empty string on failure.
+        """
+        ext = filepath.lower().split(".")[-1]
+        text_content = ""
+
+        try:
+            if ext == "pdf":
+                with pdfplumber.open(filepath) as pdf:
+                    text_content = "\n".join(
+                        [page.extract_text() for page in pdf.pages if page.extract_text()]
+                    )
+            elif ext == "docx":
+                doc = Document(filepath)
+                text_content = "\n".join([para.text for para in doc.paragraphs])
+            elif ext in ["txt", "md"]:
+                with open(filepath, "r", encoding="utf-8") as f:
+                    text_content = f.read()
+
+            return text_content
+
+        except Exception as e:
+            self.logger.error(f"Failed to read history file {filepath}: {e}")
+            return ""
+
+============================================================
+--- PLIK: .\backend\src\services\rag.py ---
+============================================================
+
+# ============================================================
+# FILE: .\backend\src\services\rag.py
+# ============================================================
+
+import os
+import hashlib
+from typing import Optional, List
+
+import chromadb
+from sentence_transformers import SentenceTransformer
+from langchain_text_splitters import RecursiveCharacterTextSplitter
+
+from src.core.config import Config
+from src.core.logger import get_logger
+
+
+# Singleton for embedder to avoid loading the model multiple times
+_embedder = None
+
+
+def get_embedder():
+    """Returns a singleton SentenceTransformer instance for embedding generation."""
+    global _embedder
+    if _embedder is None:
+        model_name = os.getenv(
+            "EMBED_MODEL", "sdadas/st-polish-paraphrase-from-distilroberta"
+        )
+        _embedder = SentenceTransformer(model_name)
+    return _embedder
+
+
+class RAGEngine:
+    """Retrieval-Augmented Generation engine using ChromaDB and parent-child chunking."""
+
+    def __init__(self):
+        self.logger = get_logger(self.__class__.__name__)
+
+        self.parent_chunk_size = Config.PARENT_CHUNK_SIZE
+        self.parent_chunk_overlap = Config.PARENT_CHUNK_OVERLAP
+        self.child_chunk_size = Config.CHILD_CHUNK_SIZE
+        self.child_chunk_overlap = Config.CHILD_CHUNK_OVERLAP
+        self.top_k = Config.TOP_K
+        self.score_threshold = Config.SCORE_THRESHOLD
+
+        # Main ChromaDB client — encapsulates all collections (projects & chats)
+        self.chroma_path = os.path.join(Config.BASE_DATA_PATH, "chroma_db")
+        os.makedirs(self.chroma_path, exist_ok=True)
+        self.chroma_client = chromadb.PersistentClient(path=self.chroma_path)
+
+    def _get_collection(self, collection_name: str):
+        """Gets or creates a ChromaDB collection (isolated vector store)."""
+
+        class _EmbFn(chromadb.EmbeddingFunction):
+            def __call__(self, input: List[str]) -> List[List[float]]:
+                return get_embedder().encode(input, show_progress_bar=False).tolist()
+
+        return self.chroma_client.get_or_create_collection(
+            name=collection_name,
+            embedding_function=_EmbFn(),
+            metadata={"hnsw:space": "cosine"},
+        )
+
+    def _chunk_parent_child(self, text: str) -> List[dict]:
+        """Splits text using parent-child chunking strategy."""
+        parent_splitter = RecursiveCharacterTextSplitter(
+            chunk_size=self.parent_chunk_size,
+            chunk_overlap=self.parent_chunk_overlap,
+            separators=["\n\n", "\n", ". ", " ", ""],
+        )
+        child_splitter = RecursiveCharacterTextSplitter(
+            chunk_size=self.child_chunk_size,
+            chunk_overlap=self.child_chunk_overlap,
+            separators=["\n\n", "\n", ". ", " ", ""],
+        )
+
+        results = []
+        for p_idx, p_text in enumerate(parent_splitter.split_text(text)):
+            for c_idx, c_text in enumerate(child_splitter.split_text(p_text)):
+                results.append(
+                    {"parent_id": p_idx, "parent_text": p_text, "child_text": c_text}
+                )
+        return results
+
+    def delete_document(self, filename: str, entity_id: str):
+        """
+        Removes vectors associated with a specific file from the entity's collection.
+        """
+        if not filename or not entity_id:
+            return
+
+        safe_collection_name = entity_id.replace("-", "_")
+        try:
+            collection = self._get_collection(safe_collection_name)
+
+            collection.delete(
+                where={"$and": [{"source": filename}, {"entity_id": entity_id}]}
+            )
+            self.logger.info(
+                f"Deleted vectors for file {filename} from collection {safe_collection_name}"
+            )
+        except Exception as e:
+            self.logger.warning(
+                f"Error while deleting document {filename} from collection {safe_collection_name}: {e}"
+            )
+
+    def ingest_document(self, text: str, filename: str, entity_id: str):
+        """
+        Vectorizes and indexes text into a collection based on entity_id.
+
+        Args:
+            text: The document text to ingest.
+            filename: Original filename for metadata.
+            entity_id: 'p-12345' (project) or 'c-98765' (chat).
+        """
+        if not text.strip():
+            return
+
+        safe_collection_name = entity_id.replace("-", "_")
+        collection = self._get_collection(safe_collection_name)
+
+        chunks = self._chunk_parent_child(text)
+        ids, docs, metas = [], [], []
+
+        for i, c in enumerate(chunks):
+            # Unique hash for each chunk to enable idempotent upserts
+            chunk_hash = hashlib.md5(
+                f"{filename}_{i}_{c['child_text'][:50]}".encode()
+            ).hexdigest()
+            ids.append(f"{filename}_c{chunk_hash[:10]}")
+            docs.append(c["child_text"])
+
+            metas.append(
+                {
+                    "source": filename,
+                    "parent_text": c["parent_text"],
+                    "entity_id": entity_id,
+                }
+            )
+
+        collection.upsert(ids=ids, documents=docs, metadatas=metas)
+        self.logger.info(
+            f"Indexed {filename} into {safe_collection_name} ({len(chunks)} vectors)"
+        )
+
+    def search_context(
+        self, query: str, project_id: Optional[str], chat_id: str
+    ) -> str:
+        """
+        Searches both project and chat vector stores and returns merged context.
+
+        Args:
+            query: The search query text.
+            project_id: Optional project ID to search project-level documents.
+            chat_id: Chat ID to search chat-level documents.
+
+        Returns:
+            Concatenated RAG context string from best-matching chunks.
+        """
+        all_hits = []
+
+        # Search project-level collection if chat is linked to a project
+        if project_id:
+            safe_proj = project_id.replace("-", "_")
+            all_hits.extend(self._search_collection(query, safe_proj))
+
+        # Always search chat-level collection
+        safe_chat = chat_id.replace("-", "_")
+        all_hits.extend(self._search_collection(query, safe_chat))
+
+        if not all_hits:
+            return ""
+
+        all_hits.sort(key=lambda x: x["score"], reverse=True)
+        best_hits = all_hits[: self.top_k]
+
+        rag_parts = []
+        seen_texts = set()
+
+        for hit in best_hits:
+            if hit["text"] not in seen_texts:
+                rag_parts.append(f"[File: {hit['source']}]\n{hit['text']}")
+                seen_texts.add(hit["text"])
+
+        return "\n\n---\n\n".join(rag_parts)
+
+    def _search_collection(self, query: str, collection_name: str) -> List[dict]:
+        """Searches a single ChromaDB collection and returns scored hits."""
+        try:
+            collection = self._get_collection(collection_name)
+            if collection.count() == 0:
+                return []
+
+            results = collection.query(
+                query_texts=[query],
+                n_results=self.top_k,
+                include=["documents", "metadatas", "distances"],
+            )
+
+            hits = []
+            for i in range(len(results["ids"][0])):
+                score = 1 - results["distances"][0][i]
+                if score >= self.score_threshold:
+                    meta = results["metadatas"][0][i]
+                    text_to_use = meta.get("parent_text", results["documents"][0][i])
+                    hits.append(
+                        {
+                            "text": text_to_use,
+                            "source": meta.get("source", "?"),
+                            "score": score,
+                        }
+                    )
+            return hits
+        except Exception as e:
+            self.logger.warning(
+                f"Error while searching collection {collection_name}: {e}"
+            )
+            return []
+
+    # ─── Deprecated stubs (kept for backward compatibility) ──────
+
+    def get_historical_context(self, lang="pl") -> str:
+        """Deprecated: RAG context is now handled by search_context()."""
+        return ""
+
+    def load_structured_rules(self, lang="pl") -> str:
+        """Deprecated: No longer used."""
+        return ""
+
+    def save_approved_report(
+        self, project_name: str, report_data: dict, lang: str = "pl"
+    ) -> str:
+        """Deprecated: No longer used."""
+        return ""
+
+    def update_structured_rules(self, rules: list, lang: str, author: str) -> str:
+        """Deprecated: No longer used."""
+        return ""
+
 
 ============================================================
 --- PLIK: .\backend\src\services\chart_generator.py ---
@@ -1739,337 +2085,6 @@ class ChartGenerator:
         return self._save_chart(fig, "coverage", project_name)
 
 ============================================================
---- PLIK: .\backend\src\services\file_parser.py ---
-============================================================
-
-# ============================================================
-# FILE: .\backend\src\services\file_parser.py
-# ============================================================
-
-import pandas as pd
-import io
-import pdfplumber
-
-from docx import Document
-from typing import Dict
-
-from src.core.logger import get_logger
-
-
-class FileParser:
-    """Parses test data files (CSV, Excel) and knowledge documents (PDF, DOCX, TXT)."""
-
-    def __init__(self):
-        self.logger = get_logger(self.__class__.__name__)
-
-    def extract_test_data_from_bytes(self, file_contents: Dict[str, bytes]) -> str:
-        """
-        Parses test data from pre-read file bytes (CSV or Excel).
-
-        Args:
-            file_contents: Dictionary mapping filename to raw file bytes.
-
-        Returns:
-            Concatenated markdown-formatted table string of all parsed files.
-        """
-        extracted_data = []
-
-        for filename, content in file_contents.items():
-            lower_name = filename.lower()
-
-            try:
-                if lower_name.endswith(".csv"):
-                    df = pd.read_csv(io.BytesIO(content))
-                    extracted_data.append(f"### Data from file: {filename}\n" + df.to_markdown(index=False))
-
-                elif lower_name.endswith((".xls", ".xlsx")):
-                    df = pd.read_excel(io.BytesIO(content))
-                    extracted_data.append(f"### Data from file: {filename}\n" + df.to_markdown(index=False))
-
-                else:
-                    self.logger.warning(f"Skipped file with unsupported extension: {filename}")
-
-            except Exception as e:
-                self.logger.error(f"Failed to parse file {filename}: {e}")
-
-        return "\n\n".join(extracted_data)
-
-    def extract_history_text(self, filepath: str) -> str:
-        """
-        Extracts plain text from a document file (PDF, DOCX, TXT, MD).
-
-        Args:
-            filepath: Absolute or relative path to the file.
-
-        Returns:
-            Extracted text content, or empty string on failure.
-        """
-        ext = filepath.lower().split(".")[-1]
-        text_content = ""
-
-        try:
-            if ext == "pdf":
-                with pdfplumber.open(filepath) as pdf:
-                    text_content = "\n".join(
-                        [page.extract_text() for page in pdf.pages if page.extract_text()]
-                    )
-            elif ext == "docx":
-                doc = Document(filepath)
-                text_content = "\n".join([para.text for para in doc.paragraphs])
-            elif ext in ["txt", "md"]:
-                with open(filepath, "r", encoding="utf-8") as f:
-                    text_content = f.read()
-
-            return text_content
-
-        except Exception as e:
-            self.logger.error(f"Failed to read history file {filepath}: {e}")
-            return ""
-
-============================================================
---- PLIK: .\backend\src\services\rag.py ---
-============================================================
-
-# ============================================================
-# FILE: .\backend\src\services\rag.py
-# ============================================================
-
-import os
-import hashlib
-from typing import Optional, List
-
-import chromadb
-from sentence_transformers import SentenceTransformer
-from langchain_text_splitters import RecursiveCharacterTextSplitter
-
-from src.core.config import Config
-from src.core.logger import get_logger
-
-
-# Singleton for embedder to avoid loading the model multiple times
-_embedder = None
-
-
-def get_embedder():
-    """Returns a singleton SentenceTransformer instance for embedding generation."""
-    global _embedder
-    if _embedder is None:
-        model_name = os.getenv(
-            "EMBED_MODEL", "sdadas/st-polish-paraphrase-from-distilroberta"
-        )
-        _embedder = SentenceTransformer(model_name)
-    return _embedder
-
-
-class RAGEngine:
-    """Retrieval-Augmented Generation engine using ChromaDB and parent-child chunking."""
-
-    def __init__(self):
-        self.logger = get_logger(self.__class__.__name__)
-
-        self.parent_chunk_size = Config.PARENT_CHUNK_SIZE
-        self.parent_chunk_overlap = Config.PARENT_CHUNK_OVERLAP
-        self.child_chunk_size = Config.CHILD_CHUNK_SIZE
-        self.child_chunk_overlap = Config.CHILD_CHUNK_OVERLAP
-        self.top_k = Config.TOP_K
-        self.score_threshold = Config.SCORE_THRESHOLD
-
-        # Main ChromaDB client — encapsulates all collections (projects & chats)
-        self.chroma_path = os.path.join(Config.BASE_DATA_PATH, "chroma_db")
-        os.makedirs(self.chroma_path, exist_ok=True)
-        self.chroma_client = chromadb.PersistentClient(path=self.chroma_path)
-
-    def _get_collection(self, collection_name: str):
-        """Gets or creates a ChromaDB collection (isolated vector store)."""
-
-        class _EmbFn(chromadb.EmbeddingFunction):
-            def __call__(self, input: List[str]) -> List[List[float]]:
-                return get_embedder().encode(input, show_progress_bar=False).tolist()
-
-        return self.chroma_client.get_or_create_collection(
-            name=collection_name,
-            embedding_function=_EmbFn(),
-            metadata={"hnsw:space": "cosine"},
-        )
-
-    def _chunk_parent_child(self, text: str) -> List[dict]:
-        """Splits text using parent-child chunking strategy."""
-        parent_splitter = RecursiveCharacterTextSplitter(
-            chunk_size=self.parent_chunk_size,
-            chunk_overlap=self.parent_chunk_overlap,
-            separators=["\n\n", "\n", ". ", " ", ""],
-        )
-        child_splitter = RecursiveCharacterTextSplitter(
-            chunk_size=self.child_chunk_size,
-            chunk_overlap=self.child_chunk_overlap,
-            separators=["\n\n", "\n", ". ", " ", ""],
-        )
-
-        results = []
-        for p_idx, p_text in enumerate(parent_splitter.split_text(text)):
-            for c_idx, c_text in enumerate(child_splitter.split_text(p_text)):
-                results.append(
-                    {"parent_id": p_idx, "parent_text": p_text, "child_text": c_text}
-                )
-        return results
-
-    def delete_document(self, filename: str, entity_id: str):
-        """
-        Removes vectors associated with a specific file from the entity's collection.
-        """
-        if not filename or not entity_id:
-            return
-
-        safe_collection_name = entity_id.replace("-", "_")
-        try:
-            collection = self._get_collection(safe_collection_name)
-
-            collection.delete(
-                where={"$and": [{"source": filename}, {"entity_id": entity_id}]}
-            )
-            self.logger.info(
-                f"Deleted vectors for file {filename} from collection {safe_collection_name}"
-            )
-        except Exception as e:
-            self.logger.warning(
-                f"Error while deleting document {filename} from collection {safe_collection_name}: {e}"
-            )
-
-    def ingest_document(self, text: str, filename: str, entity_id: str):
-        """
-        Vectorizes and indexes text into a collection based on entity_id.
-
-        Args:
-            text: The document text to ingest.
-            filename: Original filename for metadata.
-            entity_id: 'p-12345' (project) or 'c-98765' (chat).
-        """
-        if not text.strip():
-            return
-
-        safe_collection_name = entity_id.replace("-", "_")
-        collection = self._get_collection(safe_collection_name)
-
-        chunks = self._chunk_parent_child(text)
-        ids, docs, metas = [], [], []
-
-        for i, c in enumerate(chunks):
-            # Unique hash for each chunk to enable idempotent upserts
-            chunk_hash = hashlib.md5(
-                f"{filename}_{i}_{c['child_text'][:50]}".encode()
-            ).hexdigest()
-            ids.append(f"{filename}_c{chunk_hash[:10]}")
-            docs.append(c["child_text"])
-
-            metas.append(
-                {
-                    "source": filename,
-                    "parent_text": c["parent_text"],
-                    "entity_id": entity_id,
-                }
-            )
-
-        collection.upsert(ids=ids, documents=docs, metadatas=metas)
-        self.logger.info(
-            f"Indexed {filename} into {safe_collection_name} ({len(chunks)} vectors)"
-        )
-
-    def search_context(
-        self, query: str, project_id: Optional[str], chat_id: str
-    ) -> str:
-        """
-        Searches both project and chat vector stores and returns merged context.
-
-        Args:
-            query: The search query text.
-            project_id: Optional project ID to search project-level documents.
-            chat_id: Chat ID to search chat-level documents.
-
-        Returns:
-            Concatenated RAG context string from best-matching chunks.
-        """
-        all_hits = []
-
-        # Search project-level collection if chat is linked to a project
-        if project_id:
-            safe_proj = project_id.replace("-", "_")
-            all_hits.extend(self._search_collection(query, safe_proj))
-
-        # Always search chat-level collection
-        safe_chat = chat_id.replace("-", "_")
-        all_hits.extend(self._search_collection(query, safe_chat))
-
-        if not all_hits:
-            return ""
-
-        all_hits.sort(key=lambda x: x["score"], reverse=True)
-        best_hits = all_hits[: self.top_k]
-
-        rag_parts = []
-        seen_texts = set()
-
-        for hit in best_hits:
-            if hit["text"] not in seen_texts:
-                rag_parts.append(f"[File: {hit['source']}]\n{hit['text']}")
-                seen_texts.add(hit["text"])
-
-        return "\n\n---\n\n".join(rag_parts)
-
-    def _search_collection(self, query: str, collection_name: str) -> List[dict]:
-        """Searches a single ChromaDB collection and returns scored hits."""
-        try:
-            collection = self._get_collection(collection_name)
-            if collection.count() == 0:
-                return []
-
-            results = collection.query(
-                query_texts=[query],
-                n_results=self.top_k,
-                include=["documents", "metadatas", "distances"],
-            )
-
-            hits = []
-            for i in range(len(results["ids"][0])):
-                score = 1 - results["distances"][0][i]
-                if score >= self.score_threshold:
-                    meta = results["metadatas"][0][i]
-                    text_to_use = meta.get("parent_text", results["documents"][0][i])
-                    hits.append(
-                        {
-                            "text": text_to_use,
-                            "source": meta.get("source", "?"),
-                            "score": score,
-                        }
-                    )
-            return hits
-        except Exception as e:
-            self.logger.warning(
-                f"Error while searching collection {collection_name}: {e}"
-            )
-            return []
-
-    # ─── Deprecated stubs (kept for backward compatibility) ──────
-
-    def get_historical_context(self, lang="pl") -> str:
-        """Deprecated: RAG context is now handled by search_context()."""
-        return ""
-
-    def load_structured_rules(self, lang="pl") -> str:
-        """Deprecated: No longer used."""
-        return ""
-
-    def save_approved_report(
-        self, project_name: str, report_data: dict, lang: str = "pl"
-    ) -> str:
-        """Deprecated: No longer used."""
-        return ""
-
-    def update_structured_rules(self, rules: list, lang: str, author: str) -> str:
-        """Deprecated: No longer used."""
-        return ""
-
-
-============================================================
 --- PLIK: .\backend\src\services\report_generator.py ---
 ============================================================
 
@@ -2234,10 +2249,11 @@ class ReportGenerator:
             user_prompt = f"""
                             Wygeneruj strukturę raportu w formacie JSON zachowując te klucze:
                             - "summary": (string) krótkie podsumowanie techniczne,
-                            - "test_analysis": (string) wnioski z testów,
-                            - "risks_eval": (string) analiza ryzyk (zaznacz tu, czy użytkownik zaakceptował usterki),
+                            - "test_analysis": (array) lista wyników testów jako obiekty JSON. Każdy obiekt MUSI zawierać dokładnie te klucze: "test_name" (nazwa testu), "value" (wynik/wartość np. PASS/FAIL/liczba), "filename" (nazwa pliku źródłowego z którego pochodzi). Przejdź przez WSZYSTKIE wiersze z [ZPARSOWANE WYNIKI TESTÓW] i wypisz każdy test osobno. Nie grupuj, nie pomijaj.
+                            - "test_analysis_summary": (string) krótkie podsumowanie całej analizy testów (2-4 zdania) — ile testów przeszło, ile nie, jakie są główne wnioski.
+                            - "risks_eval": (array) lista WYŁĄCZNIE ryzykownych testów z test_analysis. Każdy obiekt MUSI zawierać: "test_name" (nazwa testu), "filename" (plik źródłowy), "value" (wynik testu), "reason" (dlaczego jest ryzykowny — jeśli ryzyko wynika z wiadomości użytkownika z [UWAGI UŻYTKOWNIKA] napisz "z chatu: [cytat z wiadomości]", jeśli z danych w pliku napisz "na bazie [nazwa pliku]: [cytat/opis]"). Jeśli żaden test nie jest ryzykowny, zwróć pustą tablicę [], "severity" (string) poziom ryzyka: dokładnie "high", "medium" lub "low" — oceń na podstawie wartości testu i kontekstu.
                             - "decision": (string) dokładnie "GO" lub "NO-GO",
-                            - "justification": (string) ostateczne uzasadnienie (uwzględnij autorytet użytkownika!).
+                            - "justification": (string) ostateczne uzasadnienie decyzji oparte NA LIŚCIE Z risks_eval. Dla każdego ryzykownego testu z risks_eval napisz wprost dlaczego powoduje NO-GO (np. "Test X z pliku Y zwrócił FAIL — przekracza dopuszczalną normę"). Jeśli wszystkie testy są w normie, napisz że wyniki są powyżej normy i decyzja to GO. Jeśli użytkownik w [UWAGI UŻYTKOWNIKA] jawnie zaakceptował ryzyka, napisz: "Na podstawie decyzji użytkownika akceptuję widoczne ryzyko: [wymień konkretne testy z risks_eval które użytkownik zaakceptował]" i zmień decyzję na GO.
                             - "assistant_reply": (string) krótka, merytoryczna odpowiedź do użytkownika na czacie, podsumowująca co dokładnie zmieniłeś w raporcie (np. "Zaakceptowałem ryzyko związane z wydajnością i zmieniłem status na GO.").
 
                             [GLOBALNE ZASADY BIZNESOWE (RAG)]
@@ -2272,10 +2288,11 @@ class ReportGenerator:
             user_prompt = f"""
                             Generate the report structure in JSON format using exactly these keys:
                             - "summary": brief technical summary,
-                            - "test_analysis": conclusions from tests,
-                            - "risks_eval": risk evaluation (highlight if the user accepted the flaws),
+                            - "test_analysis": (array) list of test results as JSON objects. Each object MUST contain exactly these keys: "test_name" (name of the test), "value" (result/value e.g. PASS/FAIL/number), "filename" (source filename it was taken from). Go through ALL rows from [PARSED TEST RESULTS] and list each test separately. Do not group or skip any.
+                            - "test_analysis_summary": (string) short summary of the full test analysis (2-4 sentences) — how many passed, how many failed, key takeaways.
+                            - "risks_eval": (array) list of ONLY the risky tests from test_analysis. Each object MUST contain: "test_name" (test name), "filename" (source file), "value" (test result), "reason" (why it is risky — if the risk comes from the user's message in [USER INPUT] write "from chat: [quote from message]", if from file data write "based on [filename]: [quote/description]"). If no tests are risky, return an empty array [], "severity" (string) risk level: exactly "high", "medium" or "low" — assess based on test value and context.
                             - "decision": exactly "GO" or "NO-GO",
-                            - "justification": final rationale (must respect the User's overriding authority),
+                            - "justification": (string) final rationale based DIRECTLY ON THE risks_eval LIST. For each risky test in risks_eval, explicitly state why it causes NO-GO (e.g. "Test X from file Y returned FAIL — exceeds acceptable threshold"). If all tests are within norms, state that results are above norm and the decision is GO. If the user in [USER INPUT] explicitly accepted risks, write: "Based on the user's decision, I accept the visible risk: [list the specific tests from risks_eval the user accepted]" and set decision to GO.
                             - "assistant_reply": (string) brief, substantive reply to the user in the chat, summarizing exactly what you changed in the report (e.g., "I accepted the performance-related risk and changed the status to GO.").
 
                             [GLOBAL BUSINESS RULES (RAG)]
@@ -2314,8 +2331,9 @@ class ReportGenerator:
             )
             return {
                 "summary": fallback_summary,
-                "test_analysis": "",
-                "risks_eval": "",
+                "test_analysis": [],
+                "test_analysis_summary": "",
+                "risks_eval": [],
                 "decision": "NO-GO",
                 "justification": fallback_justification,
             }
@@ -2699,6 +2717,7 @@ class ReportGenerator:
         result = {
             "summary": "",
             "test_analysis": "",
+            "test_analysis_summary": "",
             "risks_eval": "",
             "decision": "",
             "justification": "",
@@ -2710,6 +2729,8 @@ class ReportGenerator:
             "analiza testow": "test_analysis",
             "analiza testów": "test_analysis",
             "test analysis": "test_analysis",
+            "podsumowanie analizy": "test_analysis_summary",
+            "test analysis summary": "test_analysis_summary",
             "ocena ryzyk": "risks_eval",
             "risk evaluation": "risks_eval",
             "decyzja": "decision",
@@ -2917,7 +2938,7 @@ class StorageManager:
     # GO-NOGO CACHE MANAGEMENT (draft JSON in chat folder)
     # ==========================================
 
-    def save_to_cache(self, chat_id: str, structured_data: dict):
+    def save_to_cache(self, chat_id: str, structured_data: dict, parsed_test_data: str = ""):
         """Saves the structured draft JSON to the chat's created directory."""
         created_dir = self.get_chat_created_dir(chat_id)
         filepath = os.path.join(created_dir, "draft_cache.json")
@@ -2926,13 +2947,8 @@ class StorageManager:
             "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             "chat_id": chat_id,
             "data": structured_data,
+            "parsed_test_data": parsed_test_data,
         }
-        try:
-            with open(filepath, "w", encoding="utf-8") as f:
-                json.dump(cache_payload, f, indent=4)
-            self.logger.info(f"Saved JSON draft cache for chat: {chat_id}")
-        except Exception as e:
-            self.logger.error(f"Failed to save JSON cache: {e}")
 
     def get_latest_history(self, chat_id: str) -> Optional[dict]:
         """Reads the latest draft cache for a given chat."""
@@ -3702,7 +3718,9 @@ function App() {
   }, [chats]);
 
   const [activeId, setActiveId] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const [loadingStates, setLoadingStates] = useState<Record<string, boolean>>({});
+  const isLoading = activeId ? (loadingStates[activeId] || false) : false;
+
   const [canvasContent, setCanvasContent] = useState("");
   const [exportMessage, setExportMessage] = useState("");
   const [chartPaths, setChartPaths] = useState<string[]>([]);
@@ -3789,7 +3807,7 @@ function App() {
         }),
       );
 
-      setIsLoading(true);
+      setLoadingStates(prev => ({ ...prev, [chatId!]: true }));
 
       try {
         const response = await api.sendMessage({
@@ -3852,7 +3870,7 @@ function App() {
           ),
         );
       } finally {
-        setIsLoading(false);
+        setLoadingStates(prev => ({ ...prev, [chatId!]: false }));
       }
     },
     [activeId, chats, language, canvasContent, isCanvasOpen, labels],
@@ -3911,6 +3929,16 @@ function App() {
         const c = chats.find((x) => x.id === id);
         setCanvasContent(c?.canvasContent || "");
         setChartPaths(c?.chartPaths || []);
+
+        const hasGoNogoHistory = c?.messages.some(
+          (m) => m.mode === "gonogo" || !!m.draftData,
+        );
+
+        if (c?.mode !== "gonogo" && !hasGoNogoHistory) {
+          setIsCanvasOpen(false);
+        } else if (c?.canvasContent) {
+          setIsCanvasOpen(true);
+        }
       }
     },
     [projects, chats],
@@ -4050,7 +4078,8 @@ function App() {
     async (files: FileList | File[]) => {
       if (!activeProject || files.length === 0) return;
       try {
-        setIsLoading(true);
+        setLoadingStates((prev) => ({ ...prev, [activeProject.id]: true }));
+
         const fileArray = Array.from(files);
         await api.uploadProjectFiles(activeProject.id, fileArray);
         const fileNames = fileArray.map((f) => f.name);
@@ -4067,7 +4096,7 @@ function App() {
       } catch {
         alert(labels.uploadError);
       } finally {
-        setIsLoading(false);
+        setLoadingStates((prev) => ({ ...prev, [activeProject.id]: false }));
       }
     },
     [activeProject, labels],

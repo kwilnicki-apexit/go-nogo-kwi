@@ -1,731 +1,6 @@
 
 
 ============================================================
---- PLIK: .\frontend\src\components\CanvasPanel.tsx ---
-============================================================
-
-// ============================================================
-// FILE: .\frontend\src\components\CanvasPanel.tsx
-// ============================================================
-
-import { useRef, useState } from "react";
-import ReactQuill from "react-quill-new";
-import "react-quill-new/dist/quill.snow.css";
-import { X, Download, FileType2, FileCode } from "lucide-react";
-import type { Labels } from "../types";
-
-interface CanvasPanelProps {
-  isOpen: boolean;
-  content: string;
-  onChange: (content: string) => void;
-  onClose: () => void;
-  onExport: (format: "pdf" | "docx" | "md", addToRag: boolean) => void;
-  exportMessage: string;
-  labels: Labels;
-}
-
-const QUILL_MODULES = {
-  toolbar: [
-    [{ header: [1, 2, 3, false] }],
-    ["bold", "italic", "underline", "strike"],
-    [{ list: "ordered" }, { list: "bullet" }],
-    [{ color: [] }, { background: [] }],
-    ["blockquote", "code-block"],
-    ["clean"],
-  ],
-};
-
-const QUILL_FORMATS = [
-  "header",
-  "bold",
-  "italic",
-  "underline",
-  "strike",
-  "list",
-  "color",
-  "background",
-  "blockquote",
-  "code-block",
-];
-
-const exportBtnStyle = (): React.CSSProperties => ({
-  display: "inline-flex",
-  alignItems: "center",
-  justifyContent: "center",
-  gap: 8,
-  padding: "9px 18px",
-  borderRadius: 8,
-  border: "1px solid var(--color-border)",
-  backgroundColor: "var(--color-surface)",
-  fontSize: 13,
-  fontWeight: 600,
-  color: "var(--color-text-secondary)",
-  cursor: "pointer",
-  transition: "all 0.15s",
-});
-
-/**
- * Determines if an export status message indicates an error.
- * Checks both Polish and English error keywords.
- */
-function isErrorMessage(msg: string): boolean {
-  const lower = msg.toLowerCase();
-  return lower.includes("błąd") || lower.includes("error");
-}
-
-export const CanvasPanel = ({
-  isOpen,
-  content,
-  onChange,
-  onClose,
-  onExport,
-  exportMessage,
-  labels,
-}: CanvasPanelProps) => {
-  const quillRef = useRef<ReactQuill>(null);
-  const [addToRag, setAddToRag] = useState(true);
-  
-  if (!isOpen) return null;
-
-  const isError = isErrorMessage(exportMessage);
-
-  return (
-    <div
-      className="animate-slide-in-right"
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        height: "100%",
-        width: "100%",
-        borderLeft: "1px solid var(--color-border)",
-        backgroundColor: "var(--color-surface)",
-      }}
-    >
-      {/* Toolbar */}
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          borderBottom: "1px solid var(--color-border)",
-          backgroundColor: "var(--color-surface-secondary)",
-          padding: "16px 24px",
-          flexShrink: 0,
-        }}
-      >
-        <h3
-          style={{
-            fontSize: 15,
-            fontWeight: 700,
-            color: "var(--color-text-primary)",
-            margin: 0,
-          }}
-        >
-          {labels.canvasTitle}
-        </h3>
-
-        <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, fontWeight: 500, color: "var(--color-text-secondary)", cursor: "pointer" }}>
-            <input 
-              type="checkbox" 
-              checked={addToRag} 
-              onChange={(e) => setAddToRag(e.target.checked)} 
-              style={{ cursor: "pointer" }}
-            />
-            {labels.downloadPdf === "PDF" ? "Zapisz do bazy wiedzy (RAG)" : "Save to Knowledge Base (RAG)"}
-          </label>
-
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <button
-            onClick={() => onExport("pdf", addToRag)}
-            style={exportBtnStyle()}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.borderColor = "#fca5a5";
-              e.currentTarget.style.color = "#e3000f";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.borderColor = "var(--color-border)";
-              e.currentTarget.style.color = "var(--color-text-secondary)";
-            }}
-          >
-            <Download size={14} /> {labels.downloadPdf}
-          </button>
-          <button
-            onClick={() => onExport("docx", addToRag)}
-            style={exportBtnStyle()}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.borderColor = "#93c5fd";
-              e.currentTarget.style.color = "#3b82f6";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.borderColor = "var(--color-border)";
-              e.currentTarget.style.color = "var(--color-text-secondary)";
-            }}
-          >
-            <FileType2 size={14} /> {labels.downloadDocx}
-          </button>
-          <button
-            onClick={() => onExport("md", addToRag)}
-            style={exportBtnStyle()}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.borderColor = "#9ca3af";
-              e.currentTarget.style.color = "var(--color-text-primary)";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.borderColor = "var(--color-border)";
-              e.currentTarget.style.color = "var(--color-text-secondary)";
-            }}
-          >
-            <FileCode size={14} /> {labels.downloadMd}
-          </button>
-
-          <div
-            style={{
-              width: 1,
-              height: 24,
-              backgroundColor: "var(--color-border)",
-              margin: "0 8px",
-            }}
-          />
-
-          <button
-            onClick={onClose}
-            style={{
-              padding: 10,
-              borderRadius: 8,
-              color: "var(--color-text-tertiary)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              transition: "all 0.15s",
-            }}
-            title={labels.closeCanvas}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor =
-                "var(--color-surface-tertiary)";
-              e.currentTarget.style.color = "var(--color-text-secondary)";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = "transparent";
-              e.currentTarget.style.color = "var(--color-text-tertiary)";
-            }}
-          >
-            <X size={20} />
-          </button>
-        </div>
-      </div>
-
-      {/* Editor */}
-      <div
-        className="canvas-editor custom-scrollbar"
-        style={{ flex: 1, overflowY: "auto" }}
-      >
-        <ReactQuill
-          ref={quillRef}
-          theme="snow"
-          value={content}
-          onChange={onChange}
-          modules={QUILL_MODULES}
-          formats={QUILL_FORMATS}
-        />
-      </div>
-
-      {/* Status message */}
-      {exportMessage && (
-        <div
-          style={{
-            borderTop: "1px solid",
-            padding: "12px 24px",
-            textAlign: "center",
-            fontSize: 13,
-            fontWeight: 500,
-            borderColor: isError ? "#fca5a5" : "#86efac",
-            backgroundColor: isError ? "#fef2f2" : "#f0fdf4",
-            color: isError ? "#dc2626" : "#16a34a",
-          }}
-        >
-          {exportMessage}
-        </div>
-      )}
-    </div>
-  );
-};
-
-
-============================================================
---- PLIK: .\frontend\src\components\ChatFeed.tsx ---
-============================================================
-
-// ============================================================
-// FILE: .\frontend\src\components\ChatFeed.tsx
-// ============================================================
-
-import { useEffect, useRef, useState } from "react";
-import ReactMarkdown from "react-markdown";
-import { Bot, Check, Copy, FileText } from "lucide-react";
-import type { ChatMessage, Labels } from "../types";
-import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
-import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
-import { formatTime } from "../lib/utils";
-
-interface ChatFeedProps {
-  messages: ChatMessage[];
-  isLoading: boolean;
-  onOpenCanvas: () => void;
-  labels: Labels;
-}
-
-interface CodeBlockProps extends React.HTMLAttributes<HTMLElement> {
-  inline?: boolean;
-  className?: string;
-  children?: React.ReactNode;
-}
-
-const CodeBlock = ({
-  inline,
-  className,
-  children,
-  ...props
-}: CodeBlockProps) => {
-  const match = /language-(\w+)/.exec(className || "");
-  const lang = match ? match[1] : "";
-  const [copied, setCopied] = useState(false);
-
-  const handleCopy = () => {
-    navigator.clipboard.writeText(String(children).replace(/\n$/, ""));
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-
-  if (!inline && match) {
-    return (
-      <div
-        style={{
-          margin: "16px 0",
-          borderRadius: "8px",
-          overflow: "hidden",
-          border: "1px solid var(--color-border-strong)",
-        }}
-      >
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            backgroundColor: "#2d2d2d",
-            padding: "6px 16px",
-            borderBottom: "1px solid #404040"
-          }}
-        >
-          <span
-            style={{
-              fontSize: "11px",
-              fontWeight: 700,
-              textTransform: "uppercase",
-              color: "#a3a3a3",
-            }}
-          >
-            {lang}
-          </span>
-          <button
-            onClick={handleCopy}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "6px",
-              fontSize: "11px",
-              fontWeight: 600,
-              color: "#d4d4d4",
-              cursor: "pointer",
-              border: "none",
-              background: "none",
-              transition: "color 0.15s"
-            }}
-            onMouseEnter={(e) => e.currentTarget.style.color = "#ffffff"}
-            onMouseLeave={(e) => e.currentTarget.style.color = "#d4d4d4"}
-          >
-            {copied ? <Check size={14} color="#10b981" /> : <Copy size={14} />}
-            {copied ? "Skopiowano" : "Kopiuj"}
-          </button>
-        </div>
-        
-        <SyntaxHighlighter
-          children={String(children).replace(/\n$/, "")}
-          style={vscDarkPlus as Record<string, object>}
-          language={lang === "csv" ? "text" : lang}
-          PreTag="div"
-          customStyle={{
-            margin: 0,
-            padding: "16px",
-            fontSize: "13px",
-            backgroundColor: "#1e1e1e"
-          }}
-        />
-      </div>
-    );
-  }
-  
-  return (
-    <code
-      style={{
-        backgroundColor: "var(--color-surface-tertiary)",
-        padding: "2px 6px",
-        borderRadius: "4px",
-        fontSize: "13px",
-        fontFamily: "monospace",
-        color: "var(--color-orlen)",
-      }}
-      {...props}
-    >
-      {children}
-    </code>
-  );
-};
-
-export const ChatFeed = ({
-  messages,
-  isLoading,
-  onOpenCanvas,
-  labels,
-}: ChatFeedProps) => {
-  const bottomRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, isLoading]);
-
-  if (messages.length === 0 && !isLoading) {
-    return (
-      <div
-        style={{
-          flex: 1,
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "center",
-          padding: "40px 24px",
-          textAlign: "center",
-        }}
-      >
-        <div
-          style={{
-            marginBottom: 32,
-            width: 88,
-            height: 88,
-            borderRadius: 16,
-            background:
-              "linear-gradient(135deg, rgba(227,0,15,0.1), rgba(227,0,15,0.04))",
-            border: "1px solid rgba(227,0,15,0.15)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-        >
-          <Bot size={44} color="#e3000f" />
-        </div>
-        <h2
-          style={{
-            fontSize: 26,
-            fontWeight: 700,
-            marginBottom: 8,
-            color: "var(--color-text-primary)",
-          }}
-        >
-          {labels.welcome}
-        </h2>
-        <p
-          style={{
-            fontSize: 15,
-            color: "var(--color-text-tertiary)",
-            maxWidth: 480,
-            lineHeight: 1.7,
-          }}
-        >
-          {labels.welcomeSub}
-        </p>
-        <div
-          style={{
-            marginTop: 40,
-            display: "grid",
-            gridTemplateColumns: "1fr 1fr",
-            gap: 16,
-            maxWidth: 420,
-            width: "100%",
-          }}
-        >
-          {[
-            { icon: "💬", label: labels.modeChatbot, desc: labels.chatbotDesc },
-            { icon: "✅", label: labels.modeGoNogo, desc: labels.gonogoDesc },
-            {
-              icon: "🌐",
-              label: labels.modeTranslator,
-              desc: labels.translatorDesc,
-            },
-            {
-              icon: "📊",
-              label: labels.modeRemedy,
-              desc: labels.analysisDesc,
-            },
-          ].map((item) => (
-            <div
-              key={item.label}
-              style={{
-                padding: 20,
-                borderRadius: 10,
-                border: "1px solid var(--color-border)",
-                backgroundColor: "var(--color-surface)",
-                textAlign: "left",
-                transition: "box-shadow 0.2s, border-color 0.2s",
-                cursor: "default",
-              }}
-            >
-              <div style={{ fontSize: 28, marginBottom: 10 }}>{item.icon}</div>
-              <div
-                style={{
-                  fontSize: 14,
-                  fontWeight: 600,
-                  color: "var(--color-text-primary)",
-                }}
-              >
-                {item.label}
-              </div>
-              <div
-                style={{
-                  fontSize: 12,
-                  color: "var(--color-text-tertiary)",
-                  marginTop: 4,
-                }}
-              >
-                {item.desc}
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div
-      style={{ flex: 1, overflowY: "auto", padding: "32px 24px" }}
-      className="custom-scrollbar"
-    >
-      <div style={{ maxWidth: 720, margin: "0 auto" }}>
-        {messages.map((msg) => (
-          <div key={msg.id} className="animate-fade-in-up">
-            {msg.role === "user" ? (
-              <UserBubble message={msg} labels={labels} />
-            ) : (
-              <AssistantBubble
-                message={msg}
-                onOpenCanvas={onOpenCanvas}
-                labels={labels}
-              />
-            )}
-          </div>
-        ))}
-
-        {isLoading && (
-          <div
-            style={{
-              display: "flex",
-              alignItems: "flex-start",
-              gap: 16,
-              padding: "20px 0",
-            }}
-            className="animate-fade-in-up"
-          >
-            <div
-              style={{
-                width: 36,
-                height: 36,
-                borderRadius: "50%",
-                flexShrink: 0,
-                backgroundColor: "var(--color-surface-tertiary)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-            >
-              <Bot size={18} color="var(--color-text-tertiary)" />
-            </div>
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 8,
-                borderRadius: 16,
-                backgroundColor: "var(--color-surface-tertiary)",
-                padding: "16px 24px",
-              }}
-            >
-              <div className="typing-dot" />
-              <div className="typing-dot" />
-              <div className="typing-dot" />
-            </div>
-          </div>
-        )}
-
-        <div ref={bottomRef} />
-      </div>
-    </div>
-  );
-};
-
-const UserBubble = ({
-  message,
-  labels,
-}: {
-  message: ChatMessage;
-  labels: Labels;
-}) => (
-  <div
-    style={{ display: "flex", justifyContent: "flex-end", padding: "12px 0" }}
-  >
-    <div
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "flex-end",
-        maxWidth: "80%",
-      }}
-    >
-      <div
-        style={{
-          borderRadius: "var(--radius-lg)",
-          backgroundColor: "var(--color-surface-secondary)",
-          border: "1px solid var(--color-border)",
-          padding: "12px 16px",
-          color: "var(--color-text-primary)",
-          boxShadow: "0 1px 2px rgba(0,0,0,0.02)",
-        }}
-      >
-        <p
-          style={{
-            fontSize: 15,
-            lineHeight: 1.65,
-            whiteSpace: "pre-wrap",
-            margin: 0,
-          }}
-        >
-          {message.content}
-        </p>
-      </div>
-      <span
-        style={{
-          marginTop: 6,
-          fontSize: 11,
-          color: "var(--color-text-muted)",
-          fontWeight: 500,
-        }}
-      >
-        {formatTime(message.timestamp)} · {labels.userLabel}
-      </span>
-    </div>
-  </div>
-);
-
-const AssistantBubble = ({
-  message,
-  onOpenCanvas,
-  labels,
-}: {
-  message: ChatMessage;
-  onOpenCanvas: () => void;
-  labels: Labels;
-}) => (
-  <div
-    style={{
-      display: "flex",
-      alignItems: "flex-start",
-      gap: 16,
-      padding: "16px 0",
-    }}
-  >
-    <div
-      style={{
-        width: 32,
-        height: 32,
-        flexShrink: 0,
-        borderRadius: "var(--radius-md)",
-        backgroundColor: "var(--color-orlen)",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        marginTop: 2,
-      }}
-    >
-      <Bot size={18} color="#ffffff" />
-    </div>
-    <div style={{ display: "flex", flexDirection: "column", maxWidth: "85%" }}>
-      <div
-        style={{
-          borderRadius: "var(--radius-md)",
-          backgroundColor: "var(--color-surface)",
-          border: "1px solid var(--color-border)",
-          borderLeft: "3px solid var(--color-orlen)",
-          padding: "16px 20px",
-          boxShadow: "0 2px 6px rgba(0,0,0,0.03)",
-        }}
-      >
-        <div
-          className="chat-markdown"
-          style={{ fontSize: 15, color: "var(--color-text-primary)" }}
-        >
-          <ReactMarkdown components={{ code: CodeBlock }}>
-            {message.content}
-          </ReactMarkdown>
-        </div>
-      </div>
-
-      {message.draftData && (
-        <button
-          onClick={onOpenCanvas}
-          style={{
-            marginTop: 12,
-            display: "inline-flex",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: 8,
-            alignSelf: "flex-start",
-            borderRadius: "var(--radius-md)",
-            border: "1px solid var(--color-orlen)",
-            backgroundColor: "var(--color-surface)",
-            padding: "8px 16px",
-            fontSize: 13,
-            fontWeight: 600,
-            color: "var(--color-orlen)",
-            transition: "all 0.15s",
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.backgroundColor = "var(--color-orlen)";
-            e.currentTarget.style.color = "#ffffff";
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.backgroundColor = "var(--color-surface)";
-            e.currentTarget.style.color = "var(--color-orlen)";
-          }}
-        >
-          <FileText size={15} />
-          {labels.openCanvas}
-        </button>
-      )}
-
-      <span
-        style={{
-          marginTop: 8,
-          fontSize: 11,
-          color: "var(--color-text-muted)",
-          fontWeight: 500,
-        }}
-      >
-        {formatTime(message.timestamp)} · {labels.systemQaLabel}
-      </span>
-    </div>
-  </div>
-);
-
-
-============================================================
 --- PLIK: .\frontend\src\components\ProjectView.tsx ---
 ============================================================
 
@@ -2364,6 +1639,480 @@ export const Sidebar = ({
 
 
 ============================================================
+--- PLIK: .\frontend\src\components\ChatFeed.tsx ---
+============================================================
+
+// ============================================================
+// FILE: .\frontend\src\components\ChatFeed.tsx
+// ============================================================
+
+import { useEffect, useRef, useState } from "react";
+import ReactMarkdown from "react-markdown";
+import { Bot, Check, Copy, FileText } from "lucide-react";
+import type { ChatMessage, Labels } from "../types";
+import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
+import { vscDarkPlus } from "react-syntax-highlighter/dist/esm/styles/prism";
+import { formatTime } from "../lib/utils";
+
+interface ChatFeedProps {
+  messages: ChatMessage[];
+  isLoading: boolean;
+  onOpenCanvas: () => void;
+  labels: Labels;
+}
+
+interface CodeBlockProps extends React.HTMLAttributes<HTMLElement> {
+  inline?: boolean;
+  className?: string;
+  children?: React.ReactNode;
+}
+
+const CodeBlock = ({
+  inline,
+  className,
+  children,
+  ...props
+}: CodeBlockProps) => {
+  const match = /language-(\w+)/.exec(className || "");
+  const lang = match ? match[1] : "";
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(String(children).replace(/\n$/, ""));
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  if (!inline && match) {
+    return (
+      <div
+        style={{
+          margin: "16px 0",
+          borderRadius: "8px",
+          overflow: "hidden",
+          border: "1px solid var(--color-border-strong)",
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            backgroundColor: "#2d2d2d",
+            padding: "6px 16px",
+            borderBottom: "1px solid #404040",
+          }}
+        >
+          <span
+            style={{
+              fontSize: "11px",
+              fontWeight: 700,
+              textTransform: "uppercase",
+              color: "#a3a3a3",
+            }}
+          >
+            {lang}
+          </span>
+          <button
+            onClick={handleCopy}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "6px",
+              fontSize: "11px",
+              fontWeight: 600,
+              color: "#d4d4d4",
+              cursor: "pointer",
+              border: "none",
+              background: "none",
+              transition: "color 0.15s",
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.color = "#ffffff")}
+            onMouseLeave={(e) => (e.currentTarget.style.color = "#d4d4d4")}
+          >
+            {copied ? <Check size={14} color="#10b981" /> : <Copy size={14} />}
+            {copied ? "Skopiowano" : "Kopiuj"}
+          </button>
+        </div>
+
+        <SyntaxHighlighter
+          children={String(children).replace(/\n$/, "")}
+          style={vscDarkPlus as Record<string, object>}
+          language={lang === "csv" ? "text" : lang}
+          PreTag="div"
+          customStyle={{
+            margin: 0,
+            padding: "16px",
+            fontSize: "13px",
+            backgroundColor: "#1e1e1e",
+          }}
+        />
+      </div>
+    );
+  }
+
+  return (
+    <code
+      style={{
+        backgroundColor: "var(--color-surface-tertiary)",
+        padding: "2px 6px",
+        borderRadius: "4px",
+        fontSize: "13px",
+        fontFamily: "monospace",
+        color: "var(--color-orlen)",
+      }}
+      {...props}
+    >
+      {children}
+    </code>
+  );
+};
+
+export const ChatFeed = ({
+  messages,
+  isLoading,
+  onOpenCanvas,
+  labels,
+}: ChatFeedProps) => {
+  const bottomRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages, isLoading]);
+
+  if (messages.length === 0 && !isLoading) {
+    return (
+      <div
+        style={{
+          flex: 1,
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          padding: "40px 24px",
+          textAlign: "center",
+        }}
+      >
+        <div
+          style={{
+            marginBottom: 32,
+            width: 88,
+            height: 88,
+            borderRadius: 16,
+            background:
+              "linear-gradient(135deg, rgba(227,0,15,0.1), rgba(227,0,15,0.04))",
+            border: "1px solid rgba(227,0,15,0.15)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <Bot size={44} color="#e3000f" />
+        </div>
+        <h2
+          style={{
+            fontSize: 26,
+            fontWeight: 700,
+            marginBottom: 8,
+            color: "var(--color-text-primary)",
+          }}
+        >
+          {labels.welcome}
+        </h2>
+        <p
+          style={{
+            fontSize: 15,
+            color: "var(--color-text-tertiary)",
+            maxWidth: 480,
+            lineHeight: 1.7,
+          }}
+        >
+          {labels.welcomeSub}
+        </p>
+        <div
+          style={{
+            marginTop: 40,
+            display: "grid",
+            gridTemplateColumns: "1fr 1fr",
+            gap: 16,
+            maxWidth: 420,
+            width: "100%",
+          }}
+        >
+          {[
+            { icon: "💬", label: labels.modeChatbot, desc: labels.chatbotDesc },
+            { icon: "✅", label: labels.modeGoNogo, desc: labels.gonogoDesc },
+            {
+              icon: "🌐",
+              label: labels.modeTranslator,
+              desc: labels.translatorDesc,
+            },
+            {
+              icon: "📊",
+              label: labels.modeRemedy,
+              desc: labels.analysisDesc,
+            },
+          ].map((item) => (
+            <div
+              key={item.label}
+              style={{
+                padding: 20,
+                borderRadius: 10,
+                border: "1px solid var(--color-border)",
+                backgroundColor: "var(--color-surface)",
+                textAlign: "left",
+                transition: "box-shadow 0.2s, border-color 0.2s",
+                cursor: "default",
+              }}
+            >
+              <div style={{ fontSize: 28, marginBottom: 10 }}>{item.icon}</div>
+              <div
+                style={{
+                  fontSize: 14,
+                  fontWeight: 600,
+                  color: "var(--color-text-primary)",
+                }}
+              >
+                {item.label}
+              </div>
+              <div
+                style={{
+                  fontSize: 12,
+                  color: "var(--color-text-tertiary)",
+                  marginTop: 4,
+                }}
+              >
+                {item.desc}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      style={{ flex: 1, overflowY: "auto", padding: "32px 24px", minHeight: 0 }}
+      className="custom-scrollbar"
+    >
+      <div style={{ maxWidth: 720, margin: "0 auto" }}>
+        {messages.map((msg) => (
+          <div key={msg.id} className="animate-fade-in-up">
+            {msg.role === "user" ? (
+              <UserBubble message={msg} labels={labels} />
+            ) : (
+              <AssistantBubble
+                message={msg}
+                onOpenCanvas={onOpenCanvas}
+                labels={labels}
+              />
+            )}
+          </div>
+        ))}
+
+        {isLoading && (
+          <div
+            style={{
+              display: "flex",
+              alignItems: "flex-start",
+              gap: 16,
+              padding: "20px 0",
+            }}
+            className="animate-fade-in-up"
+          >
+            <div
+              style={{
+                width: 36,
+                height: 36,
+                borderRadius: "50%",
+                flexShrink: 0,
+                backgroundColor: "var(--color-surface-tertiary)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <Bot size={18} color="var(--color-text-tertiary)" />
+            </div>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+                borderRadius: 16,
+                backgroundColor: "var(--color-surface-tertiary)",
+                padding: "16px 24px",
+              }}
+            >
+              <div className="typing-dot" />
+              <div className="typing-dot" />
+              <div className="typing-dot" />
+            </div>
+          </div>
+        )}
+
+        <div ref={bottomRef} />
+      </div>
+    </div>
+  );
+};
+
+const UserBubble = ({
+  message,
+  labels,
+}: {
+  message: ChatMessage;
+  labels: Labels;
+}) => (
+  <div
+    style={{ display: "flex", justifyContent: "flex-end", padding: "12px 0" }}
+  >
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "flex-end",
+        maxWidth: "80%",
+      }}
+    >
+      <div
+        style={{
+          borderRadius: "var(--radius-lg)",
+          backgroundColor: "var(--color-surface-secondary)",
+          border: "1px solid var(--color-border)",
+          padding: "12px 16px",
+          color: "var(--color-text-primary)",
+          boxShadow: "0 1px 2px rgba(0,0,0,0.02)",
+        }}
+      >
+        <p
+          style={{
+            fontSize: 15,
+            lineHeight: 1.65,
+            whiteSpace: "pre-wrap",
+            margin: 0,
+          }}
+        >
+          {message.content}
+        </p>
+      </div>
+      <span
+        style={{
+          marginTop: 6,
+          fontSize: 11,
+          color: "var(--color-text-muted)",
+          fontWeight: 500,
+        }}
+      >
+        {formatTime(message.timestamp)} · {labels.userLabel}
+      </span>
+    </div>
+  </div>
+);
+
+const AssistantBubble = ({
+  message,
+  onOpenCanvas,
+  labels,
+}: {
+  message: ChatMessage;
+  onOpenCanvas: () => void;
+  labels: Labels;
+}) => (
+  <div
+    style={{
+      display: "flex",
+      alignItems: "flex-start",
+      gap: 16,
+      padding: "16px 0",
+    }}
+  >
+    <div
+      style={{
+        width: 32,
+        height: 32,
+        flexShrink: 0,
+        borderRadius: "var(--radius-md)",
+        backgroundColor: "var(--color-orlen)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        marginTop: 2,
+      }}
+    >
+      <Bot size={18} color="#ffffff" />
+    </div>
+    <div style={{ display: "flex", flexDirection: "column", maxWidth: "85%" }}>
+      <div
+        style={{
+          borderRadius: "var(--radius-md)",
+          backgroundColor: "var(--color-surface)",
+          border: "1px solid var(--color-border)",
+          borderLeft: "3px solid var(--color-orlen)",
+          padding: "16px 20px",
+          boxShadow: "0 2px 6px rgba(0,0,0,0.03)",
+        }}
+      >
+        <div
+          className="chat-markdown"
+          style={{ fontSize: 15, color: "var(--color-text-primary)" }}
+        >
+          <ReactMarkdown components={{ code: CodeBlock }}>
+            {message.content}
+          </ReactMarkdown>
+        </div>
+      </div>
+
+      {message.draftData && (
+        <button
+          onClick={onOpenCanvas}
+          style={{
+            marginTop: 12,
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 8,
+            alignSelf: "flex-start",
+            borderRadius: "var(--radius-md)",
+            border: "1px solid var(--color-orlen)",
+            backgroundColor: "var(--color-surface)",
+            padding: "8px 16px",
+            fontSize: 13,
+            fontWeight: 600,
+            color: "var(--color-orlen)",
+            transition: "all 0.15s",
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.backgroundColor = "var(--color-orlen)";
+            e.currentTarget.style.color = "#ffffff";
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.backgroundColor = "var(--color-surface)";
+            e.currentTarget.style.color = "var(--color-orlen)";
+          }}
+        >
+          <FileText size={15} />
+          {labels.openCanvas}
+        </button>
+      )}
+
+      <span
+        style={{
+          marginTop: 8,
+          fontSize: 11,
+          color: "var(--color-text-muted)",
+          fontWeight: 500,
+        }}
+      >
+        {formatTime(message.timestamp)} · {labels.systemQaLabel}
+      </span>
+    </div>
+  </div>
+);
+
+
+============================================================
 --- PLIK: .\frontend\src\components\InputArea.tsx ---
 ============================================================
 
@@ -2514,11 +2263,16 @@ export const InputArea = ({
         {/* File chips */}
         {attachedFiles.length > 0 && (
           <div
+            className="custom-scrollbar"
             style={{
               display: "flex",
-              flexWrap: "wrap",
+              flexWrap:
+                "nowrap",
+              overflowX: "auto",
+              overflowY: "hidden",
               gap: 8,
               marginBottom: 14,
+              paddingBottom: 8,
             }}
           >
             {attachedFiles.map((af) => (
@@ -2534,6 +2288,7 @@ export const InputArea = ({
                   backgroundColor: "var(--color-surface-secondary)",
                   padding: "8px 12px",
                   fontSize: 13,
+                  flexShrink: 0 /* ZMIANA: Zapobiega "zgniataniu" czipów, gdy brakuje miejsca */,
                 }}
               >
                 {getFileIcon(af.file.name)}
@@ -2854,6 +2609,257 @@ export const InputArea = ({
           </span>
         </div>
       </div>
+    </div>
+  );
+};
+
+
+============================================================
+--- PLIK: .\frontend\src\components\CanvasPanel.tsx ---
+============================================================
+
+// ============================================================
+// FILE: .\frontend\src\components\CanvasPanel.tsx
+// ============================================================
+
+import { useRef, useState } from "react";
+import ReactQuill from "react-quill-new";
+import "react-quill-new/dist/quill.snow.css";
+import { X, Download, FileType2, FileCode } from "lucide-react";
+import type { Labels } from "../types";
+
+interface CanvasPanelProps {
+  isOpen: boolean;
+  content: string;
+  onChange: (content: string) => void;
+  onClose: () => void;
+  onExport: (format: "pdf" | "docx" | "md", addToRag: boolean) => void;
+  exportMessage: string;
+  labels: Labels;
+}
+
+const QUILL_MODULES = {
+  toolbar: [
+    [{ header: [1, 2, 3, false] }],
+    ["bold", "italic", "underline", "strike"],
+    [{ list: "ordered" }, { list: "bullet" }],
+    [{ color: [] }, { background: [] }],
+    ["blockquote", "code-block"],
+    ["clean"],
+  ],
+};
+
+const QUILL_FORMATS = [
+  "header",
+  "bold",
+  "italic",
+  "underline",
+  "strike",
+  "list",
+  "color",
+  "background",
+  "blockquote",
+  "code-block",
+];
+
+const exportBtnStyle = (): React.CSSProperties => ({
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  gap: 8,
+  padding: "9px 18px",
+  borderRadius: 8,
+  border: "1px solid var(--color-border)",
+  backgroundColor: "var(--color-surface)",
+  fontSize: 13,
+  fontWeight: 600,
+  color: "var(--color-text-secondary)",
+  cursor: "pointer",
+  transition: "all 0.15s",
+});
+
+/**
+ * Determines if an export status message indicates an error.
+ * Checks both Polish and English error keywords.
+ */
+function isErrorMessage(msg: string): boolean {
+  const lower = msg.toLowerCase();
+  return lower.includes("błąd") || lower.includes("error");
+}
+
+export const CanvasPanel = ({
+  isOpen,
+  content,
+  onChange,
+  onClose,
+  onExport,
+  exportMessage,
+  labels,
+}: CanvasPanelProps) => {
+  const quillRef = useRef<ReactQuill>(null);
+  const [addToRag, setAddToRag] = useState(true);
+  
+  if (!isOpen) return null;
+
+  const isError = isErrorMessage(exportMessage);
+
+  return (
+    <div
+      className="animate-slide-in-right"
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        height: "100%",
+        width: "100%",
+        borderLeft: "1px solid var(--color-border)",
+        backgroundColor: "var(--color-surface)",
+      }}
+    >
+      {/* Toolbar */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          borderBottom: "1px solid var(--color-border)",
+          backgroundColor: "var(--color-surface-secondary)",
+          padding: "16px 24px",
+          flexShrink: 0,
+        }}
+      >
+        <h3
+          style={{
+            fontSize: 15,
+            fontWeight: 700,
+            color: "var(--color-text-primary)",
+            margin: 0,
+          }}
+        >
+          {labels.canvasTitle}
+        </h3>
+
+        <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, fontWeight: 500, color: "var(--color-text-secondary)", cursor: "pointer" }}>
+            <input 
+              type="checkbox" 
+              checked={addToRag} 
+              onChange={(e) => setAddToRag(e.target.checked)} 
+              style={{ cursor: "pointer" }}
+            />
+            {labels.downloadPdf === "PDF" ? "Zapisz do bazy wiedzy (RAG)" : "Save to Knowledge Base (RAG)"}
+          </label>
+
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <button
+            onClick={() => onExport("pdf", addToRag)}
+            style={exportBtnStyle()}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.borderColor = "#fca5a5";
+              e.currentTarget.style.color = "#e3000f";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.borderColor = "var(--color-border)";
+              e.currentTarget.style.color = "var(--color-text-secondary)";
+            }}
+          >
+            <Download size={14} /> {labels.downloadPdf}
+          </button>
+          <button
+            onClick={() => onExport("docx", addToRag)}
+            style={exportBtnStyle()}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.borderColor = "#93c5fd";
+              e.currentTarget.style.color = "#3b82f6";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.borderColor = "var(--color-border)";
+              e.currentTarget.style.color = "var(--color-text-secondary)";
+            }}
+          >
+            <FileType2 size={14} /> {labels.downloadDocx}
+          </button>
+          <button
+            onClick={() => onExport("md", addToRag)}
+            style={exportBtnStyle()}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.borderColor = "#9ca3af";
+              e.currentTarget.style.color = "var(--color-text-primary)";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.borderColor = "var(--color-border)";
+              e.currentTarget.style.color = "var(--color-text-secondary)";
+            }}
+          >
+            <FileCode size={14} /> {labels.downloadMd}
+          </button>
+
+          <div
+            style={{
+              width: 1,
+              height: 24,
+              backgroundColor: "var(--color-border)",
+              margin: "0 8px",
+            }}
+          />
+
+          <button
+            onClick={onClose}
+            style={{
+              padding: 10,
+              borderRadius: 8,
+              color: "var(--color-text-tertiary)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              transition: "all 0.15s",
+            }}
+            title={labels.closeCanvas}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor =
+                "var(--color-surface-tertiary)";
+              e.currentTarget.style.color = "var(--color-text-secondary)";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = "transparent";
+              e.currentTarget.style.color = "var(--color-text-tertiary)";
+            }}
+          >
+            <X size={20} />
+          </button>
+        </div>
+      </div>
+
+      {/* Editor */}
+      <div
+        className="canvas-editor custom-scrollbar"
+        style={{ flex: 1, overflowY: "auto" }}
+      >
+        <ReactQuill
+          ref={quillRef}
+          theme="snow"
+          value={content}
+          onChange={onChange}
+          modules={QUILL_MODULES}
+          formats={QUILL_FORMATS}
+        />
+      </div>
+
+      {/* Status message */}
+      {exportMessage && (
+        <div
+          style={{
+            borderTop: "1px solid",
+            padding: "12px 24px",
+            textAlign: "center",
+            fontSize: 13,
+            fontWeight: 500,
+            borderColor: isError ? "#fca5a5" : "#86efac",
+            backgroundColor: isError ? "#fef2f2" : "#f0fdf4",
+            color: isError ? "#dc2626" : "#16a34a",
+          }}
+        >
+          {exportMessage}
+        </div>
+      )}
     </div>
   );
 };
@@ -3667,8 +3673,9 @@ export interface Chat {
 
 export interface StructuredDraft {
   summary: string;
-  test_analysis: string;
-  risks_eval: string;
+  test_analysis: { test_name: string; value: string; filename: string }[];
+  test_analysis_summary: string;
+  risks_eval: { test_name: string; filename: string; value: string; reason: string; severity: "high" | "medium" | "low" }[];
   decision: string;
   justification: string;
 }
@@ -3877,12 +3884,60 @@ export function draftToHtml(
   const sections = [
     { heading: isPl ? "Podsumowanie" : "Summary", content: draft.summary },
     {
-      heading: isPl ? "Analiza testów" : "Test Analysis",
-      content: draft.test_analysis,
+      heading: isPl ? "Analiza Testów" : "Test Analysis",
+      content: (() => {
+        const rows = Array.isArray(draft.test_analysis) ? draft.test_analysis : [];
+        const table = rows.length > 0
+          ? `<table style="width:100%;border-collapse:collapse;font-size:0.9em;margin-bottom:12px">
+              <thead>
+                <tr>
+                  <th style="text-align:left;padding:6px 10px;border-bottom:2px solid #e2e8f0">${isPl ? "Nazwa testu" : "Test name"}</th>
+                  <th style="text-align:left;padding:6px 10px;border-bottom:2px solid #e2e8f0">${isPl ? "Wynik" : "Value"}</th>
+                  <th style="text-align:left;padding:6px 10px;border-bottom:2px solid #e2e8f0">${isPl ? "Plik" : "File"}</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${rows.map(r => `<tr>
+                  <td style="padding:5px 10px;border-bottom:1px solid #f1f5f9">${r.test_name}</td>
+                  <td style="padding:5px 10px;border-bottom:1px solid #f1f5f9">${r.value}</td>
+                  <td style="padding:5px 10px;border-bottom:1px solid #f1f5f9;color:#64748b;font-size:0.85em">${r.filename}</td>
+                </tr>`).join("")}
+              </tbody>
+            </table>`
+          : "";
+        const summary = draft.test_analysis_summary
+          ? `<p style="margin-top:8px;color:#475569;font-style:italic">${draft.test_analysis_summary}</p>`
+          : "";
+        return table + summary;
+      })(),
     },
     {
-      heading: isPl ? "Ocena ryzyk" : "Risk Evaluation",
-      content: draft.risks_eval,
+      content: (() => {
+        const rows = Array.isArray(draft.risks_eval) ? draft.risks_eval : [];
+        if (rows.length === 0)
+          return `<p style="color:#64748b;font-style:italic">${isPl ? "Brak zidentyfikowanych ryzyk." : "No risks identified."}</p>`;
+        return `<table style="width:100%;border-collapse:collapse;font-size:0.9em">
+          <thead>
+            <tr>
+              <th style="text-align:left;padding:6px 10px;border-bottom:2px solid #e2e8f0;color:#dc2626">${isPl ? "Nazwa testu" : "Test name"}</th>
+              <th style="text-align:left;padding:6px 10px;border-bottom:2px solid #e2e8f0;color:#dc2626">${isPl ? "Plik" : "File"}</th>
+              <th style="text-align:left;padding:6px 10px;border-bottom:2px solid #e2e8f0;color:#dc2626">${isPl ? "Wynik" : "Value"}</th>
+              <th style="text-align:left;padding:6px 10px;border-bottom:2px solid #e2e8f0;color:#dc2626">${isPl ? "Powód" : "Reason"}</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rows.map(r => {
+              const color = r.severity === "high" ? "#dc2626" : r.severity === "medium" ? "#ea580c" : "#ca8a04";
+              return `<tr>
+                <td style="padding:5px 10px;border-bottom:1px solid #f1f5f9;color:${color};font-weight:500">${r.test_name}</td>
+                <td style="padding:5px 10px;border-bottom:1px solid #f1f5f9;color:${color};font-size:0.85em">${r.filename}</td>
+                <td style="padding:5px 10px;border-bottom:1px solid #f1f5f9;color:${color}"><strong>${r.value}</strong></td>
+                <td style="padding:5px 10px;border-bottom:1px solid #f1f5f9;color:${color};font-style:italic">${r.reason}</td>
+              </tr>`;
+            }).join("")}
+          </tbody>
+        </table>`;
+      })(),
     },
     {
       heading: isPl ? "Decyzja" : "Decision",
