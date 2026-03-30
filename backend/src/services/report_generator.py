@@ -228,10 +228,10 @@ class ReportGenerator:
                 history_str = f"Ostatnia decyzja: {prev_status}.\nPoprzednie ryzyka: {prev_risks}."
 
             system_prompt = (
-                "Jesteś Głównym Inżynierem QA i doradcą technicznym. Ostateczną instancją decyzyjną jest Użytkownik.\n"
-                "ZASADA NADRZĘDNA: Jeśli w sekcji [UWAGI UŻYTKOWNIKA] człowiek JAWNIE i BEZSPORNIE akceptuje ryzyka (np. pisząc 'akceptuję błędy', 'wymuszam GO'), zmień decyzję na 'GO'.\n"
-                "UWAGA KRYTYCZNA: Ogólne polecenia typu 'stwórz gonogo', 'wygeneruj raport', 'zrób raport', 'analizuj' ABSOLUTNIE NIE SĄ akceptacją ryzyk! Ignoruj je i decyduj surowo na podstawie błędów technicznych z plików.\n"
-                "Zwróć odpowiedź WYŁĄCZNIE jako surowy, poprawny obiekt JSON. Nie używaj znaczników ```json ani Markdown."
+                "Jesteś Głównym Inżynierem QA. Twoim zadaniem jest ocena plików i wygenerowanie raportu, który potocznie nazywa się 'raportem gonogo' lub 'Go/No-Go'.\n"
+                "ZASADA NADRZĘDNA DOTYCZĄCA RYZYKA: Zmień decyzję na 'GO' pomimo krytycznych błędów TYLKO I WYŁĄCZNIE WTEDY, gdy Użytkownik użyje twardych deklaracji, np.: 'akceptuję ryzyko', 'ignoruj błędy', 'wymuszam GO'.\n"
+                "BARDZO WAŻNE: Frazy takie jak 'stwórz gonogo', 'zrób raport', 'analizuj' to TYLKO komendy uruchamiające analizę. Nazwa 'gonogo' nie jest decyzją 'GO'! Jeśli użytkownik napisał 'stwórz gonogo', oznacza to po prostu 'przeanalizuj pliki'. W takim przypadku wystaw surową decyzję 'NO-GO', jeśli w plikach są błędy FAIL, CRITICAL lub WARN.\n"
+                "Zwróć odpowiedź WYŁĄCZNIE jako surowy obiekt JSON. Nie używaj znaczników ```json ani Markdown."
             )
 
             user_prompt = f"""
@@ -267,10 +267,10 @@ class ReportGenerator:
                 history_str = f"Last decision: {prev_status} | Last risks: {prev_risks}"
 
             system_prompt = (
-                "You are a Lead QA Engineer and technical advisor. The User is the ultimate Release Manager.\n"
-                "OVERRIDE RULE: If the User in the [USER INPUT] explicitly and undeniably accepts risks (e.g., 'I accept errors', 'force GO'), change the decision to 'GO'.\n"
-                "CRITICAL WARNING: General commands like 'create gonogo', 'generate report', 'analyze' are ABSOLUTELY NOT risk acceptances! Ignore them and decide strictly based on file test results.\n"
-                "Return the response STRICTLY as a valid JSON object. Do not use ```json or Markdown wrappers."
+                "You are a Lead QA Engineer. Your task is to evaluate files and generate a document commonly known as a 'gonogo report' or 'Go/No-Go'.\n"
+                "OVERRIDE RULE ON RISKS: Change the decision to 'GO' despite critical errors ONLY IF the User uses hard declarations like: 'I accept the risks', 'ignore errors', or 'force GO'.\n"
+                "VERY IMPORTANT: Phrases like 'create gonogo', 'generate report', or 'analyze' are JUST trigger commands. The word 'gonogo' is NOT a 'GO' decision! If the user wrote 'create gonogo', it simply means 'analyze the files'. In such cases, issue a strict 'NO-GO' decision if there are FAIL, CRITICAL, or WARN errors in the files.\n"
+                "Return the response STRICTLY as a raw JSON object. Do not use ```json or Markdown wrappers."
             )
 
             user_prompt = f"""
