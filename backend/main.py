@@ -385,12 +385,17 @@ async def _handle_gonogo(
         storage.load_project_instructions(project_id) if project_id else ""
     )
 
-    rag_context = rag.search_context(
-        query=message, project_id=project_id, chat_id=chat_id
-    )
+    rag_context_text = ""
+    if project_id:
+        rag_context_text = rag.search_context(
+            query="Kryteria akceptacji, zasady biznesowe, wytyczne projektu, priorytety NO-GO",
+            project_id=project_id,
+            chat_id=None,
+        )
 
-    if project_instructions:
-        rag_context = f"[GLOBALNE WYTYCZNE PROJEKTU]\n{project_instructions}\n\n[DOKUMENTY RAG]\n{rag_context}"
+    final_rag_block = "Brak specyficznych wytycznych biznesowych."
+    if project_instructions or rag_context_text:
+        final_rag_block = f"[GLOBALNE WYTYCZNE PROJEKTU]\n{project_instructions}\n\n[DOKUMENTY RAG]\n{rag_context_text}"
 
     historical_cache = storage.get_latest_history(chat_id=chat_id)
     chart_paths = chart_generator.generate_all_charts(
@@ -401,7 +406,7 @@ async def _handle_gonogo(
     draft_json = await asyncio.to_thread(
         report_generator.generate_structured_draft,
         historical_cache=historical_cache,
-        rag_context=rag_context,
+        rag_context=final_rag_block,
         parsed_test_data=parsed_test_data,
         user_risks=user_risks,
         project_name=chat_id,
