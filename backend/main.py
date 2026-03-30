@@ -166,9 +166,7 @@ TRANSLATOR_KEYWORDS = [
 ]
 
 
-async def detect_intent_llm(
-    message: str, current_mode: str, llm: LLMClient
-) -> str:
+async def detect_intent_llm(message: str, current_mode: str, llm: LLMClient) -> str:
     """Hybrid intent detection"""
     msg_lower = message.lower().strip()
     msg_no_diacritics = remove_diacritics(msg_lower)
@@ -305,17 +303,33 @@ async def _handle_gonogo(
 ) -> dict:
     chat_uploads_dir = storage.get_chat_uploads_dir(chat_id)
     contents = {}
-
-    # RE-EVALUATION: no new files → load parsed_test_data from cache directly
-    cached = storage.get_latest_history(chat_id=chat_id)
-    cached_parsed = cached.get("parsed_test_data", "") if cached else ""
-
-    
-
-    # IF NEW FILES ARE UPLOADED - VALIDATE, SAVE, INGEST
-    valid_files = [f for f in files if getattr(f, "filename", "")]
     parsed_parts = []
-    if valid_files:
+
+    valid_files = [f for f in files if getattr(f, "filename", "")]
+
+    if not valid_files:
+        # POBIERANIE WGRANYCH PLIKÓW Z DYSKU (Brakowało tego kroku!)
+        if os.path.exists(chat_uploads_dir):
+            for filename in os.listdir(chat_uploads_dir):
+                file_path = os.path.join(chat_uploads_dir, filename)
+                ext = os.path.splitext(filename)[1].lower()
+                if ext in GONOGO_ALLOWED_EXTENSIONS:
+                    try:
+                        with open(file_path, "rb") as f:
+                            content = f.read()
+                            contents[filename] = content
+                            text_content = file_parser.extract_test_data_from_bytes(
+                                {filename: content}
+                            )
+                            if text_content:
+                                text_content = normalize_extracted_text(text_content)
+                                parsed_parts.append(text_content)
+                    except Exception as e:
+                        logger.warning(
+                            f"Gonogo handler failed to re-read {filename}: {e}"
+                        )
+    else:
+        # OBRÓBKA NOWO WGRANYCH PLIKÓW
         if len(valid_files) > MAX_FILES:
             raise HTTPException(
                 status_code=400, detail=f"Too many files. Maximal count is {MAX_FILES}."
@@ -350,8 +364,12 @@ async def _handle_gonogo(
             except Exception as e:
                 logger.warning(f"Could not vectorize {safe_name}: {e}")
 
-    # Determine parsed_test_data: new upload → from parsed_parts, re-eval → from cache
-    if valid_files and parsed_parts:
+    # RE-EVALUATION CACHE FALLBACK
+    cached = storage.get_latest_history(chat_id=chat_id)
+    cached_parsed = cached.get("parsed_test_data", "") if cached else ""
+
+    # USTALENIE DANYCH DO ANALIZY
+    if parsed_parts:
         parsed_test_data = "\n\n".join(parsed_parts)
     elif cached_parsed:
         parsed_test_data = cached_parsed
@@ -363,11 +381,10 @@ async def _handle_gonogo(
         )
         return {"message": msg, "detected_mode": "gonogo"}
 
-    parsed_test_data = "\n\n".join(parsed_parts)
-
     project_instructions = (
         storage.load_project_instructions(project_id) if project_id else ""
     )
+
     rag_context = rag.search_context(
         query=message, project_id=project_id, chat_id=chat_id
     )
@@ -395,7 +412,9 @@ async def _handle_gonogo(
     msg_response = draft_json.get("assistant_reply", fallback_msg)
 
     chat_history.append({"role": "assistant", "content": msg_response})
-    storage.save_to_cache(chat_id=chat_id, structured_data=draft_json, parsed_test_data=parsed_test_data)
+    storage.save_to_cache(
+        chat_id=chat_id, structured_data=draft_json, parsed_test_data=parsed_test_data
+    )
     storage.save_chat_history(chat_id, chat_history)
 
     return {
@@ -524,10 +543,10 @@ async def _handle_chatbot(
     user_prompt = f"{context_block}\n[ZAPYTANIE UŻYTKOWNIKA]\n{message}"
     reply = await asyncio.to_thread(
         llm.generate_response,
-        sys_prompt, 
-        user_prompt, 
-        temperature=0.3, 
-        chat_history=chat_history[-8:]
+        sys_prompt,
+        user_prompt,
+        temperature=0.3,
+        chat_history=chat_history[-8:],
     )
 
     chat_history.append({"role": "assistant", "content": reply})
@@ -673,10 +692,10 @@ async def _handle_translator(
     logger.info(f"Executing hybrid translator mode for chat {chat_id}")
     reply = await asyncio.to_thread(
         llm.generate_response,
-        sys_prompt, 
-        user_prompt, 
-        temperature=0.2, 
-        chat_history=chat_history[-8:]
+        sys_prompt,
+        user_prompt,
+        temperature=0.2,
+        chat_history=chat_history[-8:],
     )
 
     chat_history.append({"role": "assistant", "content": reply})

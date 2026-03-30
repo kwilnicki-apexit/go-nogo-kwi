@@ -61,7 +61,7 @@ for i in range(1, NUM_FILES + 1):
     filename = os.path.join(OUTPUT_DIR, f"Test_Report_Plock_Modul_{i}.csv")
     
     with open(filename, 'w', newline='', encoding='utf-8') as f:
-        writer = csv.writer(f, delimiter=';')
+        writer = csv.writer(f, delimiter=',')
         writer.writerow(["Test_ID", "System", "Komponent", "Priorytet_Biznesowy", "Status", "Czas_ms", "Opis_Bledu"])
         
         for j in range(1, ROWS_PER_FILE + 1):

@@ -1,61 +1,61 @@
-Test_ID;System;Komponent;Priorytet_Biznesowy;Status;Czas_ms;Opis_Bledu
-UAT-SCA-72F685;SCADA_Rafineria;Alarmy_HSE;LOW;PASS;533;Sygnał odebrany
-UAT-SCA-BDE613;SCADA_Rafineria;Alarmy_HSE;HIGH;PASS;689;Test zaliczony
-UAT-WMS-37AAA2;WMS_Petrochemia;Dystrybucja_Asfaltu;MEDIUM;FAIL;7167;Niezgodność schematu JSON z dokumentacją Swagger
-UAT-ERP-933FB7;ERP_Korporacja;Kadry_Place;MEDIUM;PASS;536;Dane zapisane poprawnie
-UAT-IoT-B0140F;IoT_Pipeline;Zasilanie_Awaryjne;HIGH;FAIL;8521;Brak fallbacku na zasilanie awaryjne w węźle komunikacyjnym 12
-UAT-SAP-493B50;SAP_IS_Oil;Raportowanie_Zapasow;CRITICAL;FAIL;12716;Brak warunku cenowego dla ON Ekodiesel w hurcie
-UAT-Sec-C46A3F;Security_HQ;Karty_Dostepu_RFID;CRITICAL;FAIL;9791;Bramka główna (Północ) nie blokuje dostępu przy unieważnionej karcie RFID
-UAT-SAP-E47431;SAP_IS_Oil;Raportowanie_Zapasow;CRITICAL;PASS;79;OK
-UAT-Fle-0172B5;Fleet_TMS;Harmonogram_Zaladunku;CRITICAL;PASS;751;Dane zapisane poprawnie
-UAT-Fle-4257EB;Fleet_TMS;Czas_Pracy_Kierowcow;MEDIUM;PASS;389;Sygnał odebrany
-UAT-IoT-8DF305;IoT_Pipeline;Zasilanie_Awaryjne;CRITICAL;PASS;561;OK
-UAT-Fle-A253CE;Fleet_TMS;Czas_Pracy_Kierowcow;HIGH;PASS;90;Sygnał odebrany
-UAT-SAP-A8F625;SAP_IS_Oil;Podatki_Akcyza;HIGH;PASS;576;OK
-UAT-ERP-A7468A;ERP_Korporacja;Kadry_Place;HIGH;FAIL;10850;HTTP 500 Internal Server Error podczas strzału do API API Gateway
-UAT-ERP-3D9398;ERP_Korporacja;Portal_Pracowniczy;MEDIUM;PASS;21;Zgodnie z asercją
-UAT-SAP-A40AB2;SAP_IS_Oil;Raportowanie_Zapasow;LOW;PASS;685;Zgodnie z asercją
-UAT-SAP-35B751;SAP_IS_Oil;Podatki_Akcyza;MEDIUM;PASS;340;Dane zapisane poprawnie
-UAT-Sec-49AC19;Security_HQ;Bramki_Obrotowe;CRITICAL;PASS;47;Dane zapisane poprawnie
-UAT-Fle-EAF339;Fleet_TMS;GPS_Cysterny;MEDIUM;PASS;11;Sygnał odebrany
-UAT-WMS-C94956;WMS_Petrochemia;Magazyn_Olejow;LOW;PASS;202;OK
-UAT-SCA-D8BD62;SCADA_Rafineria;Zawory_Biezace;LOW;PASS;625;Sygnał odebrany
-UAT-WMS-F708BD;WMS_Petrochemia;Inwentaryzacja_Dronami;CRITICAL;PASS;507;OK
-UAT-ERP-F6328A;ERP_Korporacja;Kadry_Place;MEDIUM;PASS;790;Test zaliczony
-UAT-WMS-DD34F7;WMS_Petrochemia;Inwentaryzacja_Dronami;LOW;PASS;355;Dane zapisane poprawnie
-UAT-Fle-95FE6E;Fleet_TMS;Integracja_TollCollect;MEDIUM;PASS;678;Dane zapisane poprawnie
-UAT-Fle-687804;Fleet_TMS;Harmonogram_Zaladunku;CRITICAL;PASS;504;Test zaliczony
-UAT-Fle-5FA4BD;Fleet_TMS;Harmonogram_Zaladunku;MEDIUM;PASS;194;Zgodnie z asercją
-UAT-ERP-EBA8A7;ERP_Korporacja;Zatwierdzanie_Budzetu;LOW;PASS;552;OK
-UAT-IoT-3334A3;IoT_Pipeline;Zasilanie_Awaryjne;HIGH;PASS;227;Test zaliczony
-UAT-SCA-CDFC01;SCADA_Rafineria;Alarmy_HSE;HIGH;PASS;617;Test zaliczony
-UAT-SCA-8B38C8;SCADA_Rafineria;Kolumna_Destylacyjna_C100;HIGH;PASS;26;Test zaliczony
-UAT-Sec-59CB53;Security_HQ;Kamery_ANPR_Parking;LOW;WARN;2429;Brak zdjęcia gościa w logach wejść
-UAT-ERP-7A0D90;ERP_Korporacja;Kadry_Place;MEDIUM;FAIL;10012;Niezgodność schematu JSON z dokumentacją Swagger
-UAT-Sec-38369A;Security_HQ;Logi_Gosci;LOW;PASS;379;OK
-UAT-Fle-EE6407;Fleet_TMS;Integracja_TollCollect;HIGH;FAIL;14550;Błąd dekodowania pozycji GPS z cysterny (null format)
-UAT-Fle-DF78BD;Fleet_TMS;GPS_Cysterny;CRITICAL;PASS;111;OK
-UAT-SAP-719D36;SAP_IS_Oil;Hurt_Paliw;LOW;PASS;799;OK
-UAT-SCA-E057B1;SCADA_Rafineria;Alarmy_HSE;CRITICAL;PASS;147;Sygnał odebrany
-UAT-SAP-48F69E;SAP_IS_Oil;Wycena_Barylek;HIGH;PASS;522;Sygnał odebrany
-UAT-SCA-DF6BBC;SCADA_Rafineria;Alarmy_HSE;MEDIUM;PASS;336;Dane zapisane poprawnie
-UAT-SCA-B70ED1;SCADA_Rafineria;Alarmy_HSE;LOW;PASS;779;Test zaliczony
-UAT-Sec-F4B0D3;Security_HQ;Kamery_ANPR_Parking;LOW;PASS;79;Zgodnie z asercją
-UAT-SCA-DDEDB7;SCADA_Rafineria;Kolumna_Destylacyjna_C100;HIGH;PASS;504;Dane zapisane poprawnie
-UAT-IoT-F1E8B1;IoT_Pipeline;Zasilanie_Awaryjne;LOW;PASS;166;Sygnał odebrany
-UAT-Fle-C240BB;Fleet_TMS;Integracja_TollCollect;HIGH;PASS;532;Dane zapisane poprawnie
-UAT-WMS-8FEAEF;WMS_Petrochemia;Inwentaryzacja_Dronami;LOW;PASS;486;Test zaliczony
-UAT-SCA-25DA23;SCADA_Rafineria;Zawory_Biezace;LOW;PASS;438;OK
-UAT-WMS-7D3D65;WMS_Petrochemia;Inwentaryzacja_Dronami;MEDIUM;PASS;40;Dane zapisane poprawnie
-UAT-WMS-403854;WMS_Petrochemia;Magazyn_Olejow;HIGH;FAIL;13602;HTTP 500 Internal Server Error podczas strzału do API API Gateway
-UAT-SAP-17AE65;SAP_IS_Oil;Raportowanie_Zapasow;MEDIUM;PASS;42;Zgodnie z asercją
-UAT-Sec-508F1A;Security_HQ;Kamery_ANPR_Parking;CRITICAL;PASS;453;Dane zapisane poprawnie
-UAT-Sec-F7A4CD;Security_HQ;Karty_Dostepu_RFID;HIGH;PASS;508;Sygnał odebrany
-UAT-SCA-85BF77;SCADA_Rafineria;Czujniki_Cisnienia;HIGH;PASS;398;Dane zapisane poprawnie
-UAT-ERP-78FDC4;ERP_Korporacja;Zatwierdzanie_Budzetu;LOW;PASS;193;Zgodnie z asercją
-UAT-ERP-4783A9;ERP_Korporacja;Zatwierdzanie_Budzetu;HIGH;PASS;493;Dane zapisane poprawnie
-UAT-Sec-9FBE79;Security_HQ;Bramki_Obrotowe;LOW;WARN;4950;Brak zdjęcia gościa w logach wejść
-UAT-WMS-521E07;WMS_Petrochemia;Etykietowanie_Chemii;MEDIUM;FAIL;2072;Niezgodność schematu JSON z dokumentacją Swagger
-UAT-Sec-D89A0A;Security_HQ;Karty_Dostepu_RFID;HIGH;PASS;68;Zgodnie z asercją
-UAT-SAP-4E41C1;SAP_IS_Oil;Wycena_Barylek;HIGH;PASS;122;Test zaliczony
-UAT-Fle-13C5EC;Fleet_TMS;Integracja_TollCollect;CRITICAL;PASS;503;OK
+Test_ID,System,Komponent,Priorytet_Biznesowy,Status,Czas_ms,Opis_Bledu
+UAT-WMS-05BBFB,WMS_Petrochemia,Inwentaryzacja_Dronami,HIGH,PASS,485,Test zaliczony
+UAT-Sec-CC2088,Security_HQ,Bramki_Obrotowe,CRITICAL,PASS,409,OK
+UAT-SAP-6BB103,SAP_IS_Oil,Podatki_Akcyza,MEDIUM,WARN,5868,Zbyt długa odpowiedź RFC z modułu MM (> 3000ms)
+UAT-Fle-5ABB45,Fleet_TMS,Czas_Pracy_Kierowcow,LOW,WARN,10012,Użyto zdeprecjonowanego endpointu v2.1 (zalecany v3.0)
+UAT-SCA-D5751D,SCADA_Rafineria,Kolumna_Destylacyjna_C100,CRITICAL,FAIL,13110,Brak odczytu z czujnika ciśnienia PT-405 (timeout > 500ms)
+UAT-WMS-54B277,WMS_Petrochemia,Dystrybucja_Asfaltu,CRITICAL,PASS,366,Dane zapisane poprawnie
+UAT-ERP-77F6A0,ERP_Korporacja,Zatwierdzanie_Budzetu,LOW,PASS,759,Dane zapisane poprawnie
+UAT-IoT-DD1966,IoT_Pipeline,Telemetria_Temperatury,MEDIUM,PASS,115,Dane zapisane poprawnie
+UAT-Fle-739279,Fleet_TMS,GPS_Cysterny,HIGH,PASS,484,Test zaliczony
+UAT-SAP-C18C10,SAP_IS_Oil,Hurt_Paliw,HIGH,FAIL,5750,Błąd wyliczenia podatku akcyzowego dla dokumentu WZ
+UAT-SAP-7AB4FC,SAP_IS_Oil,Wycena_Barylek,MEDIUM,WARN,2002,Zbyt długa odpowiedź RFC z modułu MM (> 3000ms)
+UAT-WMS-C57AAC,WMS_Petrochemia,Etykietowanie_Chemii,LOW,PASS,20,Test zaliczony
+UAT-SCA-58A877,SCADA_Rafineria,Czujniki_Cisnienia,MEDIUM,PASS,405,OK
+UAT-Sec-C1C747,Security_HQ,Karty_Dostepu_RFID,HIGH,FAIL,9738,HTTP 500 Internal Server Error podczas strzału do API API Gateway
+UAT-WMS-329F23,WMS_Petrochemia,Dystrybucja_Asfaltu,LOW,PASS,782,Sygnał odebrany
+UAT-SCA-CCFB2F,SCADA_Rafineria,Kolumna_Destylacyjna_C100,MEDIUM,PASS,49,Test zaliczony
+UAT-Sec-A8A891,Security_HQ,Karty_Dostepu_RFID,CRITICAL,PASS,264,Sygnał odebrany
+UAT-IoT-88A036,IoT_Pipeline,Przeplywomierze,HIGH,FAIL,14172,Brak fallbacku na zasilanie awaryjne w węźle komunikacyjnym 12
+UAT-WMS-C8227F,WMS_Petrochemia,Etykietowanie_Chemii,LOW,PASS,413,Sygnał odebrany
+UAT-SCA-AC9EBF,SCADA_Rafineria,Czujniki_Cisnienia,LOW,PASS,481,Dane zapisane poprawnie
+UAT-WMS-EE7947,WMS_Petrochemia,Etykietowanie_Chemii,HIGH,PASS,251,Dane zapisane poprawnie
+UAT-SCA-3244F8,SCADA_Rafineria,Alarmy_HSE,CRITICAL,PASS,423,Sygnał odebrany
+UAT-SCA-24BC4A,SCADA_Rafineria,Alarmy_HSE,MEDIUM,PASS,669,OK
+UAT-IoT-927C9A,IoT_Pipeline,Przeplywomierze,HIGH,PASS,121,Dane zapisane poprawnie
+UAT-ERP-E1B8BC,ERP_Korporacja,Kadry_Place,LOW,PASS,681,OK
+UAT-SAP-AED1D8,SAP_IS_Oil,Podatki_Akcyza,CRITICAL,PASS,580,Zgodnie z asercją
+UAT-IoT-44AC10,IoT_Pipeline,Przeplywomierze,CRITICAL,FAIL,5879,Algorytm detekcji wycieków zwrócił False Negative podczas testu wstrzykiwania
+UAT-Sec-DB0B97,Security_HQ,Kamery_ANPR_Parking,MEDIUM,PASS,799,Dane zapisane poprawnie
+UAT-IoT-BD89D7,IoT_Pipeline,Przeplywomierze,MEDIUM,PASS,605,Dane zapisane poprawnie
+UAT-Sec-B29A22,Security_HQ,Bramki_Obrotowe,CRITICAL,PASS,54,Test zaliczony
+UAT-ERP-613B54,ERP_Korporacja,Portal_Pracowniczy,LOW,WARN,4962,Użyto zdeprecjonowanego endpointu v2.1 (zalecany v3.0)
+UAT-WMS-52003C,WMS_Petrochemia,Inwentaryzacja_Dronami,HIGH,PASS,392,Sygnał odebrany
+UAT-Fle-66C4F1,Fleet_TMS,Harmonogram_Zaladunku,MEDIUM,PASS,180,Zgodnie z asercją
+UAT-SCA-21138B,SCADA_Rafineria,Kolumna_Destylacyjna_C100,MEDIUM,PASS,169,Test zaliczony
+UAT-SCA-05F74B,SCADA_Rafineria,Zawory_Biezace,HIGH,FAIL,14259,Nieprawidłowy stan zaworu awaryjnego zrzutu gazu
+UAT-SCA-8F856A,SCADA_Rafineria,Zawory_Biezace,LOW,PASS,424,OK
+UAT-SCA-2F5CD3,SCADA_Rafineria,Czujniki_Cisnienia,LOW,PASS,267,Zgodnie z asercją
+UAT-SAP-BD4C93,SAP_IS_Oil,Hurt_Paliw,LOW,PASS,160,Sygnał odebrany
+UAT-WMS-DBA4FE,WMS_Petrochemia,Etykietowanie_Chemii,HIGH,FAIL,14351,HTTP 500 Internal Server Error podczas strzału do API API Gateway
+UAT-WMS-C8A34C,WMS_Petrochemia,Magazyn_Olejow,MEDIUM,PASS,184,Sygnał odebrany
+UAT-Sec-4326E7,Security_HQ,Kamery_ANPR_Parking,LOW,PASS,795,Dane zapisane poprawnie
+UAT-IoT-2FB2D7,IoT_Pipeline,Telemetria_Temperatury,LOW,PASS,558,Dane zapisane poprawnie
+UAT-SCA-E394E9,SCADA_Rafineria,Kolumna_Destylacyjna_C100,LOW,PASS,423,Test zaliczony
+UAT-SAP-6E3EED,SAP_IS_Oil,Hurt_Paliw,MEDIUM,PASS,600,Dane zapisane poprawnie
+UAT-ERP-CFDC6A,ERP_Korporacja,Obieg_Faktur,HIGH,PASS,540,Sygnał odebrany
+UAT-IoT-1F8718,IoT_Pipeline,Detekcja_Wyciekow,HIGH,PASS,431,Dane zapisane poprawnie
+UAT-Fle-82C7E0,Fleet_TMS,GPS_Cysterny,LOW,PASS,128,Zgodnie z asercją
+UAT-WMS-D95382,WMS_Petrochemia,Etykietowanie_Chemii,MEDIUM,PASS,133,Sygnał odebrany
+UAT-SCA-F6311F,SCADA_Rafineria,Czujniki_Cisnienia,MEDIUM,PASS,754,Sygnał odebrany
+UAT-WMS-90E629,WMS_Petrochemia,Magazyn_Olejow,HIGH,PASS,482,Dane zapisane poprawnie
+UAT-SAP-D76E6E,SAP_IS_Oil,Wycena_Barylek,LOW,PASS,38,Zgodnie z asercją
+UAT-SAP-3BD7F0,SAP_IS_Oil,Raportowanie_Zapasow,MEDIUM,PASS,271,Test zaliczony
+UAT-Fle-5A9B2C,Fleet_TMS,Czas_Pracy_Kierowcow,HIGH,PASS,775,Sygnał odebrany
+UAT-SCA-36C009,SCADA_Rafineria,Czujniki_Cisnienia,CRITICAL,PASS,564,Sygnał odebrany
+UAT-IoT-1CB068,IoT_Pipeline,Przeplywomierze,CRITICAL,PASS,759,Sygnał odebrany
+UAT-SCA-902E1B,SCADA_Rafineria,Czujniki_Cisnienia,LOW,PASS,102,Dane zapisane poprawnie
+UAT-IoT-A4EE7D,IoT_Pipeline,Przeplywomierze,CRITICAL,PASS,254,Dane zapisane poprawnie
+UAT-Fle-BA1590,Fleet_TMS,Czas_Pracy_Kierowcow,HIGH,FAIL,3177,HTTP 500 Internal Server Error podczas strzału do API API Gateway
+UAT-SCA-9BF6E7,SCADA_Rafineria,Zawory_Biezace,LOW,PASS,536,OK
+UAT-SCA-2720A1,SCADA_Rafineria,Alarmy_HSE,LOW,PASS,735,Sygnał odebrany
