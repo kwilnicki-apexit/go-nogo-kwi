@@ -143,7 +143,7 @@ class RAGEngine:
         )
 
     def search_context(
-        self, query: str, project_id: Optional[str], chat_id: str
+        self, query: str, project_id: Optional[str], chat_id: Optional[str] = None
     ) -> str:
         """
         Searches both project and chat vector stores and returns merged context.
@@ -151,7 +151,7 @@ class RAGEngine:
         Args:
             query: The search query text.
             project_id: Optional project ID to search project-level documents.
-            chat_id: Chat ID to search chat-level documents.
+            chat_id: Optional chat ID to search chat-level documents.
 
         Returns:
             Concatenated RAG context string from best-matching chunks.
@@ -163,9 +163,10 @@ class RAGEngine:
             safe_proj = project_id.replace("-", "_")
             all_hits.extend(self._search_collection(query, safe_proj))
 
-        # Always search chat-level collection
-        safe_chat = chat_id.replace("-", "_")
-        all_hits.extend(self._search_collection(query, safe_chat))
+        # Search chat-level collection ONLY if chat_id is provided
+        if chat_id:
+            safe_chat = chat_id.replace("-", "_")
+            all_hits.extend(self._search_collection(query, safe_chat))
 
         if not all_hits:
             return ""
