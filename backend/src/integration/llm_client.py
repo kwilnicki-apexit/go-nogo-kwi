@@ -27,7 +27,7 @@ class LLMClient:
         if not self.api_token or not self.endpoint_url:
             self.logger.warning("Missing LLM configuration in .env file")
 
-    def generate_response(self, system_prompt, user_prompt, temperature=0.1, max_tokens=2000, force_json=False, chat_history=None):
+    def generate_response(self, system_prompt, user_prompt, temperature=0.1, max_tokens=8000, force_json=False, chat_history=None):
         """
         Sends a prompt to the LLM and returns the generated text response.
 
