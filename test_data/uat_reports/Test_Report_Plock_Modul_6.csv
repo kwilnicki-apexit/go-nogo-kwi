@@ -1,0 +1,61 @@
+Test_ID;System;Komponent;Priorytet_Biznesowy;Status;Czas_ms;Opis_Bledu
+UAT-ERP-193B0F;ERP_Korporacja;Portal_Pracowniczy;HIGH;PASS;433;Zgodnie z asercją
+UAT-Sec-91CF50;Security_HQ;Kamery_ANPR_Parking;CRITICAL;FAIL;10333;Bramka główna (Północ) nie blokuje dostępu przy unieważnionej karcie RFID
+UAT-IoT-4C0CEB;IoT_Pipeline;Zasilanie_Awaryjne;LOW;PASS;215;Test zaliczony
+UAT-SAP-AC8314;SAP_IS_Oil;Podatki_Akcyza;HIGH;PASS;789;Dane zapisane poprawnie
+UAT-SAP-50B558;SAP_IS_Oil;Raportowanie_Zapasow;MEDIUM;PASS;668;Test zaliczony
+UAT-Fle-3F337D;Fleet_TMS;GPS_Cysterny;MEDIUM;PASS;257;Test zaliczony
+UAT-Sec-C0D16B;Security_HQ;Bramki_Obrotowe;HIGH;PASS;322;Sygnał odebrany
+UAT-SAP-698052;SAP_IS_Oil;Podatki_Akcyza;MEDIUM;PASS;714;Dane zapisane poprawnie
+UAT-ERP-239A32;ERP_Korporacja;Zatwierdzanie_Budzetu;HIGH;FAIL;2873;HTTP 500 Internal Server Error podczas strzału do API API Gateway
+UAT-IoT-78EAE9;IoT_Pipeline;Telemetria_Temperatury;MEDIUM;PASS;590;Test zaliczony
+UAT-SAP-699391;SAP_IS_Oil;Podatki_Akcyza;CRITICAL;FAIL;10644;Brak warunku cenowego dla ON Ekodiesel w hurcie
+UAT-Fle-2D31FD;Fleet_TMS;Integracja_TollCollect;LOW;PASS;591;Sygnał odebrany
+UAT-SAP-DF529E;SAP_IS_Oil;Raportowanie_Zapasow;LOW;PASS;575;OK
+UAT-SAP-4D878A;SAP_IS_Oil;Raportowanie_Zapasow;MEDIUM;FAIL;13054;Niezgodność schematu JSON z dokumentacją Swagger
+UAT-Sec-84C33F;Security_HQ;Kamery_ANPR_Parking;LOW;PASS;310;Test zaliczony
+UAT-ERP-D4C1D8;ERP_Korporacja;Obieg_Faktur;HIGH;FAIL;10841;HTTP 500 Internal Server Error podczas strzału do API API Gateway
+UAT-SCA-BC596B;SCADA_Rafineria;Czujniki_Cisnienia;MEDIUM;PASS;89;Test zaliczony
+UAT-SCA-1095AF;SCADA_Rafineria;Czujniki_Cisnienia;HIGH;PASS;687;Test zaliczony
+UAT-WMS-9EC787;WMS_Petrochemia;Dystrybucja_Asfaltu;HIGH;PASS;762;Sygnał odebrany
+UAT-ERP-5BF15A;ERP_Korporacja;Kadry_Place;MEDIUM;FAIL;13901;Niezgodność schematu JSON z dokumentacją Swagger
+UAT-SCA-6E43CD;SCADA_Rafineria;Zawory_Biezace;MEDIUM;PASS;236;Sygnał odebrany
+UAT-SAP-2A7D8E;SAP_IS_Oil;Podatki_Akcyza;LOW;PASS;710;Dane zapisane poprawnie
+UAT-ERP-085C57;ERP_Korporacja;Portal_Pracowniczy;MEDIUM;PASS;96;OK
+UAT-Fle-CBBBFE;Fleet_TMS;Harmonogram_Zaladunku;LOW;PASS;626;OK
+UAT-IoT-9AC0BB;IoT_Pipeline;Zasilanie_Awaryjne;CRITICAL;PASS;129;Sygnał odebrany
+UAT-IoT-D3A4B5;IoT_Pipeline;Zasilanie_Awaryjne;CRITICAL;PASS;776;OK
+UAT-ERP-13A633;ERP_Korporacja;Kadry_Place;MEDIUM;PASS;183;Sygnał odebrany
+UAT-Fle-87417F;Fleet_TMS;Harmonogram_Zaladunku;HIGH;PASS;770;Dane zapisane poprawnie
+UAT-SCA-5A1B48;SCADA_Rafineria;Czujniki_Cisnienia;LOW;PASS;203;Test zaliczony
+UAT-WMS-E61230;WMS_Petrochemia;Magazyn_Olejow;MEDIUM;PASS;308;Sygnał odebrany
+UAT-ERP-9D79D9;ERP_Korporacja;Portal_Pracowniczy;HIGH;FAIL;7044;HTTP 500 Internal Server Error podczas strzału do API API Gateway
+UAT-WMS-8B1278;WMS_Petrochemia;Dystrybucja_Asfaltu;MEDIUM;FAIL;2402;Niezgodność schematu JSON z dokumentacją Swagger
+UAT-Fle-EA9C49;Fleet_TMS;GPS_Cysterny;MEDIUM;PASS;369;Dane zapisane poprawnie
+UAT-SAP-9FB0BA;SAP_IS_Oil;Wycena_Barylek;MEDIUM;WARN;13606;Zbyt długa odpowiedź RFC z modułu MM (> 3000ms)
+UAT-IoT-292626;IoT_Pipeline;Zasilanie_Awaryjne;CRITICAL;PASS;533;Dane zapisane poprawnie
+UAT-SAP-BD8EFB;SAP_IS_Oil;Raportowanie_Zapasow;HIGH;PASS;62;OK
+UAT-ERP-F15124;ERP_Korporacja;Portal_Pracowniczy;CRITICAL;PASS;512;Sygnał odebrany
+UAT-IoT-4554C0;IoT_Pipeline;Zasilanie_Awaryjne;MEDIUM;PASS;83;Zgodnie z asercją
+UAT-IoT-6F51CB;IoT_Pipeline;Detekcja_Wyciekow;LOW;PASS;525;OK
+UAT-SCA-4F932C;SCADA_Rafineria;Czujniki_Cisnienia;HIGH;PASS;22;Sygnał odebrany
+UAT-IoT-781E6B;IoT_Pipeline;Telemetria_Temperatury;HIGH;PASS;729;OK
+UAT-WMS-3F6CA1;WMS_Petrochemia;Magazyn_Olejow;LOW;PASS;462;Dane zapisane poprawnie
+UAT-WMS-76F21E;WMS_Petrochemia;Etykietowanie_Chemii;MEDIUM;PASS;781;Dane zapisane poprawnie
+UAT-ERP-E02066;ERP_Korporacja;Obieg_Faktur;HIGH;FAIL;14249;HTTP 500 Internal Server Error podczas strzału do API API Gateway
+UAT-SCA-274081;SCADA_Rafineria;Zawory_Biezace;MEDIUM;WARN;12471;Opóźnienie synchronizacji danych historycznych do hurtowni (1.2s)
+UAT-SAP-EE3A68;SAP_IS_Oil;Wycena_Barylek;LOW;PASS;539;Test zaliczony
+UAT-IoT-BF7EF3;IoT_Pipeline;Przeplywomierze;LOW;PASS;372;Test zaliczony
+UAT-ERP-27004D;ERP_Korporacja;Kadry_Place;HIGH;FAIL;1124;HTTP 500 Internal Server Error podczas strzału do API API Gateway
+UAT-SCA-4E33F7;SCADA_Rafineria;Alarmy_HSE;CRITICAL;PASS;604;OK
+UAT-SAP-3DD02C;SAP_IS_Oil;Raportowanie_Zapasow;CRITICAL;PASS;511;Zgodnie z asercją
+UAT-WMS-166DB2;WMS_Petrochemia;Inwentaryzacja_Dronami;CRITICAL;PASS;703;OK
+UAT-Fle-A8EFC4;Fleet_TMS;GPS_Cysterny;HIGH;PASS;194;OK
+UAT-WMS-B59F2C;WMS_Petrochemia;Etykietowanie_Chemii;MEDIUM;PASS;134;Zgodnie z asercją
+UAT-SCA-15636D;SCADA_Rafineria;Kolumna_Destylacyjna_C100;HIGH;PASS;751;Test zaliczony
+UAT-ERP-293C65;ERP_Korporacja;Kadry_Place;HIGH;FAIL;10780;HTTP 500 Internal Server Error podczas strzału do API API Gateway
+UAT-SAP-969B32;SAP_IS_Oil;Wycena_Barylek;CRITICAL;PASS;527;Zgodnie z asercją
+UAT-IoT-19103B;IoT_Pipeline;Zasilanie_Awaryjne;HIGH;PASS;370;Test zaliczony
+UAT-SAP-E53912;SAP_IS_Oil;Raportowanie_Zapasow;MEDIUM;PASS;595;Test zaliczony
+UAT-SAP-AF3F74;SAP_IS_Oil;Raportowanie_Zapasow;CRITICAL;FAIL;4171;Brak warunku cenowego dla ON Ekodiesel w hurcie
+UAT-WMS-0970F1;WMS_Petrochemia;Inwentaryzacja_Dronami;HIGH;PASS;755;Zgodnie z asercją

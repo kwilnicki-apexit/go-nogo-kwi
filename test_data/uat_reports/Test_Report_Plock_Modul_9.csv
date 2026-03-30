@@ -1,0 +1,61 @@
+Test_ID;System;Komponent;Priorytet_Biznesowy;Status;Czas_ms;Opis_Bledu
+UAT-ERP-2ADD26;ERP_Korporacja;Kadry_Place;CRITICAL;PASS;632;Zgodnie z asercją
+UAT-Sec-F3CD2C;Security_HQ;Logi_Gosci;MEDIUM;PASS;139;Test zaliczony
+UAT-SAP-CB6F00;SAP_IS_Oil;Podatki_Akcyza;CRITICAL;PASS;536;Zgodnie z asercją
+UAT-Fle-FBDE5A;Fleet_TMS;Integracja_TollCollect;CRITICAL;PASS;21;Test zaliczony
+UAT-SCA-39A7E7;SCADA_Rafineria;Alarmy_HSE;MEDIUM;PASS;685;Test zaliczony
+UAT-ERP-FE6C5C;ERP_Korporacja;Obieg_Faktur;MEDIUM;PASS;412;Zgodnie z asercją
+UAT-WMS-46C2B2;WMS_Petrochemia;Magazyn_Olejow;MEDIUM;PASS;758;Test zaliczony
+UAT-IoT-652E8D;IoT_Pipeline;Przeplywomierze;CRITICAL;FAIL;9940;Algorytm detekcji wycieków zwrócił False Negative podczas testu wstrzykiwania
+UAT-IoT-CD009D;IoT_Pipeline;Detekcja_Wyciekow;MEDIUM;PASS;557;Zgodnie z asercją
+UAT-ERP-34FED3;ERP_Korporacja;Portal_Pracowniczy;CRITICAL;PASS;279;Dane zapisane poprawnie
+UAT-SCA-83F1A3;SCADA_Rafineria;Kolumna_Destylacyjna_C100;HIGH;PASS;329;Dane zapisane poprawnie
+UAT-Sec-7820EA;Security_HQ;Kamery_ANPR_Parking;LOW;PASS;212;Dane zapisane poprawnie
+UAT-Sec-AE37D3;Security_HQ;Bramki_Obrotowe;HIGH;FAIL;2891;System kamer ANPR nie rozpoznaje zabrudzonych tablic rejestracyjnych
+UAT-ERP-088661;ERP_Korporacja;Portal_Pracowniczy;CRITICAL;PASS;47;Zgodnie z asercją
+UAT-Fle-A6F527;Fleet_TMS;GPS_Cysterny;LOW;WARN;11131;Kierowca przekroczył limit pauzy wg API tacho, ale brak alertu na froncie
+UAT-Sec-6AFD4F;Security_HQ;Logi_Gosci;CRITICAL;PASS;312;Zgodnie z asercją
+UAT-Sec-D5949C;Security_HQ;Bramki_Obrotowe;LOW;PASS;455;Test zaliczony
+UAT-WMS-E3E5F5;WMS_Petrochemia;Etykietowanie_Chemii;LOW;PASS;179;Test zaliczony
+UAT-SCA-239FE8;SCADA_Rafineria;Alarmy_HSE;MEDIUM;PASS;657;Dane zapisane poprawnie
+UAT-WMS-A3A589;WMS_Petrochemia;Magazyn_Olejow;MEDIUM;PASS;666;Sygnał odebrany
+UAT-Sec-F6B054;Security_HQ;Karty_Dostepu_RFID;HIGH;PASS;577;Sygnał odebrany
+UAT-ERP-E9CB0F;ERP_Korporacja;Zatwierdzanie_Budzetu;HIGH;PASS;517;Test zaliczony
+UAT-SAP-F1D8EB;SAP_IS_Oil;Podatki_Akcyza;CRITICAL;PASS;541;Sygnał odebrany
+UAT-Sec-82AE4B;Security_HQ;Kamery_ANPR_Parking;HIGH;PASS;593;Sygnał odebrany
+UAT-ERP-84BD09;ERP_Korporacja;Portal_Pracowniczy;LOW;PASS;451;OK
+UAT-ERP-48F186;ERP_Korporacja;Obieg_Faktur;CRITICAL;PASS;156;Sygnał odebrany
+UAT-Fle-D64304;Fleet_TMS;Integracja_TollCollect;HIGH;FAIL;1369;Błąd dekodowania pozycji GPS z cysterny (null format)
+UAT-ERP-883803;ERP_Korporacja;Kadry_Place;CRITICAL;PASS;89;Test zaliczony
+UAT-WMS-4CDCED;WMS_Petrochemia;Etykietowanie_Chemii;HIGH;PASS;340;Dane zapisane poprawnie
+UAT-ERP-432FA2;ERP_Korporacja;Obieg_Faktur;LOW;PASS;746;Test zaliczony
+UAT-WMS-A47332;WMS_Petrochemia;Magazyn_Olejow;MEDIUM;PASS;791;OK
+UAT-SCA-7CE584;SCADA_Rafineria;Czujniki_Cisnienia;LOW;PASS;178;Test zaliczony
+UAT-ERP-3103A6;ERP_Korporacja;Portal_Pracowniczy;LOW;WARN;8612;Użyto zdeprecjonowanego endpointu v2.1 (zalecany v3.0)
+UAT-ERP-F6ADA7;ERP_Korporacja;Kadry_Place;CRITICAL;PASS;308;Sygnał odebrany
+UAT-Fle-0C1830;Fleet_TMS;Harmonogram_Zaladunku;MEDIUM;FAIL;4400;Niezgodność schematu JSON z dokumentacją Swagger
+UAT-ERP-36FEDF;ERP_Korporacja;Portal_Pracowniczy;LOW;PASS;752;Sygnał odebrany
+UAT-SAP-57A8F9;SAP_IS_Oil;Wycena_Barylek;MEDIUM;PASS;368;Zgodnie z asercją
+UAT-IoT-B8BC52;IoT_Pipeline;Zasilanie_Awaryjne;HIGH;FAIL;3403;Brak fallbacku na zasilanie awaryjne w węźle komunikacyjnym 12
+UAT-Sec-0102B2;Security_HQ;Logi_Gosci;HIGH;FAIL;1727;System kamer ANPR nie rozpoznaje zabrudzonych tablic rejestracyjnych
+UAT-Fle-8AD4D4;Fleet_TMS;Integracja_TollCollect;LOW;PASS;678;Dane zapisane poprawnie
+UAT-ERP-CBE784;ERP_Korporacja;Obieg_Faktur;LOW;PASS;34;Dane zapisane poprawnie
+UAT-WMS-30EF32;WMS_Petrochemia;Etykietowanie_Chemii;HIGH;PASS;282;Test zaliczony
+UAT-SAP-2132A7;SAP_IS_Oil;Raportowanie_Zapasow;MEDIUM;PASS;266;OK
+UAT-SAP-6AB3D3;SAP_IS_Oil;Wycena_Barylek;MEDIUM;PASS;513;Sygnał odebrany
+UAT-Sec-D6155D;Security_HQ;Logi_Gosci;MEDIUM;PASS;190;OK
+UAT-ERP-79D30A;ERP_Korporacja;Portal_Pracowniczy;LOW;PASS;523;Sygnał odebrany
+UAT-ERP-760F7C;ERP_Korporacja;Portal_Pracowniczy;LOW;PASS;134;Zgodnie z asercją
+UAT-IoT-471891;IoT_Pipeline;Detekcja_Wyciekow;HIGH;PASS;157;OK
+UAT-Fle-0C20DC;Fleet_TMS;Harmonogram_Zaladunku;CRITICAL;PASS;462;Sygnał odebrany
+UAT-Sec-9BF6FA;Security_HQ;Bramki_Obrotowe;LOW;PASS;42;Dane zapisane poprawnie
+UAT-ERP-F7FFE9;ERP_Korporacja;Obieg_Faktur;MEDIUM;PASS;288;OK
+UAT-SAP-F458F0;SAP_IS_Oil;Raportowanie_Zapasow;HIGH;FAIL;14670;Błąd wyliczenia podatku akcyzowego dla dokumentu WZ
+UAT-SCA-ED9DBB;SCADA_Rafineria;Czujniki_Cisnienia;CRITICAL;PASS;284;Zgodnie z asercją
+UAT-IoT-4D7B97;IoT_Pipeline;Zasilanie_Awaryjne;HIGH;PASS;260;Zgodnie z asercją
+UAT-IoT-901B83;IoT_Pipeline;Detekcja_Wyciekow;CRITICAL;FAIL;10524;Algorytm detekcji wycieków zwrócił False Negative podczas testu wstrzykiwania
+UAT-ERP-F2BDE7;ERP_Korporacja;Portal_Pracowniczy;HIGH;PASS;215;Sygnał odebrany
+UAT-Fle-3E5848;Fleet_TMS;Integracja_TollCollect;LOW;PASS;62;OK
+UAT-WMS-5E12BF;WMS_Petrochemia;Etykietowanie_Chemii;MEDIUM;PASS;723;OK
+UAT-SCA-D4ABCF;SCADA_Rafineria;Zawory_Biezace;MEDIUM;PASS;259;Dane zapisane poprawnie
+UAT-Sec-61AE8F;Security_HQ;Logi_Gosci;MEDIUM;PASS;765;Zgodnie z asercją
