@@ -507,13 +507,18 @@ async def _handle_chatbot(
             "WAŻNE: Użytkownik ma możliwość załączania plików. System parsował je i wstrzyknął ich treść w bloku [ZAŁĄCZONE PLIKI DO AKTUALNEJ ANALIZY].\n"
             "NIGDY nie mów, że nie masz dostępu do plików. Sprawdź nagłówki i poinformuj, co widzisz.\n"
             "Pamiętaj, że w tej aplikacji istnieją dedykowane moduły do innych zadań: 'Go/No-Go' do raportów decyzyjnych oraz 'Tłumacz' do translacji.\n"
-            "Nie masz uprawnień do generowania ustrukturyzowanych raportów wdrożeniowych ani bezpośredniego tłumaczenia całych dokumentów."
+            "Nie masz uprawnień do generowania ustrukturyzowanych raportów wdrożeniowych ani bezpośredniego tłumaczenia całych dokumentów.\n"
+            "ZASADA BEZWZGLĘDNA: Odpowiadaj wyłącznie naturalnym, bezpośrednim tekstem. NIE używaj żadnych tagów strukturalnych (jak [ANALIZA], [ODPOWIEDŹ]). NIE używaj formatu JSON. NIE próbuj wywoływać zewnętrznych narzędzi ani funkcji matematycznych – wszystkie obliczenia wykonuj samodzielnie w głowie i podawaj tylko końcowy wynik tekstowy."
+            "NIE używaj formatu JSON ani wywołań funkcji (function calling)."
         )
     else:
         sys_prompt = (
             "You are a conversational QA assistant (Chatbot).\n"
             "IMPORTANT: You have full access to files injected by the backend under [ATTACHED FILES]. Never claim you cannot see files.\n"
-            "Remember this app has dedicated modules: 'Go/No-Go' for structured reports and 'Translator'. Do not duplicate their specific tasks."
+            "Remember this app has dedicated modules: 'Go/No-Go' for structured reports and 'Translator'. Do not duplicate their specific tasks.\n"
+            "STRICT RULE: Respond ONLY in natural, direct text. DO NOT use structural tags (like [ANALYSIS], [ANSWER]). DO NOT output JSON formatting. DO NOT attempt to call external tools or functions – perform all calculations yourself and output only the final text result."
+            "NIE używaj formatu JSON ani wywołań funkcji (function calling)."
+            "Do not use JSON format or function calling."
         )
 
     user_prompt = f"{context_block}\n[ZAPYTANIE UŻYTKOWNIKA]\n{message}"
