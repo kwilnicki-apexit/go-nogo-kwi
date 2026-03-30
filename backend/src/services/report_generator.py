@@ -451,32 +451,57 @@ class ReportGenerator:
                         if not cells:
                             continue
 
-                        col_width = 190 / len(cells)
-                        pdf.set_x(10)
+                        # 1. Ustalanie szerokości kolumn (dajemy dużo miejsca na "Powód/Plik")
+                        if len(cells) == 3:
+                            col_widths = [55, 30, 105]  # Razem równe 190mm szerokości A4
+                        else:
+                            col_widths = [190 / len(cells)] * len(cells)
 
-                        for cell in cells:
+                        # 2. Szacowanie maksymalnej wysokości wiersza
+                        max_lines = 1
+                        for i, cell in enumerate(cells):
+                            cell_clean = cell.replace("**", "").replace("*", "")
+                            txt_width = pdf.get_string_width(cell_clean)
+                            # +10% marginesu błędu na spacje i łamanie wyrazów
+                            lines = int((txt_width * 1.1) / (col_widths[i] - 2)) + 1
+                            if lines > max_lines:
+                                max_lines = lines
+
+                        row_height = max_lines * 6
+
+                        # 3. Złamanie strony, jeśli nowy wiersz nie mieści się na kartce
+                        if pdf.get_y() + row_height > 275:
+                            pdf.add_page()
+
+                        start_y = pdf.get_y()
+                        start_x = 10
+
+                        for i, cell in enumerate(cells):
                             cell_clean = cell.replace("**", "").replace("*", "")
 
-                            # Nakładanie kolorów dla statusów
+                            # Nakładanie kolorów
                             if cell_clean in ["GO", "PASS", "Low", "Niskie", "low"]:
                                 pdf.set_text_color(34, 197, 94)  # Zielony
-                            elif cell_clean in [
-                                "NO-GO",
-                                "FAIL",
-                                "High",
-                                "Wysokie",
-                                "high",
-                            ]:
+                            elif cell_clean in ["NO-GO", "FAIL", "High", "Wysokie", "high", "CRITICAL", "critical", "ERROR", "error"]:
                                 pdf.set_text_color(239, 68, 68)  # Czerwony
                             elif cell_clean in ["WARN", "Medium", "Średnie", "medium"]:
                                 pdf.set_text_color(245, 158, 11)  # Pomarańczowy
                             else:
-                                pdf.set_text_color(51, 65, 85)  # Standardowy szary
+                                pdf.set_text_color(51, 65, 85)  # Ciemnoszary
 
-                            pdf.cell(col_width, 8, cell_clean, border=1)
+                            # Rysowanie obramowania ręcznie dla równej tabeli
+                            pdf.set_draw_color(200, 200, 200) # Jasnoszara ramka
+                            pdf.rect(start_x, start_y, col_widths[i], row_height)
+                            
+                            # Wpisywanie zawijającego się tekstu wewnątrz ramki (multi_cell)
+                            pdf.set_xy(start_x + 1, start_y + 1)
+                            pdf.multi_cell(col_widths[i] - 2, 5, cell_clean, border=0, align="L")
 
-                        pdf.ln(8)
-                        pdf.set_text_color(51, 65, 85)  # Reset koloru po wierszu
+                            start_x += col_widths[i]
+
+                        # Przesunięcie kursora w dół po narysowaniu kompletnego wiersza
+                        pdf.set_y(start_y + row_height)
+                        pdf.set_text_color(51, 65, 85)
 
                     # Obsługa list punktowanych
                     elif line.startswith("- "):
