@@ -141,6 +141,85 @@ class ReportGenerator:
         """
         self.logger.info(f"Generating structured JSON report (lang: {lang})")
 
+        # if lang == "pl":
+        #     history_str = "brak historycznych raportow"
+        #     if historical_cache and historical_cache.get("data"):
+        #         prev_status = historical_cache["data"].get("decision", "Nieznany")
+        #         prev_risks = historical_cache["data"].get("risks_eval", "Brak")
+        #         history_str = f"Ostatnia decyzja: {prev_status}.\nPoprzednie ryzyka: {prev_risks}."
+
+        #     system_prompt = (
+        #         "Jesteś Głównym Inżynierem QA, ale działasz jako doradca techniczny. "
+        #         "Ostateczną instancją decyzyjną (Release Managerem) jest Użytkownik.\n"
+        #         "ZASADA NADRZĘDNA (AUTORYTET UŻYTKOWNIKA): Jeśli w sekcji [UWAGI UŻYTKOWNIKA] człowiek jawnie akceptuje ryzyka, nakazuje zmianę decyzji lub twierdzi, że błędy są znane, MUSISZ bezwzględnie zmienić decyzję na 'GO'. "
+        #         "W takiej sytuacji w polu 'justification' wyjaśnij, że mimo błędów technicznych, ryzyko zostało zaakceptowane biznesowo ORAZ WYMIEŃ KONKRETNIE WSZYSTKIE BŁĘDY/RYZYKA (np. problemy z wydajnością, błędy konkretnych komponentów), które użytkownik zdecydował się zignorować/zaakceptować.\n"
+        #         "Zwróć odpowiedź WYŁĄCZNIE jako surowy, poprawny obiekt JSON. Nie używaj znaczników ```json ani Markdown."
+        #     )
+
+        #     user_prompt = f"""
+        #                     Wygeneruj strukturę raportu w formacie JSON zachowując te klucze:
+        #                     - "summary": (string) krótkie podsumowanie techniczne,
+        #                     - "test_analysis": (array) lista wyników testów jako obiekty JSON. Każdy obiekt MUSI zawierać dokładnie te klucze: "test_name" (nazwa testu), "value" (wynik/wartość np. PASS/FAIL/liczba), "filename" (nazwa pliku źródłowego z którego pochodzi). Przejdź przez WSZYSTKIE wiersze z [ZPARSOWANE WYNIKI TESTÓW] i wypisz każdy test osobno. Nie grupuj, nie pomijaj.
+        #                     - "test_analysis_summary": (string) krótkie podsumowanie całej analizy testów (2-4 zdania) — ile testów przeszło, ile nie, jakie są główne wnioski.
+        #                     - "risks_eval": (array) lista WYŁĄCZNIE ryzykownych testów z test_analysis. Każdy obiekt MUSI zawierać: "test_name" (nazwa testu), "filename" (plik źródłowy), "value" (wynik testu), "reason" (dlaczego jest ryzykowny — jeśli ryzyko wynika z wiadomości użytkownika z [UWAGI UŻYTKOWNIKA] napisz "z chatu: [cytat z wiadomości]", jeśli z danych w pliku napisz "na bazie [nazwa pliku]: [cytat/opis]"). Jeśli żaden test nie jest ryzykowny, zwróć pustą tablicę [], "severity" (string) poziom ryzyka: dokładnie "high", "medium" lub "low" — oceń na podstawie wartości testu i kontekstu.
+        #                     - "decision": (string) dokładnie "GO" lub "NO-GO",
+        #                     - "justification": (string) ostateczne uzasadnienie decyzji oparte NA LIŚCIE Z risks_eval. Dla każdego ryzykownego testu z risks_eval napisz wprost dlaczego powoduje NO-GO (np. "Test X z pliku Y zwrócił FAIL — przekracza dopuszczalną normę"). Jeśli wszystkie testy są w normie, napisz że wyniki są powyżej normy i decyzja to GO. Jeśli użytkownik w [UWAGI UŻYTKOWNIKA] jawnie zaakceptował ryzyka, napisz: "Na podstawie decyzji użytkownika akceptuję widoczne ryzyko: [wymień konkretne testy z risks_eval które użytkownik zaakceptował]" i zmień decyzję na GO.
+        #                     - "assistant_reply": (string) krótka, merytoryczna odpowiedź do użytkownika na czacie, podsumowująca co dokładnie zmieniłeś w raporcie (np. "Zaakceptowałem ryzyko związane z wydajnością i zmieniłem status na GO.").
+
+        #                     [GLOBALNE ZASADY BIZNESOWE (RAG)]
+        #                     {rag_context}
+
+        #                     [KONTEKST Z POPRZEDNICH WERSJI RAPORTU]
+        #                     {history_str}
+
+        #                     [ZPARSOWANE WYNIKI TESTÓW]
+        #                     {parsed_test_data}
+
+        #                     [UWAGI UŻYTKOWNIKA (PRIORYTET NADRZĘDNY)]
+        #                     {user_risks}
+        #                     """
+        #     fallback_summary = "Błąd parsowania JSON"
+        #     fallback_justification = "Błąd po stronie modelu AI (niepoprawny format)"
+
+        # else:
+        #     history_str = "no historical reports"
+        #     if historical_cache and historical_cache.get("data"):
+        #         prev_status = historical_cache["data"].get("decision", "unknown")
+        #         prev_risks = historical_cache["data"].get("risks_eval", "none")
+        #         history_str = f"Last decision: {prev_status} | Last risks: {prev_risks}"
+
+        #     system_prompt = (
+        #         "You are a Lead QA Engineer acting as a technical advisor. The User is the ultimate Release Manager.\n"
+        #         "OVERRIDE RULE: If the User in the [USER INPUT] section explicitly accepts risks, commands a decision change, or states that bugs are known/accepted, you MUST set the decision to 'GO'. "
+        #         "In such cases, use the 'justification' field to state that despite technical failures, the risks were business-accepted by the User AND EXPLICITLY LIST ALL SPECIFIC BUGS/RISKS (e.g., performance issues, specific component failures) that the User decided to ignore/accept.\n"
+        #         "Return the response STRICTLY as a valid JSON object. Do not use ```json or Markdown wrappers."
+        #     )
+
+        #     user_prompt = f"""
+        #                     Generate the report structure in JSON format using exactly these keys:
+        #                     - "summary": brief technical summary,
+        #                     - "test_analysis": (array) list of test results as JSON objects. Each object MUST contain exactly these keys: "test_name" (name of the test), "value" (result/value e.g. PASS/FAIL/number), "filename" (source filename it was taken from). Go through ALL rows from [PARSED TEST RESULTS] and list each test separately. Do not group or skip any.
+        #                     - "test_analysis_summary": (string) short summary of the full test analysis (2-4 sentences) — how many passed, how many failed, key takeaways.
+        #                     - "risks_eval": (array) list of ONLY the risky tests from test_analysis. Each object MUST contain: "test_name" (test name), "filename" (source file), "value" (test result), "reason" (why it is risky — if the risk comes from the user's message in [USER INPUT] write "from chat: [quote from message]", if from file data write "based on [filename]: [quote/description]"). If no tests are risky, return an empty array [], "severity" (string) risk level: exactly "high", "medium" or "low" — assess based on test value and context.
+        #                     - "decision": exactly "GO" or "NO-GO",
+        #                     - "justification": (string) final rationale based DIRECTLY ON THE risks_eval LIST. For each risky test in risks_eval, explicitly state why it causes NO-GO (e.g. "Test X from file Y returned FAIL — exceeds acceptable threshold"). If all tests are within norms, state that results are above norm and the decision is GO. If the user in [USER INPUT] explicitly accepted risks, write: "Based on the user's decision, I accept the visible risk: [list the specific tests from risks_eval the user accepted]" and set decision to GO.
+        #                     - "assistant_reply": (string) brief, substantive reply to the user in the chat, summarizing exactly what you changed in the report (e.g., "I accepted the performance-related risk and changed the status to GO.").
+
+        #                     [GLOBAL BUSINESS RULES (RAG)]
+        #                     {rag_context}
+
+        #                     [CONTEXT FROM PREVIOUS REPORT DRAFTS]
+        #                     {history_str}
+
+        #                     [PARSED TEST RESULTS]
+        #                     {parsed_test_data}
+
+        #                     [USER INPUT (HIGHEST PRIORITY)]
+        #                     {user_risks}
+        #                     """
+        #     fallback_summary = "JSON parsing error"
+        #     fallback_justification = "LLM-side error (incorrect format)"
+
         if lang == "pl":
             history_str = "brak historycznych raportow"
             if historical_cache and historical_cache.get("data"):
@@ -149,22 +228,21 @@ class ReportGenerator:
                 history_str = f"Ostatnia decyzja: {prev_status}.\nPoprzednie ryzyka: {prev_risks}."
 
             system_prompt = (
-                "Jesteś Głównym Inżynierem QA, ale działasz jako doradca techniczny. "
-                "Ostateczną instancją decyzyjną (Release Managerem) jest Użytkownik.\n"
-                "ZASADA NADRZĘDNA (AUTORYTET UŻYTKOWNIKA): Jeśli w sekcji [UWAGI UŻYTKOWNIKA] człowiek jawnie akceptuje ryzyka, nakazuje zmianę decyzji lub twierdzi, że błędy są znane, MUSISZ bezwzględnie zmienić decyzję na 'GO'. "
-                "W takiej sytuacji w polu 'justification' wyjaśnij, że mimo błędów technicznych, ryzyko zostało zaakceptowane biznesowo ORAZ WYMIEŃ KONKRETNIE WSZYSTKIE BŁĘDY/RYZYKA (np. problemy z wydajnością, błędy konkretnych komponentów), które użytkownik zdecydował się zignorować/zaakceptować.\n"
+                "Jesteś Głównym Inżynierem QA i doradcą technicznym. Ostateczną instancją decyzyjną jest Użytkownik.\n"
+                "ZASADA NADRZĘDNA: Jeśli w sekcji [UWAGI UŻYTKOWNIKA] człowiek JAWNIE i BEZSPORNIE akceptuje ryzyka (np. pisząc 'akceptuję błędy', 'wymuszam GO'), zmień decyzję na 'GO'.\n"
+                "UWAGA KRYTYCZNA: Ogólne polecenia typu 'stwórz gonogo', 'wygeneruj raport', 'zrób raport', 'analizuj' ABSOLUTNIE NIE SĄ akceptacją ryzyk! Ignoruj je i decyduj surowo na podstawie błędów technicznych z plików.\n"
                 "Zwróć odpowiedź WYŁĄCZNIE jako surowy, poprawny obiekt JSON. Nie używaj znaczników ```json ani Markdown."
             )
 
             user_prompt = f"""
                             Wygeneruj strukturę raportu w formacie JSON zachowując te klucze:
                             - "summary": (string) krótkie podsumowanie techniczne,
-                            - "test_analysis": (array) lista wyników testów jako obiekty JSON. Każdy obiekt MUSI zawierać dokładnie te klucze: "test_name" (nazwa testu), "value" (wynik/wartość np. PASS/FAIL/liczba), "filename" (nazwa pliku źródłowego z którego pochodzi). Przejdź przez WSZYSTKIE wiersze z [ZPARSOWANE WYNIKI TESTÓW] i wypisz każdy test osobno. Nie grupuj, nie pomijaj.
-                            - "test_analysis_summary": (string) krótkie podsumowanie całej analizy testów (2-4 zdania) — ile testów przeszło, ile nie, jakie są główne wnioski.
-                            - "risks_eval": (array) lista WYŁĄCZNIE ryzykownych testów z test_analysis. Każdy obiekt MUSI zawierać: "test_name" (nazwa testu), "filename" (plik źródłowy), "value" (wynik testu), "reason" (dlaczego jest ryzykowny — jeśli ryzyko wynika z wiadomości użytkownika z [UWAGI UŻYTKOWNIKA] napisz "z chatu: [cytat z wiadomości]", jeśli z danych w pliku napisz "na bazie [nazwa pliku]: [cytat/opis]"). Jeśli żaden test nie jest ryzykowny, zwróć pustą tablicę [], "severity" (string) poziom ryzyka: dokładnie "high", "medium" lub "low" — oceń na podstawie wartości testu i kontekstu.
-                            - "decision": (string) dokładnie "GO" lub "NO-GO",
-                            - "justification": (string) ostateczne uzasadnienie decyzji oparte NA LIŚCIE Z risks_eval. Dla każdego ryzykownego testu z risks_eval napisz wprost dlaczego powoduje NO-GO (np. "Test X z pliku Y zwrócił FAIL — przekracza dopuszczalną normę"). Jeśli wszystkie testy są w normie, napisz że wyniki są powyżej normy i decyzja to GO. Jeśli użytkownik w [UWAGI UŻYTKOWNIKA] jawnie zaakceptował ryzyka, napisz: "Na podstawie decyzji użytkownika akceptuję widoczne ryzyko: [wymień konkretne testy z risks_eval które użytkownik zaakceptował]" i zmień decyzję na GO.
-                            - "assistant_reply": (string) krótka, merytoryczna odpowiedź do użytkownika na czacie, podsumowująca co dokładnie zmieniłeś w raporcie (np. "Zaakceptowałem ryzyko związane z wydajnością i zmieniłem status na GO.").
+                            - "test_analysis_summary": (string) krótkie podsumowanie analizy. Podaj tu ogólną LICZBĘ testów zakończonych sukcesem (PASS) oraz krótki opis zidentyfikowanych problemów.
+                            - "test_analysis": (array) lista wyników testów. Wypisz tu WYŁĄCZNIE testy ze statusem FAIL, WARN, ERROR lub CRITICAL. CAŁKOWICIE POMIŃ w tej tablicy testy ze statusem PASS (są one wliczone tylko w podsumowaniu wyżej). Każdy obiekt to: "test_name", "value", "filename". Jeśli brak błędów, zwróć pustą tablicę [].
+                            - "risks_eval": (array) lista WYŁĄCZNIE ryzykownych testów (FAIL/WARN). Każdy obiekt to: "test_name", "filename", "value", "severity" (high/medium/low) oraz "reason". Klucz "reason" MUSI zawierać DOKŁADNY OPIS BŁĘDU wyciągnięty z danych pliku (np. brak odczytu czujnika). NIGDY nie wpisuj tu wiadomości z chatu jako powodu błędu! Jeśli brak, zwróć pustą tablicę [].
+                            - "decision": (string) dokładnie "GO" lub "NO-GO" (obiektywnie na podstawie błędów, chyba że użytkownik jawnie wymusił GO),
+                            - "justification": (string) ostateczne uzasadnienie. Jeśli zdecydowałeś na NO-GO, opisz krótko dlaczego. Jeśli użytkownik jawnie zaakceptował ryzyko, zaznacz to wyraźnie.
+                            - "assistant_reply": (string) krótka odpowiedź do użytkownika na czacie, podsumowująca decyzję.
 
                             [GLOBALNE ZASADY BIZNESOWE (RAG)]
                             {rag_context}
@@ -189,21 +267,21 @@ class ReportGenerator:
                 history_str = f"Last decision: {prev_status} | Last risks: {prev_risks}"
 
             system_prompt = (
-                "You are a Lead QA Engineer acting as a technical advisor. The User is the ultimate Release Manager.\n"
-                "OVERRIDE RULE: If the User in the [USER INPUT] section explicitly accepts risks, commands a decision change, or states that bugs are known/accepted, you MUST set the decision to 'GO'. "
-                "In such cases, use the 'justification' field to state that despite technical failures, the risks were business-accepted by the User AND EXPLICITLY LIST ALL SPECIFIC BUGS/RISKS (e.g., performance issues, specific component failures) that the User decided to ignore/accept.\n"
+                "You are a Lead QA Engineer and technical advisor. The User is the ultimate Release Manager.\n"
+                "OVERRIDE RULE: If the User in the [USER INPUT] explicitly and undeniably accepts risks (e.g., 'I accept errors', 'force GO'), change the decision to 'GO'.\n"
+                "CRITICAL WARNING: General commands like 'create gonogo', 'generate report', 'analyze' are ABSOLUTELY NOT risk acceptances! Ignore them and decide strictly based on file test results.\n"
                 "Return the response STRICTLY as a valid JSON object. Do not use ```json or Markdown wrappers."
             )
 
             user_prompt = f"""
                             Generate the report structure in JSON format using exactly these keys:
-                            - "summary": brief technical summary,
-                            - "test_analysis": (array) list of test results as JSON objects. Each object MUST contain exactly these keys: "test_name" (name of the test), "value" (result/value e.g. PASS/FAIL/number), "filename" (source filename it was taken from). Go through ALL rows from [PARSED TEST RESULTS] and list each test separately. Do not group or skip any.
-                            - "test_analysis_summary": (string) short summary of the full test analysis (2-4 sentences) — how many passed, how many failed, key takeaways.
-                            - "risks_eval": (array) list of ONLY the risky tests from test_analysis. Each object MUST contain: "test_name" (test name), "filename" (source file), "value" (test result), "reason" (why it is risky — if the risk comes from the user's message in [USER INPUT] write "from chat: [quote from message]", if from file data write "based on [filename]: [quote/description]"). If no tests are risky, return an empty array [], "severity" (string) risk level: exactly "high", "medium" or "low" — assess based on test value and context.
-                            - "decision": exactly "GO" or "NO-GO",
-                            - "justification": (string) final rationale based DIRECTLY ON THE risks_eval LIST. For each risky test in risks_eval, explicitly state why it causes NO-GO (e.g. "Test X from file Y returned FAIL — exceeds acceptable threshold"). If all tests are within norms, state that results are above norm and the decision is GO. If the user in [USER INPUT] explicitly accepted risks, write: "Based on the user's decision, I accept the visible risk: [list the specific tests from risks_eval the user accepted]" and set decision to GO.
-                            - "assistant_reply": (string) brief, substantive reply to the user in the chat, summarizing exactly what you changed in the report (e.g., "I accepted the performance-related risk and changed the status to GO.").
+                            - "summary": (string) brief technical summary,
+                            - "test_analysis_summary": (string) short summary of the analysis. Provide the exact NUMBER of successful (PASS) tests here and briefly describe the main issues.
+                            - "test_analysis": (array) list of test results. List EXCLUSIVELY tests with FAIL, WARN, ERROR, or CRITICAL statuses. COMPLETELY OMIT tests with a PASS status (they are only counted in the summary above). Each object: "test_name", "value", "filename". If no issues, return [].
+                            - "risks_eval": (array) list of ONLY risky tests (FAIL/WARN). Each object: "test_name", "filename", "value", "severity" (high/medium/low), and "reason". The "reason" MUST contain the EXACT ERROR DESCRIPTION extracted from the file data. NEVER put chat messages here! If no risks, return [].
+                            - "decision": (string) exactly "GO" or "NO-GO" (objectively based on errors, unless the user explicitly forced GO),
+                            - "justification": (string) final rationale. If NO-GO, explain why. If the user explicitly accepted risks, state it clearly.
+                            - "assistant_reply": (string) brief reply to the user in the chat summarizing the decision.
 
                             [GLOBAL BUSINESS RULES (RAG)]
                             {rag_context}
